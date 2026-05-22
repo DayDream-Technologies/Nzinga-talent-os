@@ -52,6 +52,12 @@ components/
 NzingaTalentOS_v2.jsx   # Original single-file prototype (reference)
 ```
 
+## Deploy (AWS Amplify)
+
+The repo includes `amplify.yml`, which runs `npm ci` before `npm run build`. If the Amplify console uses a custom build spec, make sure **preBuild** installs dependencies — otherwise you will see `next: command not found`.
+
+In the Amplify app settings, use **Node.js 18** or later and framework **Next.js - SSR** (or rely on `amplify.yml` in the repo).
+
 ## License
 
 TBD.
