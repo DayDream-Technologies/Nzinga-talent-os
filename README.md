@@ -1,23 +1,56 @@
 # Nzinga Talent OS
 
-Talent operating system for managing people, roles, and workflows at scale.
+Talent operating system for managing people, roles, and workflows at scale — pipeline matrix, roster, tasks, history, and role-based dashboards.
 
-## About
+Built with **Next.js 15** and **React 19**. The UI lives in `components/NzingaTalentOS.jsx` (ported from `NzingaTalentOS_v2.jsx`).
 
-Nzinga Talent OS is a platform for talent management—hiring, onboarding, development, and team operations—in one place.
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 18.18 or later
 
 ## Getting started
-
-This repository is in early setup. Clone it and check back as the project structure and setup steps are added.
 
 ```bash
 git clone https://github.com/DayDream-Technologies/Nzinga-talent-os.git
 cd Nzinga-talent-os
+npm install
+npm run dev
 ```
 
-## Development
+Open [http://localhost:3000](http://localhost:3000).
 
-Setup and contribution guidelines will be documented here as the codebase grows.
+## Demo login
+
+Use any demo role on the sign-in screen, or sign in with:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Scout | jordan@nzinga.co | scout123 |
+| Team 1 Lead | marcus@nzinga.co | lead123 |
+| Ops Specialist | priya@nzinga.co | ops123 |
+| Team 2 Lead | devon@nzinga.co | lead2123 |
+| Director | simone@nzinga.co | director123 |
+| Success Manager | alexis@nzinga.co | success123 |
+
+Data is stored in memory for this prototype (no backend yet).
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run start` | Run production server |
+| `npm run lint` | Run ESLint |
+
+## Project structure
+
+```
+app/                    # Next.js App Router (layout, page, styles)
+components/
+  NzingaTalentOS.jsx    # Main application (client component)
+NzingaTalentOS_v2.jsx   # Original single-file prototype (reference)
+```
 
 ## License
 
