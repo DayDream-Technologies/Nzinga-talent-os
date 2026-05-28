@@ -15,6 +15,8 @@ import { fetchTalents, updateTalents, upsertTalent } from '@/services/talent.ser
 import { fetchApplications, saveApplication } from '@/services/application.service'
 import { fetchTasks, saveTasks } from '@/services/task.service'
 import { fetchHistory, saveHistory } from '@/services/history.service'
+import { useAuthContext } from './AuthContext'
+import { supabaseConfigured } from '@/lib/supabase'
 
 interface AppDataContextValue {
   talents: Talent[]
@@ -40,15 +42,18 @@ const AppDataContext = createContext<AppDataContextValue | null>(null)
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
+  const { user } = useAuthContext()
   const [selectedTalent, setSelectedTalent] = useState<Talent | null>(null)
   const [reviewingApp, setReviewingApp] = useState<Application | null>(null)
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
   const [localHistory, setLocalHistory] = useState<HistoryEntry[] | null>(null)
 
-  const talentsQuery = useQuery({ queryKey: ['talents'], queryFn: fetchTalents })
-  const appsQuery = useQuery({ queryKey: ['applications'], queryFn: fetchApplications })
-  const tasksQuery = useQuery({ queryKey: ['tasks'], queryFn: fetchTasks })
-  const historyQuery = useQuery({ queryKey: ['history'], queryFn: fetchHistory })
+  const queryEnabled = !supabaseConfigured || !!user
+
+  const talentsQuery = useQuery({ queryKey: ['talents'], queryFn: fetchTalents, enabled: queryEnabled })
+  const appsQuery = useQuery({ queryKey: ['applications'], queryFn: fetchApplications, enabled: queryEnabled })
+  const tasksQuery = useQuery({ queryKey: ['tasks'], queryFn: fetchTasks, enabled: queryEnabled })
+  const historyQuery = useQuery({ queryKey: ['history'], queryFn: fetchHistory, enabled: queryEnabled })
 
   const talents = talentsQuery.data ?? []
   const applications = appsQuery.data ?? {}

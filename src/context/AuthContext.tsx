@@ -75,6 +75,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, companyCode, isRestoringSession, validateCode, validateCodeAsync, login, switchUser, logout],
   )
 
+  if (isRestoringSession) {
+    return (
+      <AuthContext.Provider value={value}>
+        <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ color: '#666', fontSize: 14 }}>Loading...</p>
+        </div>
+      </AuthContext.Provider>
+    )
+  }
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
