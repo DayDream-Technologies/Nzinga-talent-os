@@ -19,7 +19,7 @@ const PAGE_TITLES: Record<string, string> = {
   applications: 'Applications',
 }
 
-export function AppShell() {
+export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, companyCode, switchUser, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -91,7 +91,7 @@ export function AppShell() {
           currentUser={user}
         />
         <div className="flex flex-1 flex-col overflow-hidden">
-          <Outlet />
+          {children ?? <Outlet />}
         </div>
       </div>
       {menuOpen && (
