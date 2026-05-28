@@ -23,16 +23,24 @@ export async function validateCompanyCodeFromDB(code: string): Promise<boolean> 
 export async function loginWithCredentials(
   email: string,
   password: string,
+  companyCode?: string,
 ): Promise<User | null> {
   if (supabaseConfigured && supabase) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.user) return null
-    const { data: profile } = await supabase
+    let query = supabase
       .from('users')
       .select('*')
       .eq('auth_uid', data.user.id)
-      .single()
-    return (profile as User) ?? null
+    if (companyCode) {
+      query = query.eq('company_code', companyCode.toUpperCase())
+    }
+    const { data: profile } = await query.single()
+    if (!profile) {
+      await supabase.auth.signOut()
+      return null
+    }
+    return profile as User
   }
   return USERS.find((u) => u.email === email && u.password === password) ?? null
 }

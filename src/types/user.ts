@@ -16,6 +16,7 @@ export interface User {
   title: string
   color: string
   auth_uid?: string | null
+  company_code?: string
 }
 
 export interface ProspectProfile {

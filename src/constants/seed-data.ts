@@ -10,6 +10,7 @@ export const USERS: User[] = [
     password: 'scout123',
     title: 'Talent Scout',
     color: '#7c3aed',
+    company_code: 'NZG',
   },
   {
     id: 'u2',
@@ -20,6 +21,7 @@ export const USERS: User[] = [
     password: 'lead123',
     title: 'Team 1 Lead',
     color: '#f59e0b',
+    company_code: 'NZG',
   },
   {
     id: 'u3',
@@ -30,6 +32,7 @@ export const USERS: User[] = [
     password: 'ops123',
     title: 'Ops Specialist',
     color: '#3b82f6',
+    company_code: 'NZG',
   },
   {
     id: 'u4',
@@ -40,6 +43,7 @@ export const USERS: User[] = [
     password: 'lead2123',
     title: 'Team 2 Lead',
     color: '#06b6d4',
+    company_code: 'NZG',
   },
   {
     id: 'u5',
@@ -50,6 +54,7 @@ export const USERS: User[] = [
     password: 'director123',
     title: 'Executive Director',
     color: '#10b981',
+    company_code: 'NZG',
   },
   {
     id: 'u6',
@@ -60,6 +65,7 @@ export const USERS: User[] = [
     password: 'success123',
     title: 'Success Manager',
     color: '#ec4899',
+    company_code: 'NZG',
   },
 ]
 

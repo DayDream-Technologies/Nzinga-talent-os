@@ -72,10 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const validateCodeAsync = useCallback((code: string) => validateCompanyCodeFromDB(code), [])
 
   const login = useCallback(async (email: string, password: string) => {
-    const u = await loginWithCredentials(email, password)
+    const u = await loginWithCredentials(email, password, companyCode)
     if (u) setUser(u)
     return u
-  }, [])
+  }, [companyCode])
 
   const switchUser = useCallback((u: User) => setUser(u), [])
 
