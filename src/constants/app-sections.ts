@@ -15,6 +15,10 @@ export const APP_SECTIONS: AppSection[] = [
       { id: 'city', label: 'City', type: 'text', required: true },
       { id: 'state', label: 'State', type: 'text', required: true },
       { id: 'zip', label: 'ZIP Code', type: 'text', required: true },
+      { id: 'parent_name', label: 'Parent/Guardian Full Name', type: 'text', requiredIf: { field: 'dob', condition: 'minor' } },
+      { id: 'parent_phone', label: 'Parent/Guardian Phone', type: 'tel', requiredIf: { field: 'dob', condition: 'minor' } },
+      { id: 'parent_email', label: 'Parent/Guardian Email', type: 'email', requiredIf: { field: 'dob', condition: 'minor' } },
+      { id: 'parent_relationship', label: 'Relationship to Applicant', type: 'select', options: ['Parent', 'Legal Guardian', 'Other'], requiredIf: { field: 'dob', condition: 'minor' } },
     ],
   },
   {
@@ -145,11 +149,27 @@ export const APP_SECTIONS: AppSection[] = [
   },
 ]
 
+function isMinor(dob: string | undefined): boolean {
+  if (!dob) return false
+  const birth = new Date(dob)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age < 18
+}
+
 export function validateSection(secId: string, data: ApplicationData): string[] {
   const sec = APP_SECTIONS.find((s) => s.id === secId)
   if (!sec) return []
   return sec.fields
-    .filter((f) => f.required)
+    .filter((f) => {
+      if (f.required) return true
+      if (f.requiredIf?.condition === 'minor') {
+        return isMinor(data[f.requiredIf.field] as string | undefined)
+      }
+      return false
+    })
     .filter((f) => {
       const v = data[f.id]
       if (!v) return true

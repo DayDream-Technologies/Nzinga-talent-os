@@ -64,7 +64,9 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
       save({...local,stage:"ops_processing",team1_decision:"approved",audit_log:auditLog("Approved for Ops Processing","team1_review")});onClose();
     }else if(d==="revision"){
       if(!local.team1_notes){setErr("Correction notes required for revision.");return;}
-      save({...local,stage:"scout_complete",team1_decision:"revision",audit_log:auditLog("Returned for Revision","team1_review")});onClose();
+      save({...local,stage:"scout_complete",team1_decision:"revision",audit_log:auditLog("Returned for Revision","team1_review")});
+      setTasks(prev=>[{id:"tk_"+Date.now(),title:"Revision Required: "+local.name,assigned_to:local.scout_id||"u1",related_talent:local.id,due:new Date(Date.now()+3*86400000).toISOString().slice(0,10),priority:"high",status:"open",created_by:currentUser.id,created_at:new Date().toISOString(),notes:local.team1_notes},...prev]);
+      onClose();
     }else{save({...local,stage:"archived",team1_decision:"rejected",audit_log:auditLog("Rejected at Team 1","team1_review")});onClose();}
   }
   function ops(){
@@ -73,10 +75,13 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
     save({...local,stage:"team2_audit",audit_log:auditLog("Compliance verified → Team 2 Audit","ops_processing")});onClose();
   }
   function t2(d){
-    if(d==="approved")save({...local,stage:"executive_review",team2_decision:"approved",audit_log:auditLog("Approved for Director Review","team2_audit")});
-    else if(d==="returned")save({...local,stage:"ops_processing",team2_decision:"returned",audit_log:auditLog("Returned to Ops","team2_audit")});
-    else save({...local,stage:"archived",team2_decision:"rejected",audit_log:auditLog("Rejected at Team 2","team2_audit")});
-    onClose();
+    if(d==="approved"){save({...local,stage:"executive_review",team2_decision:"approved",audit_log:auditLog("Approved for Director Review","team2_audit")});onClose();}
+    else if(d==="returned"){
+      save({...local,stage:"ops_processing",team2_decision:"returned",audit_log:auditLog("Returned to Ops","team2_audit")});
+      const opsUser=USERS.find(u=>u.role==="ops_specialist");
+      setTasks(prev=>[{id:"tk_"+Date.now(),title:"Returned from Audit: "+local.name,assigned_to:opsUser?opsUser.id:"u3",related_talent:local.id,due:new Date(Date.now()+3*86400000).toISOString().slice(0,10),priority:"high",status:"open",created_by:currentUser.id,created_at:new Date().toISOString(),notes:local.team2_notes||"Returned from Team 2 audit — review and resubmit."},...prev]);
+      onClose();
+    }else{save({...local,stage:"archived",team2_decision:"rejected",audit_log:auditLog("Rejected at Team 2","team2_audit")});onClose();}
   }
   function dir(d){
     if(d==="approved")save({...local,stage:"signed_onboarding",director_decision:"approved",audit_log:auditLog("Approved – Sign Client","executive_review")});
@@ -135,8 +140,8 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
           </div>
         </div>
 
-        {/* ── Incomplete app alert with jump links ── */}
-        {linkedApp&&appHasIncomplete&&(
+        {/* ── Incomplete app alert with jump links (role-gated) ── */}
+        {linkedApp&&appHasIncomplete&&(role==="director"||ROLE_STAGE_ACCESS[role]?.includes(local.stage))&&(
           <div style={{ background:T.amberL,borderBottom:`1px solid ${T.amber}44`,padding:"8px 16px" }}>
             <div style={{ fontSize:12,fontWeight:700,color:T.amber,marginBottom:5 }}>⚠ Linked application has incomplete required sections</div>
             <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
@@ -152,7 +157,8 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
         {/* ── Tabs ── */}
         <div style={{ display:"flex",borderBottom:"1px solid #e5e7eb",background:"#fff",overflowX:"auto" }}>
           {TABS.map(t=>{
-            const hasBadge=(t==="Documents"&&appHasIncomplete)||(t==="History / Notes"&&tHistory.filter(h=>h.flagged).length>0);
+            const showIncomplete=appHasIncomplete&&(role==="director"||ROLE_STAGE_ACCESS[role]?.includes(local.stage));
+            const hasBadge=(t==="Documents"&&showIncomplete)||(t==="History / Notes"&&tHistory.filter(h=>h.flagged).length>0);
             return <div key={t} onClick={()=>setTab(t)} style={{ padding:"7px 14px",cursor:"pointer",fontSize:12,fontWeight:tab===t?600:400,color:tab===t?T.blue:T.t3,borderBottom:`2px solid ${tab===t?T.blue:"transparent"}`,whiteSpace:"nowrap",position:"relative" }}>
               {t}{hasBadge&&<span style={{ marginLeft:4,background:T.red,color:"#fff",borderRadius:"50%",width:14,height:14,fontSize:9,display:"inline-flex",alignItems:"center",justifyContent:"center",fontWeight:700 }}>!</span>}
             </div>;
@@ -175,7 +181,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
               </div>
               <div style={{ display:"flex",gap:6 }}>
                 <Btn sm variant="ghost" onClick={()=>setTab("Documents")}>View App →</Btn>
-                {linkedApp.status==="submitted"&&!isAppComplete(linkedApp)&&<Btn sm variant="warning" onClick={()=>setTab("Documents")}>⚠ Incomplete Fields</Btn>}
+                {linkedApp.status==="submitted"&&!isAppComplete(linkedApp)&&(role==="director"||ROLE_STAGE_ACCESS[role]?.includes(local.stage))&&<Btn sm variant="warning" onClick={()=>setTab("Documents")}>⚠ Incomplete Fields</Btn>}
               </div>
             </div>}
 
@@ -200,6 +206,9 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                 {[["Rep",local.rep_type||"—"],["Commission",local.commission?local.commission+"%":"—"],["YTD","$"+parseInt(local.revenue_ytd||0).toLocaleString()],["Projected","$"+parseInt(local.revenue_projected||0).toLocaleString()]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
               </Section>
             </div>
+            {linkedApp?.data?.parent_name&&<Section title="Parent / Guardian" accent={T.purple} style={{ marginBottom:10 }}>
+              {[["Name",linkedApp.data.parent_name],["Phone",linkedApp.data.parent_phone],["Email",linkedApp.data.parent_email],["Relationship",linkedApp.data.parent_relationship]].filter(([,v])=>v).map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
+            </Section>}
             {role==="scout"&&local.stage==="holding_entry"&&<div style={{ display:"flex",gap:7 }}><Btn variant="primary" onClick={()=>setTab("Scoring")}>Complete Talent Packet →</Btn><Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send Application</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>}
             {role==="team1_lead"&&local.stage==="team1_review"&&<Section title="Gate 1 Decision" accent={T.amber} style={{ marginTop:10 }}><div style={{ marginBottom:8 }}><Lbl>Correction Notes (required for revision)</Lbl><FTextarea value={local.team1_notes} onChange={v=>p("team1_notes",v)} rows={2}/></div><div style={{ display:"flex",gap:7 }}><Btn variant="success" onClick={()=>t1("approved")}>✓ Approve for Ops</Btn><Btn variant="warning" onClick={()=>t1("revision")}>↩ Return for Revision</Btn><Btn variant="danger" onClick={()=>t1("rejected")}>✗ Reject</Btn></div></Section>}
           </div>}

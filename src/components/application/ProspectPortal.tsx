@@ -5,6 +5,7 @@ import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FText
 import { supabaseConfigured } from "@/lib/supabase";
 import { prospectSignup, prospectLogin } from "@/services/auth.service";
 import { fetchApplicationByCode } from "@/services/application.service";
+import { AgreementViewer } from "@/components/application/AgreementViewer";
 
 function ProspectPortal({ applications, onSaveApp, onBack }) {
   const [mode,setMode]=useState("landing");
@@ -150,6 +151,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   const [touched,setTouched]=useState({});
   const [jumpTarget,setJumpTarget]=useState(null);
   const [submitErr,setSubmitErr]=useState("");
+  const [hasScrolledAgreement,setHasScrolledAgreement]=useState(false);
   const autoRef=useRef(null);
   const total=APP_SECTIONS.length;
 
@@ -282,15 +284,22 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
               <div style={{ fontSize:11,color:"rgba(255,255,255,0.35)" }}>Section {currentSection+1} of {total}</div>
             </div>
 
+            {sec.id==="consent"&&<AgreementViewer onScrollComplete={setHasScrolledAgreement} hasScrolledToBottom={hasScrolledAgreement}/>}
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
               {sec.fields.map(field=>{
+                if(field.requiredIf?.condition==="minor"){
+                  const dobVal=data[field.requiredIf.field]||"";
+                  if(!dobVal)return null;
+                  const birth=new Date(dobVal),today=new Date();let age=today.getFullYear()-birth.getFullYear();const m=today.getMonth()-birth.getMonth();if(m<0||(m===0&&today.getDate()<birth.getDate()))age--;
+                  if(age>=18)return null;
+                }
                 const val=data[field.id]||"";
-                const isErr=touched[field.id]&&field.required&&!val.trim();
+                const isErr=touched[field.id]&&(field.required||field.requiredIf)&&!val.trim();
                 const isFull=field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload";
                 const inputStyle={background:"rgba(255,255,255,0.08)",border:`1px solid ${isErr?"#dc2626":"rgba(255,255,255,0.12)"}`,borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:12,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
                 return (
                   <div key={field.id} style={{ gridColumn:isFull?"1/-1":"auto" }}>
-                    {field.type!=="checkbox"&&field.type!=="file_upload"&&<div style={{ fontSize:11,color:isErr?"#fca5a5":"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:3 }}>{field.label}{field.required&&<span style={{ color:"#ef4444" }}> *</span>}</div>}
+                    {field.type!=="checkbox"&&field.type!=="file_upload"&&<div style={{ fontSize:11,color:isErr?"#fca5a5":"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:3 }}>{field.label}{(field.required||field.requiredIf)&&<span style={{ color:"#ef4444" }}> *</span>}</div>}
                     {isErr&&<div style={{ fontSize:10,color:"#fca5a5",marginBottom:3,fontWeight:600 }}>⚠ Required</div>}
                     {(field.type==="text"||field.type==="url")&&<input value={val} onChange={e=>{updateField(field.id,e.target.value);setTouched(t=>({...t,[field.id]:true}));}} placeholder={field.label} style={inputStyle}/>}
                     {field.type==="email"&&<input type="email" value={val} onChange={e=>updateField(field.id,e.target.value)} placeholder="email@example.com" style={inputStyle}/>}
@@ -300,10 +309,13 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                     {field.type==="select"&&<select value={val} onChange={e=>updateField(field.id,e.target.value)} style={{ ...inputStyle,cursor:"pointer" }}><option value="">Select…</option>{(field.options||[]).map(o=><option key={o} value={o}>{o}</option>)}</select>}
                     {field.type==="multicheck"&&<div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>{(field.options||[]).map(o=>{const sel=(val||"").split(",").filter(Boolean);const checked=sel.includes(o);return <label key={o} style={{ display:"flex",alignItems:"center",gap:5,cursor:"pointer",padding:"4px 10px",borderRadius:20,background:checked?"rgba(124,58,237,0.3)":"rgba(255,255,255,0.05)",border:`1px solid ${checked?"#7c3aed":"rgba(255,255,255,0.1)"}`,fontSize:12,color:checked?"#c4b5fd":"rgba(255,255,255,0.5)" }}><input type="checkbox" checked={checked} onChange={e=>{const n=e.target.checked?[...sel,o]:sel.filter(x=>x!==o);updateField(field.id,n.join(","));}} style={{ display:"none" }}/>{o}</label>;})}
                     {isErr&&<div style={{ width:"100%",fontSize:10,color:"#fca5a5",fontWeight:600 }}>⚠ Select at least one</div>}</div>}
-                    {field.type==="checkbox"&&<label style={{ display:"flex",alignItems:"flex-start",gap:8,cursor:"pointer",padding:"10px 12px",borderRadius:8,background:val?"rgba(22,163,74,0.15)":isErr?"rgba(220,38,38,0.1)":"rgba(255,255,255,0.04)",border:`1px solid ${val?"rgba(22,163,74,0.3)":isErr?"rgba(220,38,38,0.5)":"rgba(255,255,255,0.1)"}` }}>
-                      <div onClick={()=>updateField(field.id,val?"":"yes")} style={{ width:18,height:18,borderRadius:4,background:val?"#16a34a":"rgba(255,255,255,0.1)",border:`2px solid ${val?"#16a34a":"rgba(255,255,255,0.2)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:"pointer",marginTop:1 }}>{val&&<span style={{ color:"#fff",fontSize:10,fontWeight:700 }}>✓</span>}</div>
-                      <span style={{ fontSize:12,color:"rgba(255,255,255,0.65)",lineHeight:1.5 }}>{field.label}</span>
-                    </label>}
+                    {field.type==="checkbox"&&(()=>{
+                      const consentDisabled=sec.id==="consent"&&!hasScrolledAgreement&&field.id.startsWith("consent_");
+                      return <label style={{ display:"flex",alignItems:"flex-start",gap:8,cursor:consentDisabled?"not-allowed":"pointer",padding:"10px 12px",borderRadius:8,background:val?"rgba(22,163,74,0.15)":isErr?"rgba(220,38,38,0.1)":"rgba(255,255,255,0.04)",border:`1px solid ${val?"rgba(22,163,74,0.3)":isErr?"rgba(220,38,38,0.5)":"rgba(255,255,255,0.1)"}`,opacity:consentDisabled?0.5:1 }}>
+                        <div onClick={()=>{if(!consentDisabled)updateField(field.id,val?"":"yes");}} style={{ width:18,height:18,borderRadius:4,background:val?"#16a34a":"rgba(255,255,255,0.1)",border:`2px solid ${val?"#16a34a":"rgba(255,255,255,0.2)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,cursor:consentDisabled?"not-allowed":"pointer",marginTop:1 }}>{val&&<span style={{ color:"#fff",fontSize:10,fontWeight:700 }}>✓</span>}</div>
+                        <span style={{ fontSize:12,color:"rgba(255,255,255,0.65)",lineHeight:1.5 }}>{field.label}</span>
+                      </label>;
+                    })()}
                     {field.type==="file_upload"&&<div style={{ border:`2px dashed ${isErr?"#dc2626":val?"#4ade80":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:12,background:val?"rgba(22,163,74,0.08)":isErr?"rgba(220,38,38,0.08)":"rgba(255,255,255,0.03)",cursor:"pointer",position:"relative" }} onClick={()=>document.getElementById("fu_"+field.id)&&document.getElementById("fu_"+field.id).click()}>
                       <input id={"fu_"+field.id} type="file" accept="image/*,.pdf" onChange={e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>updateField(field.id,ev.target.result,file.name,file.type);r.readAsDataURL(file);}} style={{ display:"none" }}/>
                       <div style={{ fontSize:11,color:isErr?"#fca5a5":"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:4 }}>{field.label}{field.required&&<span style={{ color:"#ef4444" }}> *</span>}</div>

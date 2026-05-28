@@ -35,6 +35,24 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
         </div>
       )}
 
+      {/* Director idle pipeline alert */}
+      {role==="director"&&(()=>{
+        const now=Date.now();const idleStages=STAGES.filter(s=>s!=="archived"&&s!=="not_viable").filter(stg=>{
+          const inStage=talents.filter(t=>t.stage===stg);if(!inStage.length)return false;
+          const latest=Math.max(...inStage.map(t=>{const log=t.audit_log||[];return log.length?Date.parse(log[log.length-1].ts):0;}));
+          return latest>0&&(now-latest)>24*60*60*1000;
+        });
+        if(!idleStages.length)return null;
+        return(<div style={{ background:"#fef3c7",border:"1px solid #f59e0b55",borderRadius:8,padding:"10px 14px",marginBottom:12 }}>
+          <div style={{ fontWeight:700,color:T.amber,fontSize:13,marginBottom:4 }}>⏰ Pipeline Idle Alert</div>
+          <div style={{ fontSize:12,color:T.t2 }}>{idleStages.map(s=>{
+            const inStage=talents.filter(t=>t.stage===s);const latest=Math.max(...inStage.map(t=>{const log=t.audit_log||[];return log.length?Date.parse(log[log.length-1].ts):0;}));
+            const hrs=Math.round((now-latest)/3600000);
+            return <div key={s} style={{ marginBottom:2 }}>• <strong>{STAGE_LABELS[s]}</strong> — no activity for {hrs}h ({inStage.length} talent{inStage.length>1?"s":""})</div>;
+          })}</div>
+        </div>);
+      })()}
+
       {/* My Queue */}
       <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,marginBottom:14,overflow:"hidden" }}>
         <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 14px",borderBottom:"2px solid "+T.blue,background:"#fafbfc" }}>

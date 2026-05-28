@@ -17,6 +17,7 @@ export interface AppField {
   label: string
   type: AppFieldType
   required?: boolean
+  requiredIf?: { field: string; condition: 'minor' }
   options?: string[]
   note?: string
 }
