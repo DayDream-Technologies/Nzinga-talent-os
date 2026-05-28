@@ -19,15 +19,23 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
 
   function startNew(){
     if(!newData.talent_name||!newData.talent_email)return;
+    const normalizedEmail=newData.talent_email.trim().toLowerCase();
+    const hasSubmittedForEmail=Object.values(applications).some(a=>
+      a.status==="submitted"&&String(a.talent_email||"").trim().toLowerCase()===normalizedEmail
+    );
+    if(hasSubmittedForEmail){
+      setLookupErr("An application has already been submitted with this email address.");
+      return;
+    }
     const id="app_"+Date.now();
     const code=newData.talent_name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999);
-    const app={id,talent_id:null,access_code:code,talent_name:newData.talent_name,talent_email:newData.talent_email,status:"in_progress",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{}};
+    const app={id,talent_id:null,access_code:code,talent_name:newData.talent_name,talent_email:newData.talent_email.trim(),status:"in_progress",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{}};
     onSaveApp(app);
     setFoundApp(app);
     setMode("form");
   }
 
-  if(mode==="form"&&foundApp) return <ApplicationForm app={foundApp} onSave={updated=>{onSaveApp(updated);setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
+  if(mode==="form"&&foundApp) return <ApplicationForm applications={applications} app={foundApp} onSave={updated=>{onSaveApp(updated);setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
 
   return (
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44,#162038)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",position:"relative",overflow:"hidden" }}>
@@ -62,6 +70,7 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
                 <input type={type} value={newData[k]} onChange={e=>setNewData(p=>({...p,[k]:e.target.value}))} placeholder={ph} style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
               </div>
             ))}
+            {lookupErr&&<div style={{ color:"#fca5a5",fontSize:12,marginBottom:8 }}>{lookupErr}</div>}
             <button onClick={startNew} style={{ width:"100%",padding:"11px",background:"linear-gradient(135deg,#7c3aed,#2563eb)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginTop:4 }}>Begin Application →</button>
           </div>
         )}
@@ -84,7 +93,7 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
 }
 
 // ─── APPLICATION FORM (multi-step, autosave, file upload, validation) ─────────
-function ApplicationForm({ app, onSave, onExit }) {
+function ApplicationForm({ applications, app, onSave, onExit }) {
   const [data,setData]=useState({...app.data});
   const [currentSection,setCurrentSection]=useState(0);
   const [completedSections,setCompletedSections]=useState(new Set(app.completed_sections||[]));
@@ -92,6 +101,7 @@ function ApplicationForm({ app, onSave, onExit }) {
   const [submitted,setSubmitted]=useState(app.status==="submitted");
   const [touched,setTouched]=useState({});
   const [jumpTarget,setJumpTarget]=useState(null);
+  const [submitErr,setSubmitErr]=useState("");
   const autoRef=useRef(null);
   const total=APP_SECTIONS.length;
 
@@ -140,6 +150,15 @@ function ApplicationForm({ app, onSave, onExit }) {
     APP_SECTIONS.forEach(s=>{allMissing[s.id]=validateSection(s.id,data);});
     const hasAny=Object.values(allMissing).some(arr=>arr.length>0);
     if(hasAny){const allFields={};Object.values(allMissing).flat().forEach(id=>{allFields[id]=true;});setTouched(allFields);return;}
+    const emailToCheck=String(data.email||app.talent_email||"").trim().toLowerCase();
+    const duplicateSubmitted=Object.values(applications).some(a=>
+      a.id!==app.id&&a.status==="submitted"&&String((a.data&&a.data.email)||a.talent_email||"").trim().toLowerCase()===emailToCheck
+    );
+    if(duplicateSubmitted){
+      setSubmitErr("An application with this email has already been submitted.");
+      return;
+    }
+    setSubmitErr("");
     const updated={...app,data,status:"submitted",last_saved:new Date().toISOString(),completed_sections:APP_SECTIONS.map(s=>s.id),submitted_at:new Date().toISOString()};
     onSave(updated);setSubmitted(true);
   }
@@ -259,6 +278,7 @@ function ApplicationForm({ app, onSave, onExit }) {
                 </button>
               </div>
             </div>
+            {submitErr&&<div style={{ marginTop:10,fontSize:12,color:"#fca5a5",fontWeight:600 }}>{submitErr}</div>}
           </div>
         </div>
       </div>

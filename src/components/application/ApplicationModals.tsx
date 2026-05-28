@@ -4,15 +4,15 @@ import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 
 function SendApplicationModal({ talent, onSend, onClose }) {
-  const [method,setMethod]=useState("email");
   const [email,setEmail]=useState("");
   const [sent,setSent]=useState(false);
   const [sending,setSending]=useState(false);
   const [sendErr,setSendErr]=useState("");
   const [code]=useState(talent.name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999));
+  const method="email";
 
   async function send(){
-    const app={id:"app_"+talent.id+"_"+Date.now(),talent_id:talent.id,access_code:code,talent_name:talent.name,talent_email:email||"(in-person)",status:"sent",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{},delivery_method:method};
+    const app={id:"app_"+talent.id+"_"+Date.now(),talent_id:talent.id,access_code:code,talent_name:talent.name,talent_email:email||"",status:"sent",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{},delivery_method:method};
     if(method==="email"&&email){
       setSending(true);setSendErr("");
       try {
@@ -55,25 +55,12 @@ function SendApplicationModal({ talent, onSend, onClose }) {
           <button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>
         </div>
         <div style={{ padding:18 }}>
-          <div style={{ marginBottom:14 }}>
-            <Lbl>Delivery Method</Lbl>
-            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8 }}>
-              {[["email","📧","Email Link"],["inperson","🤝","In-Person Code"],["link","🔗","Copy Link"]].map(([v,icon,label])=>(
-                <div key={v} onClick={()=>setMethod(v)} style={{ padding:"10px 8px",borderRadius:8,border:`2px solid ${method===v?T.purple:"#e5e7eb"}`,background:method===v?T.purpleL:"#fff",cursor:"pointer",textAlign:"center" }}>
-                  <div style={{ fontSize:18,marginBottom:3 }}>{icon}</div>
-                  <div style={{ fontSize:11,fontWeight:600,color:method===v?T.purple:T.t2 }}>{label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          {method==="email"&&<div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,fontSize:11,color:"#15803d" }}>📧 Will email invitation with code <strong>{code}</strong></div>}</div>}
-          {method==="inperson"&&<div style={{ marginBottom:12,padding:14,background:T.purpleL,border:`1px solid ${T.purple}33`,borderRadius:8,textAlign:"center" }}><div style={{ fontSize:11,color:T.purple,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:3 }}>Show this code to the talent</div><div style={{ fontSize:30,fontWeight:800,color:T.purple,letterSpacing:"0.2em" }}>{code}</div><div style={{ fontSize:11,color:T.t4,marginTop:4 }}>They enter this at the portal to start their application</div></div>}
-          {method==="link"&&<div style={{ marginBottom:12 }}><Lbl>Shareable Link</Lbl><div style={{ display:"flex",gap:6 }}><FInput value={`https://nzinga.co/apply?code=${code}`} readOnly style={{ fontFamily:"monospace",fontSize:11 }}/><Btn sm variant="ghost" onClick={()=>{}}>Copy</Btn></div><div style={{ marginTop:6,fontSize:11,color:T.t4 }}>Send via text, DM, or any platform</div></div>}
+          <div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,fontSize:11,color:"#15803d" }}>📧 Will email invitation with code <strong>{code}</strong></div>}</div>
           <div style={{ padding:"8px 10px",background:"#f8f9fb",border:"1px solid #e5e7eb",borderRadius:6,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
             <span style={{ fontSize:11,color:T.t3 }}>Generated code:</span>
             <span style={{ fontSize:13,fontWeight:800,color:T.purple,letterSpacing:"0.12em" }}>{code}</span>
           </div>
-          <div style={{ display:"flex",gap:8 }}><Btn variant="purple" onClick={send} disabled={sending} full>{sending?"⟳ Sending…":method==="email"?"📧 Send Invitation":method==="inperson"?"🤝 Create Code":"🔗 Generate Link"}</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div>
+          <div style={{ display:"flex",gap:8 }}><Btn variant="purple" onClick={send} disabled={sending} full>{sending?"⟳ Sending…":"📧 Send Invitation"}</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div>
         </div>
       </div>
     </div>

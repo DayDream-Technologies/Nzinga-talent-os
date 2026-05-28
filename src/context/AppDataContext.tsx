@@ -100,6 +100,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             stage: 'holding_entry',
             niches: [],
             scout_id: null,
+            created_by: null,
             created_at: app.created_at || new Date().toISOString(),
             social_handle: '',
             follower_count: '',

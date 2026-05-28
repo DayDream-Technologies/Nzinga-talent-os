@@ -7,6 +7,7 @@ function Pipeline({ talents, onSelectTalent, userRole }) {
   const accessible=ROLE_STAGE_ACCESS[userRole]||[];
   const visibleTalents=userRole==="director"?talents:talents.filter(t=>accessible.includes(t.stage));
   return <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}>
+    <div style={{ fontSize:16,fontWeight:700,color:T.t1,marginBottom:12,fontFamily:"Georgia,serif" }}>Prospects</div>
     {accessible.filter(s=>s!=="not_viable").map(stage=>{
       const group=visibleTalents.filter(t=>t.stage===stage); if(!group.length)return null; const c=STAGE_COLORS[stage];
       return <div key={stage} style={{ marginBottom:16 }}>

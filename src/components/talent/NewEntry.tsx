@@ -5,14 +5,16 @@ import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FText
 
 function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
   const [entryType,setEntryType]=useState("manual");
-  const [f,setF]=useState({name:"",social_handle:"",follower_count:"",er_pct:"",platform:"",location:""});
+  const [f,setF]=useState({name:"",phone:"",email:"",city:"",state:"",social_handle:"",follower_count:"",er_pct:"",platform:"",location:""});
   const [docs,setDocs]=useState({});
   const p=(k,v)=>setF(x=>({...x,[k]:v}));
   function saveDoc(docId,data,name,type){setDocs(x=>({...x,[docId]:{data,name,type}}));}
 
   function save(){
-    if(!f.name||!f.social_handle)return;
+    if(!f.name||!f.phone||!f.email||!f.city||!f.state)return;
+    const location=[f.city,f.state].filter(Boolean).join(", ");
     const t={id:"t"+Date.now(),...f,stage:"holding_entry",niches:[],scout_id:currentUser.id,created_at:new Date().toISOString(),last_contacted:new Date().toISOString().split("T")[0],
+      created_by:currentUser.id,location,
       pillar_scores:[0,0,0,0,0],pillar_rationales:["","","","",""],jordan_score:0,revenue_path:"",scout_summary:"",team1_notes:"",team1_decision:null,compliance:{gov_id:!!docs.gov_id,tax_doc:!!docs.tax_doc,banking:!!docs.banking},rep_type:"",commission:"",term_length:"",team2_notes:"",team2_decision:null,director_decision:null,portal_setup:false,technical_routing:false,warm_handoff:"",warm_handoff_confirmed:false,revenue_ytd:"0",revenue_projected:"0",
       application_id:null,application_status:null,uploaded_docs:docs,
       audit_log:[{user:currentUser.name,role:ROLE_LABELS[currentUser.role],action:"Created holding record manually",stage:"holding_entry",ts:new Date().toISOString()}]};
@@ -35,8 +37,8 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
         <div style={{ padding:"10px 14px",borderBottom:"2px solid "+T.purple,background:"#f8f9fb" }}><span style={{ fontSize:12,fontWeight:700,color:T.t1,textTransform:"uppercase",letterSpacing:"0.06em" }}>New Holding Entry</span></div>
         <div style={{ padding:14 }}>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14 }}>
-            {[["Full Name","name","Alex Rivera"],["Social Handle","social_handle","@handle"],["Followers","follower_count","800K"],["ER%","er_pct","5.2"],["Platform","platform","Instagram / TikTok"],["Location","location","City, State"]].map(([l,k,ph])=>(
-              <div key={k}><Lbl>{l}</Lbl><FInput value={f[k]} onChange={v=>p(k,v)} placeholder={ph}/></div>
+            {[["Full Name","name","Alex Rivera",true],["Phone","phone","(555) 000-0000",true],["Email","email","talent@email.com",true],["City","city","Atlanta",true],["State","state","GA",true],["Social Handle","social_handle","@handle",false],["Followers","follower_count","800K",false],["ER%","er_pct","5.2",false],["Platform","platform","Instagram / TikTok",false]].map(([l,k,ph,required])=>(
+              <div key={k}><Lbl required={required}>{l}</Lbl><FInput value={f[k]} onChange={v=>p(k,v)} placeholder={ph}/></div>
             ))}
           </div>
           {/* Document uploads */}
@@ -61,7 +63,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
         <div style={{ padding:"10px 14px",borderBottom:"2px solid "+T.purple,background:"#f8f9fb" }}><span style={{ fontSize:12,fontWeight:700,color:T.t1,textTransform:"uppercase",letterSpacing:"0.06em" }}>Send Application to Prospect</span></div>
         <div style={{ padding:14 }}>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12 }}>
-            {[["Name","name","Alex Rivera"],["Social Handle","social_handle","@handle"],["Followers","follower_count","800K"],["Platform","platform","Instagram/TikTok"],["Location","location","City, State"]].map(([l,k,ph])=>(
+            {[["Name","name","Alex Rivera"],["Email","email","talent@email.com"],["Phone","phone","(555) 000-0000"],["City","city","Atlanta"],["State","state","GA"],["Social Handle","social_handle","@handle"],["Followers","follower_count","800K"],["Platform","platform","Instagram/TikTok"]].map(([l,k,ph])=>(
               <div key={k}><Lbl>{l}</Lbl><FInput value={f[k]} onChange={v=>p(k,v)} placeholder={ph}/></div>
             ))}
           </div>
@@ -69,7 +71,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
             📧 Creates a holding record and sends the prospect a link to complete their own application with document uploads.
           </div>
           <div style={{ display:"flex",gap:8 }}>
-            <Btn variant="purple" onClick={()=>{if(!f.name)return;save();if(onSendApp){const t={id:"t_tmp",name:f.name,...f};onSendApp(t);}}}>Create & Send →</Btn>
+            <Btn variant="purple" onClick={()=>{if(!f.name||!f.email||!f.phone||!f.city||!f.state)return;save();if(onSendApp){const t={id:"t_tmp",name:f.name,...f};onSendApp(t);}}}>Create & Send →</Btn>
             <Btn onClick={onCancel}>Cancel</Btn>
           </div>
         </div>

@@ -34,6 +34,7 @@ export interface Talent {
   stage: TalentStage
   niches: string[]
   scout_id: string | null
+  created_by?: string | null
   created_at: string
   social_handle: string
   follower_count: string

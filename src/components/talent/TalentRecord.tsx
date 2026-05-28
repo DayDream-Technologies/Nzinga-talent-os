@@ -17,6 +17,8 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
   const tTasks=allTasks.filter(t=>t.related_talent===local.id);
   const [newNote,setNewNote]=useState(""); const [noteType,setNoteType]=useState("note");
   const scoutUser=USERS.find(u=>u.id===local.scout_id);
+  const creatorUser=USERS.find(u=>u.id===local.created_by);
+  const createdByLabel=local.created_by===null?"Prospect":creatorUser?`${ROLE_LABELS[creatorUser.role]} (${creatorUser.name})`:"System";
   const linkedApp=local.application_id?applications[local.application_id]:null;
 
   // Incomplete section detection for linked app
@@ -54,6 +56,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
     setErr("");save({...local,stage:"scout_complete",audit_log:auditLog("Completed Talent Packet → Scout Complete","scout_complete")});onClose();
   }
   function scoutArchive(){save({...local,stage:"not_viable",audit_log:auditLog("Marked Not Viable","not_viable")});onClose();}
+  function markLost(){save({...local,stage:"not_viable",audit_log:auditLog("Marked Lost","not_viable")});onClose();}
   function t1(d){
     if(d==="approved"){
       for(let i=0;i<5;i++){if(local.pillar_scores[i]<3){setErr(`Pillar ${i+1} below minimum 3.`);return;}}
@@ -186,18 +189,18 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10 }}>
               <Section title="Lead Info" accent={T.blue}>
-                {[["Scout",scoutUser?.name||"—"],["Stage",STAGE_LABELS[local.stage]],["Created",new Date(local.created_at).toLocaleDateString()]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
+                {[["Scout",scoutUser?.name||"—"],["Created By",createdByLabel],["Stage",STAGE_LABELS[local.stage]],["Created",new Date(local.created_at).toLocaleDateString()]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
                 {role==="scout"&&local.stage==="holding_entry"&&<div style={{ marginTop:6 }}><Lbl>Location</Lbl><FInput value={local.location} onChange={v=>p("location",v)} placeholder="City, State"/><Lbl style={{ marginTop:4 }}>Platform</Lbl><FInput value={local.platform} onChange={v=>p("platform",v)} placeholder="Instagram / TikTok"/></div>}
               </Section>
               <Section title="Social Profile" accent={T.cyan}>
                 {[["Handle",local.social_handle],["Followers",local.follower_count],["ER%",local.er_pct?local.er_pct+"%":"—"],["Platform",local.platform||"—"]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1 }}>{v}</span></div>)}
-                {role==="scout"&&local.stage==="holding_entry"&&<div style={{ marginTop:6 }}><Lbl>Niches</Lbl><div style={{ display:"flex",gap:5,flexWrap:"wrap" }}>{["Model","Actor","Influencer","Athlete","Musician","Comedian","Gamer","Beauty/Fashion","Fitness"].map(n=><label key={n} style={{ display:"flex",alignItems:"center",gap:3,fontSize:11,cursor:"pointer",color:local.niches.includes(n)?T.purple:T.t3 }}><input type="checkbox" checked={local.niches.includes(n)} onChange={e=>p("niches",e.target.checked?[...local.niches,n]:local.niches.filter(x=>x!==n))}/>{n}</label>)}</div></div>}
+                {role==="scout"&&local.stage==="holding_entry"&&<div style={{ marginTop:6 }}><Lbl>Niches</Lbl><div style={{ display:"flex",gap:5,flexWrap:"wrap" }}>{["Model","Actor","Influencer","Athlete"].map(n=><label key={n} style={{ display:"flex",alignItems:"center",gap:3,fontSize:11,cursor:"pointer",color:local.niches.includes(n)?T.purple:T.t3 }}><input type="checkbox" checked={local.niches.includes(n)} onChange={e=>p("niches",e.target.checked?[...local.niches,n]:local.niches.filter(x=>x!==n))}/>{n}</label>)}</div></div>}
               </Section>
               <Section title="Revenue" accent={T.green}>
                 {[["Rep",local.rep_type||"—"],["Commission",local.commission?local.commission+"%":"—"],["YTD","$"+parseInt(local.revenue_ytd||0).toLocaleString()],["Projected","$"+parseInt(local.revenue_projected||0).toLocaleString()]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
               </Section>
             </div>
-            {role==="scout"&&local.stage==="holding_entry"&&<div style={{ display:"flex",gap:7 }}><Btn variant="primary" onClick={()=>setTab("Scoring")}>Complete Talent Packet →</Btn><Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send Application</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn></div>}
+            {role==="scout"&&local.stage==="holding_entry"&&<div style={{ display:"flex",gap:7 }}><Btn variant="primary" onClick={()=>setTab("Scoring")}>Complete Talent Packet →</Btn><Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send Application</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>}
             {role==="team1_lead"&&local.stage==="team1_review"&&<Section title="Gate 1 Decision" accent={T.amber} style={{ marginTop:10 }}><div style={{ marginBottom:8 }}><Lbl>Correction Notes (required for revision)</Lbl><FTextarea value={local.team1_notes} onChange={v=>p("team1_notes",v)} rows={2}/></div><div style={{ display:"flex",gap:7 }}><Btn variant="success" onClick={()=>t1("approved")}>✓ Approve for Ops</Btn><Btn variant="warning" onClick={()=>t1("revision")}>↩ Return for Revision</Btn><Btn variant="danger" onClick={()=>t1("rejected")}>✗ Reject</Btn></div></Section>}
           </div>}
 
@@ -222,7 +225,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                   <div style={{ fontSize:12,color:local.jordan_score>=3.5?T.green:T.red,fontWeight:600 }}>{local.jordan_score>=3.5?"✓ Meets 3.5 threshold":local.jordan_score>0?"✗ Below 3.5 threshold — cannot advance":"Enter pillar scores above"}</div>
                 </div>
               </Section>
-              <div style={{ display:"flex",gap:7,marginTop:10 }}><Btn variant="primary" onClick={scoutSubmit}>Submit Packet → Team 1 Review</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn></div>
+              <div style={{ display:"flex",gap:7,marginTop:10 }}><Btn variant="primary" onClick={scoutSubmit} disabled={local.jordan_score<3.5} title={local.jordan_score<3.5?"Jordan Score must be at least 3.5 to send up.":""}>Submit Packet → Team 1 Review</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>
             </div>:<div>
               {PILLAR_NAMES.map((name,i)=><Section key={i} title={`P${i+1}: ${name}`} accent={local.pillar_scores[i]>=3?T.green:local.pillar_scores[i]>0?T.red:T.t5} style={{ marginBottom:8 }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4 }}><div style={{ flex:1,marginRight:10 }}><ScoreBar score={local.pillar_scores[i]}/></div><div style={{ width:32,height:32,borderRadius:6,background:local.pillar_scores[i]>=3?T.greenL:T.redL,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:15,color:local.pillar_scores[i]>=3?T.green:T.red }}>{local.pillar_scores[i]}</div></div>
@@ -261,23 +264,6 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
               📎 Documents are sourced from the prospect's application portal uploads and staff uploads. Viewable by Ops Specialists and above for the Director Ready Packet.
             </div>
 
-            {/* Incomplete app section alert — with jump links */}
-            {linkedApp&&appHasIncomplete&&(
-              <div style={{ background:T.redL,border:`1px solid ${T.red}44`,borderRadius:8,padding:"9px 12px",marginBottom:12 }}>
-                <div style={{ fontSize:12,fontWeight:700,color:T.red,marginBottom:6 }}>⚠ Application has required fields missing — cannot auto-advance until resolved</div>
-                {APP_SECTIONS.filter(s=>(appMissingMap[s.id]||[]).length>0).map(s=>(
-                  <div key={s.id} style={{ fontSize:11,color:T.red,marginBottom:4,display:"flex",alignItems:"center",gap:8 }}>
-                    <span style={{ fontWeight:700 }}>→ {s.icon} {s.label}</span>
-                    <span style={{ color:T.t3 }}>({(appMissingMap[s.id]||[]).length} missing field{(appMissingMap[s.id]||[]).length>1?"s":""})</span>
-                    {/* List missing fields */}
-                    {(appMissingMap[s.id]||[]).map(fieldId=>{
-                      const field=s.fields.find(f=>f.id===fieldId);
-                      return <span key={fieldId} style={{ background:"#fef2f2",border:"1px solid #fca5a5",borderRadius:4,padding:"1px 6px",fontSize:10,color:T.red,fontWeight:600 }}>{field?.label||fieldId}</span>;
-                    })}
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Linked application review — always viewable in profile */}
             {linkedApp&&<div style={{ marginBottom:12,background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,overflow:"hidden" }}>
@@ -305,7 +291,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                 const appDocData=linkedApp&&linkedApp.data&&linkedApp.data["doc_"+doc.id];
                 const appDoc=appDocData?{data:appDocData,name:linkedApp.data["doc_"+doc.id+"_name"]||doc.label,type:linkedApp.data["doc_"+doc.id+"_type"]||"image/jpeg"}:null;
                 const docData=staffDoc||appDoc;
-                const source=staffDoc?"Staff Upload":appDoc?"Application Upload":null;
+                const source=staffDoc?"Staff Upload":appDoc?"Prospect Upload":null;
                 return <div key={doc.id} style={{ border:`1px solid ${docData?"#86efac":"#fca5a5"}`,borderRadius:8,padding:12,background:docData?"#f0fdf4":"#fff5f5" }}>
                   <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:8 }}>
                     <span style={{ fontSize:18 }}>{doc.icon}</span>
@@ -345,7 +331,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                 <div><div style={{ fontSize:9,color:T.t4,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3 }}>Scout Assessment</div><p style={{ fontSize:12,color:T.t2,margin:0,lineHeight:1.7 }}>{local.scout_summary||"—"}</p></div>
               </div>
             </div>
-            {role==="director"&&local.stage==="executive_review"&&<div style={{ display:"flex",gap:8,marginTop:12 }}><Btn variant="success" style={{ padding:"7px 18px",fontSize:13 }} onClick={()=>dir("approved")}>✓ Approve — Sign Client</Btn><Btn variant="ghost" onClick={()=>dir("hold")}>⏸ Hold</Btn><Btn variant="danger" onClick={()=>dir("rejected")}>✗ Reject</Btn></div>}
+            {role==="director"&&local.stage==="executive_review"&&<div style={{ display:"flex",gap:8,marginTop:12 }}><Btn variant="success" style={{ padding:"7px 18px",fontSize:13 }} onClick={()=>dir("approved")}>✓ Approve — Sign Client</Btn><Btn variant="ghost" onClick={()=>dir("hold")}>⏸ Hold</Btn><Btn variant="danger" onClick={()=>dir("rejected")}>✗ Reject</Btn><Btn variant="warning" onClick={markLost}>Mark Lost</Btn></div>}
           </div>:<div style={{ color:T.t4,fontSize:12,padding:"16px 0" }}>Executive summary restricted to leadership roles.</div>)}
 
           {/* ─ ONBOARDING ─ */}
