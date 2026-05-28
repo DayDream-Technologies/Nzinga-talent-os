@@ -157,7 +157,6 @@ export const HISTORY_SEED: HistoryEntry[] = [
   },
 ]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const talentsRaw = [
   {
     id: 't1',
