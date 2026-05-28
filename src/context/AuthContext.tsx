@@ -29,18 +29,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isRestoringSession, setIsRestoringSession] = useState(supabaseConfigured)
 
   useEffect(() => {
-    if (!supabaseConfigured) return
-    restoreSession().then((u) => {
-      if (u) setUser(u)
+    if (!supabaseConfigured) {
       setIsRestoringSession(false)
-    }).catch(() => setIsRestoringSession(false))
+      return
+    }
+
+    let settled = false
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        setIsRestoringSession(false)
+      }
+    }, 3000)
+
+    restoreSession().then((u) => {
+      if (!settled) {
+        settled = true
+        clearTimeout(timeout)
+        if (u) setUser(u)
+        setIsRestoringSession(false)
+      }
+    }).catch(() => {
+      if (!settled) {
+        settled = true
+        clearTimeout(timeout)
+        setIsRestoringSession(false)
+      }
+    })
 
     const { data } = onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null)
       }
     })
-    return () => { data.subscription.unsubscribe() }
+    return () => {
+      clearTimeout(timeout)
+      data.subscription.unsubscribe()
+    }
   }, [])
 
   const validateCode = useCallback((code: string) => validateCompanyCode(code), [])
@@ -74,16 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [user, companyCode, isRestoringSession, validateCode, validateCodeAsync, login, switchUser, logout],
   )
-
-  if (isRestoringSession) {
-    return (
-      <AuthContext.Provider value={value}>
-        <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ color: '#666', fontSize: 14 }}>Loading...</p>
-        </div>
-      </AuthContext.Provider>
-    )
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

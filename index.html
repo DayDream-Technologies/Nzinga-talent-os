@@ -8,6 +8,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot-error" style="display:none;padding:32px;font-family:monospace;color:#dc2626;white-space:pre-wrap;"></div>
+    <script>
+      window.addEventListener('error', function(e) {
+        var el = document.getElementById('boot-error');
+        if (el) { el.style.display = 'block'; el.textContent += e.message + '\n' + (e.filename || '') + ':' + (e.lineno || '') + '\n\n'; }
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var el = document.getElementById('boot-error');
+        if (el) { el.style.display = 'block'; el.textContent += 'Unhandled Promise: ' + (e.reason && e.reason.message || e.reason || 'unknown') + '\n\n'; }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

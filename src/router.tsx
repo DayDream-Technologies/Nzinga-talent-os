@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AppDataProvider } from '@/context/AppDataContext'
 import { AppShell } from '@/components/layout/AppShell'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { CompanyCodePage } from '@/pages/CompanyCodePage'
@@ -64,7 +65,9 @@ export const router = createBrowserRouter([
     path: '/portal',
     element: (
       <ErrorBoundary>
-        <ProspectPortalPage />
+        <AppDataProvider>
+          <ProspectPortalPage />
+        </AppDataProvider>
       </ErrorBoundary>
     ),
   },
@@ -72,7 +75,11 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        element: <AppShell />,
+        element: (
+          <AppDataProvider>
+            <AppShell />
+          </AppDataProvider>
+        ),
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
           {

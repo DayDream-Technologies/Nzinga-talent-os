@@ -5,7 +5,7 @@ import { COMPANY_CODES } from '@/constants/roles'
 
 export function CompanyCodePage() {
   const navigate = useNavigate()
-  const { setCompanyCode, validateCode } = useAuth()
+  const { setCompanyCode } = useAuth()
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
 
@@ -16,7 +16,7 @@ export function CompanyCodePage() {
       setError('Please enter a company code.')
       return
     }
-    if (validateCode(trimmed)) {
+    if (COMPANY_CODES[trimmed]) {
       setCompanyCode(trimmed)
       navigate('/login')
     } else {
