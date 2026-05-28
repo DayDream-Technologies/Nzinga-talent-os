@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
+import { isEmailJsConfigured, sendApplicationInviteEmail } from "@/lib/email";
 
 function SendApplicationModal({ talent, onSend, onClose }) {
   const [email,setEmail]=useState("");
@@ -15,14 +16,12 @@ function SendApplicationModal({ talent, onSend, onClose }) {
     const app={id:"app_"+talent.id+"_"+Date.now(),talent_id:talent.id,access_code:code,talent_name:talent.name,talent_email:email||"",status:"sent",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{},delivery_method:method};
     if(method==="email"&&email){
       setSending(true);setSendErr("");
-      try {
-        // EmailJS — uses public API, no server needed
-        // Note: In production, configure your EmailJS service/template IDs
-        const payload={service_id:"service_nzinga",template_id:"template_app_invite",user_id:"public_key_placeholder",
-          template_params:{to_email:email,to_name:talent.name,access_code:code,portal_link:"https://nzinga.co/apply",from_name:"Nzinga Talent Group"}};
-        const res=await fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-        if(!res.ok){setSendErr("Email service not configured (demo mode). Code generated successfully.");} 
-      } catch(e){setSendErr("Email service unavailable in demo (no live credentials). Code generated successfully.");}
+      const result=await sendApplicationInviteEmail({toEmail:email,toName:talent.name,accessCode:code});
+      if(result.status==="skipped"){
+        setSendErr("Email delivery is not configured yet. Share the access code below with the prospect.");
+      }else if(result.status==="failed"){
+        setSendErr(`${result.message} Application and access code were saved.`);
+      }
       setSending(false);
     }
     onSend(app);setSent(true);
@@ -55,7 +54,7 @@ function SendApplicationModal({ talent, onSend, onClose }) {
           <button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>
         </div>
         <div style={{ padding:18 }}>
-          <div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:6,fontSize:11,color:"#15803d" }}>📧 Will email invitation with code <strong>{code}</strong></div>}</div>
+          <div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:isEmailJsConfigured()?"#f0fdf4":"#fffbeb",border:`1px solid ${isEmailJsConfigured()?"#bbf7d0":"#fde68a"}`,borderRadius:6,fontSize:11,color:isEmailJsConfigured()?"#15803d":"#b45309" }}>{isEmailJsConfigured()?"📧 Will email invitation with code":"📋 Will save application — email delivery can be enabled later"} <strong>{code}</strong></div>}</div>
           <div style={{ padding:"8px 10px",background:"#f8f9fb",border:"1px solid #e5e7eb",borderRadius:6,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
             <span style={{ fontSize:11,color:T.t3 }}>Generated code:</span>
             <span style={{ fontSize:13,fontWeight:800,color:T.purple,letterSpacing:"0.12em" }}>{code}</span>
