@@ -1,0 +1,62 @@
+﻿import { useState, useRef, useEffect, useCallback } from "react";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "../data/constants.js";
+import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "./ui.jsx";
+
+function HistoryMod({ history, setHistory, talents, currentUser }) {
+  const [filter,setFilter]=useState("all");
+  const [showDocs,setShowDocs]=useState(false); // checkbox: docs only
+  const [note,setNote]=useState(""); const [talentId,setTalentId]=useState(""); const [type,setType]=useState("note");
+  const [viewingDoc,setViewingDoc]=useState(null);
+  const filt=history.filter(h=>{
+    if(showDocs&&!h.is_document)return false;
+    if(filter==="my")return h.user_id===currentUser.id;
+    if(filter==="flagged")return h.flagged;
+    if(filter==="documents")return h.is_document;
+    return true;
+  });
+  function add(){if(!note||!talentId)return;setHistory(p=>[{id:"h"+Date.now(),talent_id:talentId,user_id:currentUser.id,type,text:note,ts:new Date().toISOString(),flagged:false,is_document:false},...p]);setNote("");}
+  function flag(id){setHistory(p=>p.map(h=>h.id===id?{...h,flagged:!h.flagged}:h));}
+
+  return <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}>
+    {viewingDoc&&<DocViewer doc={viewingDoc} onClose={()=>setViewingDoc(null)}/>}
+    <div style={{ display:"flex",gap:6,marginBottom:10,alignItems:"center",flexWrap:"wrap" }}>
+      <div style={{ display:"flex",gap:4 }}>
+        {[["all","All Activity"],["my","My Notes"],["flagged","Flagged"],["documents","Documents Only"]].map(([v,l])=><button key={v} onClick={()=>setFilter(v)} style={{ background:filter===v?"#fff":"transparent",border:`1px solid ${filter===v?"#d1d5db":"transparent"}`,borderRadius:5,padding:"4px 10px",fontSize:11,color:filter===v?T.blue:T.t3,cursor:"pointer",fontWeight:filter===v?600:400,fontFamily:"inherit" }}>{l}</button>)}
+      </div>
+      {/* Checkbox: show docs only */}
+      <label style={{ display:"flex",alignItems:"center",gap:5,fontSize:12,color:T.t2,cursor:"pointer",marginLeft:8,padding:"4px 8px",background:showDocs?T.blueL:"transparent",borderRadius:5,border:`1px solid ${showDocs?T.blue+"44":"transparent"}` }}>
+        <input type="checkbox" checked={showDocs} onChange={e=>setShowDocs(e.target.checked)} style={{ cursor:"pointer" }}/>
+        ≡ƒôÄ Attached documents only
+      </label>
+    </div>
+    <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,padding:12,marginBottom:12 }}>
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8 }}>
+        <div><Lbl>Talent</Lbl><FSelect value={talentId} onChange={setTalentId} options={[{v:"",l:"Select talentΓÇª"},...talents.map(t=>({v:t.id,l:t.name}))]} style={{width:"100%"}}/></div>
+        <div><Lbl>Type</Lbl><FSelect value={type} onChange={setType} options={["note","call","email","task","document"]} style={{width:"100%"}}/></div>
+      </div>
+      <FTextarea value={note} onChange={setNote} placeholder="Enter note, call summary, or email logΓÇª" rows={2}/>
+      <div style={{ marginTop:8 }}><Btn sm variant="primary" onClick={add}>Post Note</Btn></div>
+    </div>
+    <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,overflow:"hidden" }}>
+      {filt.length===0?<div style={{ padding:"14px 12px",color:T.t4,fontSize:12,textAlign:"center" }}>No entries match this filter.</div>:
+        filt.map(h=>{const tal=talents.find(t=>t.id===h.talent_id);const usr=USERS.find(u=>u.id===h.user_id);
+          return <div key={h.id} style={{ display:"grid",gridTemplateColumns:"100px 60px 32px 1fr auto",padding:"8px 14px",borderBottom:"1px solid #f5f5f5",alignItems:"start",gap:8,background:h.is_document?"#f0fdf4":"transparent" }}>
+            <span style={{ fontSize:11,color:T.t3 }}>{new Date(h.ts).toLocaleDateString()}</span>
+            <span style={{ fontSize:11,color:T.t3,textTransform:"capitalize" }}>{h.type}</span>
+            <HIcon type={h.type}/>
+            <div>
+              <span style={{ color:T.blue,fontSize:12,fontWeight:600 }}>{tal?.name}</span><span style={{ color:T.t4,fontSize:11 }}> ┬╖ {usr?.name}</span>
+              {h.flagged&&<span style={{ background:T.amberL,color:T.amber,fontSize:10,padding:"1px 6px",borderRadius:8,fontWeight:700,marginLeft:6 }}>FLAGGED</span>}
+              {h.is_document&&<span style={{ background:"#dcfce7",color:T.green,fontSize:10,padding:"1px 6px",borderRadius:8,fontWeight:700,marginLeft:6 }}>≡ƒôÄ DOC</span>}
+              <div style={{ fontSize:12,color:T.t2,marginTop:1 }}>{h.text}</div>
+              {h.is_document&&h.doc_data&&<button onClick={()=>setViewingDoc({name:h.doc_name||"Document",data:h.doc_data,type:h.doc_type||"image/jpeg"})} style={{ marginTop:5,background:T.green,color:"#fff",border:"none",borderRadius:4,padding:"3px 10px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>≡ƒæü View Document</button>}
+            </div>
+            <button onClick={()=>flag(h.id)} style={{ background:"transparent",border:"1px solid #e5e7eb",borderRadius:4,padding:"2px 7px",cursor:"pointer",fontSize:11,color:h.flagged?T.amber:T.t4,fontFamily:"inherit" }}>{h.flagged?"ΓÜæ":"ΓÜÉ"}</button>
+          </div>;})}
+    </div>
+  </div>;
+}
+
+// ΓöÇΓöÇΓöÇ REPORTS ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+export { Tasks };
