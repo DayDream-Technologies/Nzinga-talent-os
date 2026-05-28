@@ -2,13 +2,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
+import { supabaseConfigured } from "@/lib/supabase";
+import { prospectSignup, prospectLogin } from "@/services/auth.service";
+import { fetchApplicationByCode } from "@/services/application.service";
 
 function ProspectPortal({ applications, onSaveApp, onBack }) {
   const [mode,setMode]=useState("landing");
   const [accessCode,setAccessCode]=useState("");
   const [foundApp,setFoundApp]=useState(null);
   const [lookupErr,setLookupErr]=useState("");
-  const [newData,setNewData]=useState({talent_name:"",talent_email:""});
+  const [newData,setNewData]=useState({talent_name:"",talent_email:"",talent_password:""});
+  const [authLoading,setAuthLoading]=useState(false);
 
   function lookup(){
     const code=accessCode.trim().toUpperCase();
@@ -17,22 +21,41 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
     else setLookupErr("Access code not found. Check your invitation email.");
   }
 
-  function startNew(){
+  async function startNew(){
     if(!newData.talent_name||!newData.talent_email)return;
+    setLookupErr("");setAuthLoading(true);
     const normalizedEmail=newData.talent_email.trim().toLowerCase();
     const hasSubmittedForEmail=Object.values(applications).some(a=>
       a.status==="submitted"&&String(a.talent_email||"").trim().toLowerCase()===normalizedEmail
     );
     if(hasSubmittedForEmail){
       setLookupErr("An application has already been submitted with this email address.");
-      return;
+      setAuthLoading(false);return;
     }
+
+    if(supabaseConfigured&&newData.talent_password){
+      const {error}=await prospectSignup(newData.talent_email.trim(),newData.talent_password,newData.talent_name);
+      if(error){setLookupErr(error);setAuthLoading(false);return;}
+    }
+
     const id="app_"+Date.now();
     const code=newData.talent_name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999);
     const app={id,talent_id:null,access_code:code,talent_name:newData.talent_name,talent_email:newData.talent_email.trim(),status:"in_progress",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{}};
     onSaveApp(app);
     setFoundApp(app);
+    setAuthLoading(false);
     setMode("form");
+  }
+
+  async function loginAndResume(){
+    if(!newData.talent_email||!newData.talent_password){setLookupErr("Email and password required.");return;}
+    setLookupErr("");setAuthLoading(true);
+    const {profile,error}=await prospectLogin(newData.talent_email.trim(),newData.talent_password);
+    if(error||!profile){setLookupErr(error||"Login failed.");setAuthLoading(false);return;}
+    const app=profile.application_id?Object.values(applications).find(a=>a.id===profile.application_id):Object.values(applications).find(a=>String(a.talent_email||"").trim().toLowerCase()===profile.email.toLowerCase());
+    if(app){setFoundApp(app);setMode("form");}
+    else setLookupErr("No application found for this account.");
+    setAuthLoading(false);
   }
 
   if(mode==="form"&&foundApp) return <ApplicationForm applications={applications} app={foundApp} onSave={updated=>{onSaveApp(updated);setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
@@ -54,7 +77,8 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
             <div style={{ fontSize:13,color:"rgba(255,255,255,0.45)",marginBottom:24,lineHeight:1.6 }}>Apply to join the Nzinga Talent Group roster, or continue a saved application.</div>
             <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
               <button onClick={()=>setMode("apply")} style={{ width:"100%",padding:"12px",background:"linear-gradient(135deg,#7c3aed,#2563eb)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>🎭 Start New Application</button>
-              <button onClick={()=>setMode("lookup")} style={{ width:"100%",padding:"12px",background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.85)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>🔑 Resume Saved Application</button>
+              {supabaseConfigured&&<button onClick={()=>setMode("login")} style={{ width:"100%",padding:"12px",background:"rgba(22,163,74,0.2)",color:"#4ade80",border:"1px solid rgba(74,222,128,0.3)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>🔐 Log In to Resume</button>}
+              <button onClick={()=>setMode("lookup")} style={{ width:"100%",padding:"12px",background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.85)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>🔑 Resume with Access Code</button>
             </div>
             <div style={{ marginTop:16,textAlign:"center" }}><button onClick={onBack} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>← Back to company login</button></div>
           </div>
@@ -62,7 +86,7 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
 
         {mode==="apply"&&(
           <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"28px 32px" }}>
-            <button onClick={()=>setMode("landing")} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer",marginBottom:14,fontFamily:"inherit" }}>← Back</button>
+            <button onClick={()=>{setMode("landing");setLookupErr("");}} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer",marginBottom:14,fontFamily:"inherit" }}>← Back</button>
             <div style={{ fontSize:17,fontWeight:700,color:"#fff",marginBottom:16 }}>Create Your Application</div>
             {[["Full Name","talent_name","text","Your full legal name"],["Email Address","talent_email","email","your@email.com"]].map(([l,k,type,ph])=>(
               <div key={k} style={{ marginBottom:12 }}>
@@ -70,8 +94,32 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
                 <input type={type} value={newData[k]} onChange={e=>setNewData(p=>({...p,[k]:e.target.value}))} placeholder={ph} style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
               </div>
             ))}
+            {supabaseConfigured&&<div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:4 }}>Password {supabaseConfigured?"*":""}</div>
+              <input type="password" value={newData.talent_password||""} onChange={e=>setNewData(p=>({...p,talent_password:e.target.value}))} placeholder="Create a password to save progress" style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
+              <div style={{ fontSize:10,color:"rgba(255,255,255,0.3)",marginTop:4 }}>You can log back in anytime to continue your application.</div>
+            </div>}
             {lookupErr&&<div style={{ color:"#fca5a5",fontSize:12,marginBottom:8 }}>{lookupErr}</div>}
-            <button onClick={startNew} style={{ width:"100%",padding:"11px",background:"linear-gradient(135deg,#7c3aed,#2563eb)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginTop:4 }}>Begin Application →</button>
+            <button onClick={startNew} disabled={authLoading} style={{ width:"100%",padding:"11px",background:"linear-gradient(135deg,#7c3aed,#2563eb)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginTop:4,opacity:authLoading?0.6:1 }}>{authLoading?"Creating account…":"Begin Application →"}</button>
+          </div>
+        )}
+
+        {mode==="login"&&(
+          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"28px 32px" }}>
+            <button onClick={()=>{setMode("landing");setLookupErr("");}} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer",marginBottom:14,fontFamily:"inherit" }}>← Back</button>
+            <div style={{ fontSize:17,fontWeight:700,color:"#fff",marginBottom:4 }}>Log In</div>
+            <div style={{ fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:18 }}>Sign in with the email and password you used when creating your application.</div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:4 }}>Email Address *</div>
+              <input type="email" value={newData.talent_email} onChange={e=>setNewData(p=>({...p,talent_email:e.target.value}))} placeholder="your@email.com" style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:4 }}>Password *</div>
+              <input type="password" value={newData.talent_password||""} onChange={e=>setNewData(p=>({...p,talent_password:e.target.value}))} placeholder="Your password" style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
+            </div>
+            {lookupErr&&<div style={{ color:"#fca5a5",fontSize:12,marginBottom:8 }}>{lookupErr}</div>}
+            <button onClick={loginAndResume} disabled={authLoading} style={{ width:"100%",padding:"11px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",opacity:authLoading?0.6:1 }}>{authLoading?"Logging in…":"Log In →"}</button>
+            <div style={{ marginTop:12,textAlign:"center" }}><button onClick={()=>setMode("lookup")} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Use access code instead</button></div>
           </div>
         )}
 

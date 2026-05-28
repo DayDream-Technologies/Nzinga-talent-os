@@ -15,4 +15,14 @@ export interface User {
   password: string
   title: string
   color: string
+  auth_uid?: string | null
+}
+
+export interface ProspectProfile {
+  id: string
+  auth_uid: string
+  email: string
+  name: string
+  application_id: string | null
+  created_at: string
 }
