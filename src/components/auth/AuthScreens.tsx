@@ -37,15 +37,21 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
 }
 
 // ─── EMPLOYEE LOGIN ───────────────────────────────────────────────────────────
-function LoginScreen({ companyCode, onLogin, onBack }) {
-  const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState("");
-  function go(){const u=USERS.find(u=>u.email===email&&u.password===pass);if(u)onLogin(u);else setErr("Invalid email or password.");}
+function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack }) {
+  const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
+  async function go(){
+    setErr("");setLoading(true);
+    const u=onSignIn?await onSignIn(email,pass):USERS.find(u=>u.email===email&&u.password===pass);
+    setLoading(false);
+    if(u)onLoginSuccess(u);else setErr("Invalid email or password.");
+  }
   return (
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#f5f0ea,#ede8e0 40%,#e8e2f5)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",position:"relative",overflow:"hidden" }}>
       <div style={{ position:"absolute",width:500,height:500,borderRadius:"50%",background:"rgba(124,58,237,0.06)",top:-100,right:-80,pointerEvents:"none" }}/>
       <div style={{ display:"flex",width:800,background:"#fff",borderRadius:14,boxShadow:"0 8px 40px rgba(0,0,0,0.12)",overflow:"hidden",zIndex:1 }}>
         <div style={{ flex:1,padding:"40px 36px" }}>
-          <button onClick={onBack} style={{ background:"none",border:"none",color:T.t3,fontSize:12,cursor:"pointer",marginBottom:16,fontFamily:"inherit" }}>← Code: <strong>{companyCode}</strong></button>
+          <button type="button" onClick={onBack} style={{ background:"none",border:"none",color:T.blue,fontSize:12,cursor:"pointer",marginBottom:16,fontFamily:"inherit",padding:0,textDecoration:"underline" }}>← Back to company code</button>
+          <div style={{ fontSize:11,color:T.t4,marginTop:-10,marginBottom:16 }}>Current code: <strong style={{ color:T.t2 }}>{companyCode}</strong></div>
           <div style={{ fontSize:20,fontWeight:700,color:"#111827",marginBottom:3,fontFamily:"Georgia,serif" }}>Welcome Back</div>
           <div style={{ fontSize:13,color:"#6b7280",marginBottom:24 }}>Log into your account</div>
           <div style={{ marginBottom:12 }}>
@@ -66,8 +72,10 @@ function LoginScreen({ companyCode, onLogin, onBack }) {
             <span style={{ fontSize:12,color:T.blue,cursor:"pointer" }}>Forgot Password?</span>
           </div>
           {err&&<div style={{ color:T.red,fontSize:11,marginBottom:8 }}>{err}</div>}
-          <button onClick={go} style={{ width:"100%",padding:"10px",background:T.orange,color:"#fff",border:"none",borderRadius:6,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>Sign In</button>
-          <div style={{ marginTop:8,textAlign:"center",fontSize:11,color:T.t4 }}>Company Code: <strong>{companyCode}</strong></div>
+          <button type="button" onClick={go} disabled={loading} style={{ width:"100%",padding:"10px",background:T.orange,color:"#fff",border:"none",borderRadius:6,fontSize:14,fontWeight:600,cursor:loading?"wait":"pointer",fontFamily:"inherit",opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In"}</button>
+          <div style={{ marginTop:12,textAlign:"center" }}>
+            <button type="button" onClick={onBack} style={{ background:"transparent",border:"none",color:T.t3,fontSize:12,cursor:"pointer",fontFamily:"inherit",textDecoration:"underline" }}>Use a different company code</button>
+          </div>
         </div>
         <div style={{ width:300,background:"linear-gradient(160deg,#1a2332,#243044 60%,#1e3a5f)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:28,position:"relative",overflow:"hidden" }}>
           <div style={{ position:"absolute",width:260,height:260,borderRadius:"50%",background:"rgba(124,58,237,0.08)",top:-80,right:-60 }}/>

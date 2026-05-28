@@ -1,18 +1,27 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LoginScreen } from '@/components/auth/AuthScreens'
 import { useAuth } from '@/hooks/useAuth'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { companyCode, switchUser } = useAuth()
+  const { companyCode, setCompanyCode, login } = useAuth()
+
+  useEffect(() => {
+    if (!companyCode) navigate('/', { replace: true })
+  }, [companyCode, navigate])
+
+  if (!companyCode) return null
+
   return (
     <LoginScreen
       companyCode={companyCode}
-      onLogin={(u: import('@/types').User) => {
-        switchUser(u)
-        navigate('/dashboard')
+      onSignIn={(email, password) => login(email, password)}
+      onLoginSuccess={() => navigate('/dashboard')}
+      onBack={() => {
+        setCompanyCode('')
+        navigate('/')
       }}
-      onBack={() => navigate('/')}
     />
   )
 }
