@@ -31,6 +31,9 @@ const ApplicationsPage = lazy(() =>
 const NewEntryPage = lazy(() =>
   import('@/pages/NewEntryPage').then((m) => ({ default: m.NewEntryPage })),
 )
+const SettingsPage = lazy(() =>
+  import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+)
 
 function PageLoader() {
   return (
@@ -151,6 +154,14 @@ export const router = createBrowserRouter([
             element: (
               <Lazy>
                 <NewEntryPage />
+              </Lazy>
+            ),
+          },
+          {
+            path: 'settings',
+            element: (
+              <Lazy>
+                <SettingsPage />
               </Lazy>
             ),
           },

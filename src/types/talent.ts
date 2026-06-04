@@ -36,6 +36,8 @@ export interface Talent {
   scout_id: string | null
   created_by?: string | null
   created_at: string
+  phone?: string
+  email?: string
   social_handle: string
   follower_count: string
   er_pct: string

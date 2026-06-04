@@ -137,6 +137,7 @@ function Sidebar({ view, onNav, talents, tasks, currentUser }) {
       {id:"tasks",label:"Tasks",icon:"☑",badge:tasks.filter(t=>t.assigned_to===currentUser.id&&t.status==="open").length},
       {id:"history",label:"History / Notes",icon:"✎"},
       {id:"reports",label:"Reports",icon:"⬡"},
+      {id:"settings",label:"Settings",icon:"⚙"},
     ]},
     {label:"MY QUEUE",items:[{id:"stage_"+actionStage,label:STAGE_LABELS[actionStage]||"My Stage",dot:STAGE_COLORS[actionStage],count:myQueue,isMyStage:true}]},
     ...(role==="director"?[{label:"ALL STAGES",items:STAGES.filter(s=>!["archived","not_viable"].includes(s)).map(s=>({id:"stage_"+s,label:STAGE_LABELS[s],dot:STAGE_COLORS[s],count:talents.filter(t=>t.stage===s).length}))}]:[]),

@@ -18,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   reports: 'Reports',
   'new-entry': 'New Holding Entry',
   applications: 'Applications',
+  settings: 'Settings',
 }
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
