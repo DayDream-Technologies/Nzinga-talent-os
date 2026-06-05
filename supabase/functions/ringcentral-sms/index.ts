@@ -1,6 +1,53 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { authenticateRequest, getSupabaseAdmin, corsHeaders, jsonResponse, errorResponse } from '../shared/auth.ts'
 
+async function getValidTokenRow(authUid: string, serverUrl: string) {
+  const supabaseAdmin = getSupabaseAdmin()
+  const { data: tokenRow, error: tokenErr } = await supabaseAdmin
+    .from('user_rc_tokens')
+    .select('*')
+    .eq('auth_uid', authUid)
+    .single()
+
+  if (tokenErr || !tokenRow) return { error: 'RingCentral not connected. Go to Settings to link your account.' }
+
+  if (new Date(tokenRow.token_expires_at) < new Date()) {
+    const clientId = Deno.env.get('RC_CLIENT_ID')!
+    const clientSecret = Deno.env.get('RC_CLIENT_SECRET')!
+    const credentials = btoa(`${clientId}:${clientSecret}`)
+
+    const refreshRes = await fetch(`${serverUrl}/restapi/oauth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${credentials}`,
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: tokenRow.refresh_token,
+      }),
+    })
+
+    if (!refreshRes.ok) {
+      return { error: 'RC token expired — please reconnect in Settings' }
+    }
+
+    const newTokens = await refreshRes.json()
+    tokenRow.access_token = newTokens.access_token
+    tokenRow.refresh_token = newTokens.refresh_token
+    tokenRow.token_expires_at = new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
+
+    await supabaseAdmin.from('user_rc_tokens').update({
+      access_token: newTokens.access_token,
+      refresh_token: newTokens.refresh_token,
+      token_expires_at: tokenRow.token_expires_at,
+      updated_at: new Date().toISOString(),
+    }).eq('auth_uid', authUid)
+  }
+
+  return { tokenRow }
+}
+
 serve(async (req) => {
   const origin = req.headers.get('origin') ?? undefined
 
@@ -33,58 +80,18 @@ serve(async (req) => {
     return errorResponse('Message exceeds maximum length of 1000 characters', 400, origin)
   }
 
-  const supabaseAdmin = getSupabaseAdmin()
-
-  // Look up user's stored RC tokens
-  const { data: tokenRow, error: tokenErr } = await supabaseAdmin
-    .from('user_rc_tokens')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
-
-  if (tokenErr || !tokenRow) {
-    return errorResponse('RingCentral not connected. Go to Settings to link your account.', 403, origin)
+  const tokenResult = await getValidTokenRow(user.id, serverUrl)
+  if ('error' in tokenResult) {
+    return errorResponse(tokenResult.error!, 403, origin)
   }
 
-  // Check token expiration and refresh if needed
-  if (new Date(tokenRow.token_expires_at) < new Date()) {
-    const clientId = Deno.env.get('RC_CLIENT_ID')!
-    const clientSecret = Deno.env.get('RC_CLIENT_SECRET')!
-    const credentials = btoa(`${clientId}:${clientSecret}`)
-
-    const refreshRes = await fetch(`${serverUrl}/restapi/oauth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${credentials}`,
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: tokenRow.refresh_token,
-      }),
-    })
-
-    if (!refreshRes.ok) {
-      return errorResponse('RC token expired — please reconnect in Settings', 401, origin)
-    }
-
-    const newTokens = await refreshRes.json()
-    tokenRow.access_token = newTokens.access_token
-    tokenRow.refresh_token = newTokens.refresh_token
-    tokenRow.token_expires_at = new Date(Date.now() + newTokens.expires_in * 1000).toISOString()
-
-    await supabaseAdmin.from('user_rc_tokens').update({
-      access_token: newTokens.access_token,
-      refresh_token: newTokens.refresh_token,
-      token_expires_at: tokenRow.token_expires_at,
-      updated_at: new Date().toISOString(),
-    }).eq('user_id', user.id)
-  }
-
+  const tokenRow = tokenResult.tokenRow!
   const fromNumber = tokenRow.rc_phone_number
   if (!fromNumber) {
     return errorResponse('No phone number associated with your RingCentral account', 400, origin)
   }
+
+  const supabaseAdmin = getSupabaseAdmin()
 
   try {
     const smsRes = await fetch(
@@ -111,7 +118,6 @@ serve(async (req) => {
 
     const smsData = await smsRes.json()
 
-    // Log to history
     const { data: userRow } = await supabaseAdmin
       .from('users')
       .select('id')
@@ -119,9 +125,10 @@ serve(async (req) => {
       .single()
 
     const staffUserId = userRow?.id || null
+    const historyId = `sms_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
     await supabaseAdmin.from('history').insert({
-      id: `sms_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: historyId,
       talent_id,
       user_id: staffUserId,
       type: 'sms',
@@ -135,6 +142,7 @@ serve(async (req) => {
     return jsonResponse({
       status: 'sent',
       message_id: smsData.id,
+      history_id: historyId,
     }, 200, origin)
   } catch (err) {
     console.error('SMS request failed:', err)

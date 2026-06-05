@@ -6,7 +6,7 @@ import { SendApplicationModal } from "@/components/application/ApplicationModals
 import { ComposeEmail } from "@/components/talent/ComposeEmail";
 import { PhoneActions } from "@/components/talent/PhoneActions";
 
-function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications }) {
+function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
   const TABS=["Details","Scoring","Compliance","Documents","Framework","Executive","Onboarding","History / Notes","Tasks","Audit Log"];
   const [tab,setTab]=useState("Details");
   const [local,setLocal]=useState(()=>JSON.parse(JSON.stringify(talent)));
@@ -210,7 +210,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
               </Section>
             </div>
             {local.phone&&<Section title="Contact" accent={T.green} style={{ marginBottom:10 }}>
-              <PhoneActions talentId={local.id} phone={local.phone} talentName={local.name} onCallInitiated={()=>{setHistory(prev=>[{id:"h"+Date.now(),talent_id:local.id,user_id:currentUser.id,type:"call",text:`Outbound call to ${local.phone}`,ts:new Date().toISOString(),flagged:false,is_document:false,call_direction:"outbound"},...prev]);}} onSmsSent={(msg)=>{setHistory(prev=>[{id:"h"+Date.now(),talent_id:local.id,user_id:currentUser.id,type:"sms",text:`SMS to ${local.phone}: ${msg.slice(0,60)}${msg.length>60?"…":""}`,ts:new Date().toISOString(),flagged:false,is_document:false,sms_direction:"outbound"},...prev]);}} />
+              <PhoneActions talentId={local.id} phone={local.phone} talentName={local.name} onSuccess={refreshAll} />
               {local.email&&<div style={{ marginTop:6,fontSize:12,color:T.t2 }}>✉ {local.email}</div>}
             </Section>}
             {linkedApp?.data?.parent_name&&<Section title="Parent / Guardian" accent={T.purple} style={{ marginBottom:10 }}>
@@ -373,6 +373,10 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
               </div>
               <Btn sm variant="primary" onClick={postNote}>Post Note</Btn>
             </Section>
+
+            {local.phone&&<Section title="Call & SMS" accent={T.green} style={{ marginBottom:10 }}>
+              <PhoneActions talentId={local.id} phone={local.phone} talentName={local.name} onSuccess={refreshAll} />
+            </Section>}
 
             <ComposeEmail talentName={local.name} talentEmail={local.email||""} talentId={local.id} onEmailSent={({subject,to})=>{setHistory(prev=>[{id:"h"+Date.now(),talent_id:local.id,user_id:currentUser.id,type:"email",text:`Email sent: "${subject}" to ${to}`,ts:new Date().toISOString(),flagged:false,is_document:false,email_subject:subject,email_to:to},...prev]);}} />
 

@@ -41,6 +41,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     setHistory,
     handleSendApp,
     importAppToPipeline,
+    refreshAll,
   } = useAppData()
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -147,6 +148,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             setSelectedTalent(u)
           }}
           onSendApp={handleSendApp}
+          refreshAll={refreshAll}
         />
       )}
     </div>

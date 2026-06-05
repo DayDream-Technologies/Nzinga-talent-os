@@ -260,7 +260,7 @@ supabase functions deploy ringcentral-webhook
 # Mailjet (email)
 supabase secrets set MJ_APIKEY_PUBLIC=<your-mailjet-api-key>
 supabase secrets set MJ_APIKEY_PRIVATE=<your-mailjet-secret-key>
-supabase secrets set MJ_SENDER_EMAIL=noreply@nzinga.co
+supabase secrets set MJ_SENDER_EMAIL=discovery@nzingamamgmt.com
 supabase secrets set MJ_SENDER_NAME="Nzinga Talent Group"
 
 # RingCentral (phone/SMS)
@@ -278,19 +278,23 @@ supabase secrets set APP_URL=https://your-app-url.amplifyapp.com
 
 1. Create an app at [developers.ringcentral.com](https://developers.ringcentral.com).
 2. App type: **Server/Web** with **Authorization Code** grant.
-3. Permissions required: `RingOut`, `SMS`, `ReadCallLog`, `ReadCallRecording`, `Telephony Sessions Notifications`.
-4. Set OAuth redirect URI to your `ringcentral-oauth` Edge Function callback URL.
-5. For call recording webhooks, create a subscription via the RingCentral API pointing to your `ringcentral-webhook` Edge Function URL.
+3. Permissions required: `RingOut`, `SMS`, `ReadCallLog`, `ReadCallRecording`, `Telephony Sessions Notifications`, `SubscriptionWebhook`.
+4. Set OAuth redirect URI to your `ringcentral-oauth` Edge Function callback URL:
+   `https://<project-ref>.supabase.co/functions/v1/ringcentral-oauth?action=callback`
+5. Webhook subscriptions are **created automatically** when a staff member connects RingCentral in Settings. The OAuth callback registers a telephony sessions webhook pointing at `ringcentral-webhook`. Set `RC_WEBHOOK_VERIFICATION_TOKEN` in Supabase secrets so inbound events are verified.
 
-### Run Migration 004
+### Run Migrations 004 + 005
 
-After deploying, apply `supabase/migrations/004_ringcentral.sql` via the SQL Editor or CLI:
+Apply RingCentral migrations via the SQL Editor or CLI:
 
 ```bash
 supabase db push
 ```
 
-This creates the `user_rc_tokens` table and adds telephony columns to `history`.
+- `004_ringcentral.sql` — initial tokens table + telephony history columns
+- `005_fix_rc_tokens_auth_uid.sql` — **required if 004 was already applied** — recreates `user_rc_tokens` with `auth_uid UUID` (Supabase Auth user id) and adds `rc_subscription_id`
+
+Migration 005 drops and recreates `user_rc_tokens`. Existing RC connections will need to reconnect in Settings after applying it.
 
 ### Edge Function Reference
 
@@ -317,6 +321,7 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 | `supabase/migrations/001_initial_schema.sql` | Core tables and enums |
 | `supabase/migrations/002_auth_and_fixes.sql` | Auth columns, prospect_profiles, RLS, indexes |
 | `supabase/migrations/004_ringcentral.sql` | RingCentral tokens table + telephony history fields |
+| `supabase/migrations/005_fix_rc_tokens_auth_uid.sql` | Fix token table to use auth_uid + subscription id |
 | `supabase/seed.sql` | Staff users + company codes |
 | `supabase/functions/send-email/` | Mailjet email Edge Function |
 | `supabase/functions/ringcentral-oauth/` | RC OAuth Edge Function |
@@ -324,6 +329,7 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 | `supabase/functions/ringcentral-sms/` | RC SMS Edge Function |
 | `supabase/functions/ringcentral-webhook/` | RC inbound events Edge Function |
 | `supabase/functions/shared/auth.ts` | Common auth helpers for Edge Functions |
+| `supabase/functions/shared/phone.ts` | Phone normalization for webhook talent matching |
 | `.env.example` | Env var template |
 | `src/lib/supabase.ts` | Client and demo-mode detection |
 | `src/lib/email.ts` | Email via Edge Function (Mailjet) |
@@ -337,7 +343,7 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 ## Quick reference: deployment order
 
 1. Create project (prefer team org, correct region).
-2. Run `001` → `002` → `004` → `seed.sql`.
+2. Run `001` → `002` → `004` → `005` → `seed.sql`.
 3. Create `documents` bucket (private).
 4. Create Auth users for staff; link `auth_uid`.
 5. Configure `.env` with URL, anon key, `VITE_DEMO_MODE=false`.

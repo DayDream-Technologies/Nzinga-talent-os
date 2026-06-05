@@ -5,18 +5,36 @@ import { useAuthContext } from '@/context/AuthContext'
 import { getRcConnectionStatus, getRcAuthUrl, disconnectRc } from '@/lib/phone'
 import type { RcConnectionStatus } from '@/lib/ringcentral-types'
 
+const RC_ERROR_MESSAGES: Record<string, string> = {
+  missing_code: 'Authorization was cancelled or incomplete.',
+  invalid_state: 'Invalid OAuth state — please try connecting again.',
+  token_exchange: 'RingCentral token exchange failed. Check your app credentials.',
+  store_tokens: 'Connected to RingCentral but failed to save tokens. Contact support.',
+}
+
 export function SettingsPage() {
   const { user } = useAuthContext()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [rcStatus, setRcStatus] = useState<RcConnectionStatus>({ connected: false })
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success')
 
   useEffect(() => {
-    if (searchParams.get('rc') === 'connected') {
+    const rc = searchParams.get('rc')
+    const reason = searchParams.get('reason')
+
+    if (rc === 'connected') {
       setMessage('RingCentral connected successfully!')
+      setMessageType('success')
+      setSearchParams({}, { replace: true })
+    } else if (rc === 'error') {
+      setMessage(RC_ERROR_MESSAGES[reason || ''] || 'RingCentral connection failed. Please try again.')
+      setMessageType('error')
+      setSearchParams({}, { replace: true })
     }
+
     loadStatus()
   }, [])
 
@@ -36,6 +54,7 @@ export function SettingsPage() {
       window.location.href = url
     } else {
       setMessage('RingCentral is not configured on this environment.')
+      setMessageType('error')
     }
   }
 
@@ -47,8 +66,10 @@ export function SettingsPage() {
     if (ok) {
       setRcStatus({ connected: false })
       setMessage('RingCentral disconnected.')
+      setMessageType('success')
     } else {
       setMessage('Failed to disconnect.')
+      setMessageType('error')
     }
   }
 
@@ -58,7 +79,15 @@ export function SettingsPage() {
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Manage your account integrations and preferences.</p>
 
       {message && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#15803d' }}>
+        <div style={{
+          background: messageType === 'success' ? '#f0fdf4' : '#fef2f2',
+          border: `1px solid ${messageType === 'success' ? '#86efac' : '#fca5a5'}`,
+          borderRadius: 8,
+          padding: '10px 14px',
+          marginBottom: 16,
+          fontSize: 13,
+          color: messageType === 'success' ? '#15803d' : '#dc2626',
+        }}>
           {message}
         </div>
       )}
@@ -103,6 +132,11 @@ export function SettingsPage() {
             {rcStatus.expired && (
               <div style={{ marginTop: 8, fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
                 ⚠ Token expired — click Reconnect below
+              </div>
+            )}
+            {!rcStatus.phone_number && (
+              <div style={{ marginTop: 8, fontSize: 11, color: '#b45309', fontWeight: 600 }}>
+                ⚠ No phone number detected — reconnect or check your RC extension
               </div>
             )}
           </div>
