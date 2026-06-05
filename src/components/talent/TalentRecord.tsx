@@ -3,8 +3,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
+import { ComposeEmail } from "@/components/talent/ComposeEmail";
+import { PhoneActions } from "@/components/talent/PhoneActions";
 
-function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications }) {
+function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
   const TABS=["Details","Scoring","Compliance","Documents","Framework","Executive","Onboarding","History / Notes","Tasks","Audit Log"];
   const [tab,setTab]=useState("Details");
   const [local,setLocal]=useState(()=>JSON.parse(JSON.stringify(talent)));
@@ -16,6 +18,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
   const tHistory=allHistory.filter(h=>h.talent_id===local.id);
   const tTasks=allTasks.filter(t=>t.related_talent===local.id);
   const [newNote,setNewNote]=useState(""); const [noteType,setNoteType]=useState("note");
+  const [historyFilter,setHistoryFilter]=useState("all");
   const scoutUser=USERS.find(u=>u.id===local.scout_id);
   const creatorUser=USERS.find(u=>u.id===local.created_by);
   const createdByLabel=local.created_by===null?"Prospect":creatorUser?`${ROLE_LABELS[creatorUser.role]} (${creatorUser.name})`:"System";
@@ -206,6 +209,10 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                 {[["Rep",local.rep_type||"—"],["Commission",local.commission?local.commission+"%":"—"],["YTD","$"+parseInt(local.revenue_ytd||0).toLocaleString()],["Projected","$"+parseInt(local.revenue_projected||0).toLocaleString()]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
               </Section>
             </div>
+            {local.phone&&<Section title="Contact" accent={T.green} style={{ marginBottom:10 }}>
+              <PhoneActions talentId={local.id} phone={local.phone} talentName={local.name} onSuccess={refreshAll} />
+              {local.email&&<div style={{ marginTop:6,fontSize:12,color:T.t2 }}>✉ {local.email}</div>}
+            </Section>}
             {linkedApp?.data?.parent_name&&<Section title="Parent / Guardian" accent={T.purple} style={{ marginBottom:10 }}>
               {[["Name",linkedApp.data.parent_name],["Phone",linkedApp.data.parent_phone],["Email",linkedApp.data.parent_email],["Relationship",linkedApp.data.parent_relationship]].filter(([,v])=>v).map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
             </Section>}
@@ -361,19 +368,40 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
 
             <Section title="Add Note / Log" accent={T.amber} style={{ marginBottom:10 }}>
               <div style={{ display:"flex",gap:7,marginBottom:7 }}>
-                <FSelect value={noteType} onChange={setNoteType} options={["note","call","email","task","document"]} style={{ width:100 }}/>
+                <FSelect value={noteType} onChange={setNoteType} options={["note","call","email","sms","task","document"]} style={{ width:100 }}/>
                 <div style={{ flex:1 }}><FTextarea value={newNote} onChange={setNewNote} placeholder="Log a note, call summary, email, or document note…" rows={2}/></div>
               </div>
               <Btn sm variant="primary" onClick={postNote}>Post Note</Btn>
             </Section>
 
+            {local.phone&&<Section title="Call & SMS" accent={T.green} style={{ marginBottom:10 }}>
+              <PhoneActions talentId={local.id} phone={local.phone} talentName={local.name} onSuccess={refreshAll} />
+            </Section>}
+
+            <ComposeEmail talentName={local.name} talentEmail={local.email||""} talentId={local.id} onEmailSent={({subject,to})=>{setHistory(prev=>[{id:"h"+Date.now(),talent_id:local.id,user_id:currentUser.id,type:"email",text:`Email sent: "${subject}" to ${to}`,ts:new Date().toISOString(),flagged:false,is_document:false,email_subject:subject,email_to:to},...prev]);}} />
+
+            {/* History type filter */}
+            <div style={{ display:"flex",gap:4,marginBottom:8,flexWrap:"wrap" }}>
+              {[["all","All"],["call","📞 Calls"],["sms","💬 SMS"],["email","✉ Email"],["note","📝 Notes"],["document","📎 Docs"]].map(([val,label])=><button key={val} onClick={()=>setHistoryFilter(val)} style={{ padding:"3px 10px",borderRadius:12,border:`1px solid ${historyFilter===val?T.blue+"88":"#e5e7eb"}`,background:historyFilter===val?T.blueL:"#fff",color:historyFilter===val?T.blue:T.t3,fontSize:11,fontWeight:historyFilter===val?600:400,cursor:"pointer",fontFamily:"inherit" }}>{label}</button>)}
+            </div>
+
             <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,overflow:"hidden" }}>
-              {filtHistory.length===0?<div style={{ padding:"14px",color:T.t4,fontSize:12,textAlign:"center" }}>{showDocOnly?"No documents attached yet.":"No history for this talent."}</div>:filtHistory.map(h=>{const u=USERS.find(u=>u.id===h.user_id);return <div key={h.id} style={{ display:"grid",gridTemplateColumns:"88px 60px 1fr",padding:"7px 10px",borderBottom:"1px solid #f5f5f5",alignItems:"start",gap:6,background:h.is_document?"#f0fdf4":"transparent" }}>
+              {(historyFilter==="all"?filtHistory:filtHistory.filter(h=>h.type===historyFilter)).length===0?<div style={{ padding:"14px",color:T.t4,fontSize:12,textAlign:"center" }}>{showDocOnly?"No documents attached yet.":"No history for this talent."}</div>:(historyFilter==="all"?filtHistory:filtHistory.filter(h=>h.type===historyFilter)).map(h=>{const u=USERS.find(u=>u.id===h.user_id);return <div key={h.id} style={{ display:"grid",gridTemplateColumns:"88px 60px 1fr",padding:"7px 10px",borderBottom:"1px solid #f5f5f5",alignItems:"start",gap:6,background:h.is_document?"#f0fdf4":h.type==="call"?"#fefce8":h.type==="sms"?"#eff6ff":"transparent" }}>
                 <span style={{ fontSize:11,color:T.t3 }}>{new Date(h.ts).toLocaleDateString()}</span>
-                <div style={{ display:"flex",alignItems:"center",gap:4 }}><HIcon type={h.type}/><span style={{ fontSize:10,color:T.t3,textTransform:"capitalize" }}>{h.type}</span></div>
+                <div style={{ display:"flex",alignItems:"center",gap:4 }}>
+                  <HIcon type={h.type}/>
+                  <span style={{ fontSize:10,color:T.t3,textTransform:"capitalize" }}>{h.type}</span>
+                  {h.call_direction&&<span style={{ fontSize:9,background:h.call_direction==="inbound"?"#dbeafe":"#dcfce7",color:h.call_direction==="inbound"?"#1d4ed8":"#15803d",padding:"0 4px",borderRadius:4,fontWeight:600 }}>{h.call_direction==="inbound"?"↙ in":"↗ out"}</span>}
+                  {h.sms_direction&&<span style={{ fontSize:9,background:h.sms_direction==="inbound"?"#dbeafe":"#dcfce7",color:h.sms_direction==="inbound"?"#1d4ed8":"#15803d",padding:"0 4px",borderRadius:4,fontWeight:600 }}>{h.sms_direction==="inbound"?"↙ in":"↗ out"}</span>}
+                </div>
                 <div>
                   <div style={{ fontSize:12,color:T.t1 }}>{h.text}</div>
-                  <div style={{ fontSize:10,color:T.t4 }}>{u?.name||"System"}</div>
+                  <div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
+                    <span style={{ fontSize:10,color:T.t4 }}>{u?.name||"System"}</span>
+                    {h.call_duration_seconds!=null&&h.call_duration_seconds>0&&<span style={{ fontSize:10,color:T.t3,background:"#f3f4f6",padding:"0 5px",borderRadius:4 }}>⏱ {Math.floor(h.call_duration_seconds/60)}:{String(h.call_duration_seconds%60).padStart(2,"0")}</span>}
+                    {h.call_recording_url&&<a href={h.call_recording_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10,color:T.blue,fontWeight:600,textDecoration:"none" }}>🎙 Recording</a>}
+                    {h.email_subject&&<span style={{ fontSize:10,color:T.purple,background:T.purpleL,padding:"0 5px",borderRadius:4 }}>Re: {h.email_subject}</span>}
+                  </div>
                   {h.is_document&&<span style={{ background:"#dcfce7",color:T.green,fontSize:10,padding:"1px 6px",borderRadius:8,fontWeight:700 }}>📎 DOCUMENT</span>}
                   {h.is_document&&h.doc_data&&<button onClick={()=>setViewingDoc({name:h.doc_name||"Document",data:h.doc_data,type:h.doc_type||"image/jpeg"})} style={{ marginLeft:6,background:T.green,color:"#fff",border:"none",borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>👁 View</button>}
                 </div>

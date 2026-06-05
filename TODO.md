@@ -6,13 +6,17 @@ Items from the original to-do list that have NOT yet been implemented.
 
 ## Page 1
 
-- [ ] **Create Email Template Dropdown & Email Integration**
+- [x] **Create Email Template Dropdown & Email Integration**
   - Dropdown to select from pre-built email templates when sending communications
-  - Full EmailJS or SMTP integration for outbound emails
+  - Mailjet integration via Supabase Edge Function (replaced EmailJS)
+  - General email compose with template selection in TalentRecord History tab
 
-- [ ] **Add Phone VoIP & History**
-  - Click-to-call or VoIP integration
-  - Call history log per talent record
+- [x] **Add Phone VoIP & History**
+  - Click-to-call via RingCentral (per-user OAuth account pairing)
+  - SMS integration via RingCentral
+  - Call history log per talent record with duration, direction, recording links
+  - Inbound call matching via webhook
+  - Settings page for RingCentral account connection
 
 - [ ] **On "Send Back", person can see task details (for staff)**
   - When a record is sent back to a previous stage, the receiving staff member should see the reason/task details
