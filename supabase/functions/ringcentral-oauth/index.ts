@@ -132,17 +132,19 @@ async function deleteWebhookSubscription(
 serve(async (req) => {
   const origin = req.headers.get('origin') ?? undefined
   const url = new URL(req.url)
-  let action = url.searchParams.get('action') || 'authorize'
 
+  let parsedBody: Record<string, unknown> = {}
   if (req.method === 'POST') {
     try {
-      const body = await req.clone().json()
-      if (typeof body?.action === 'string' && body.action) {
-        action = body.action
-      }
+      parsedBody = (await req.json()) as Record<string, unknown>
     } catch {
-      /* empty or non-JSON body */
+      /* empty or invalid JSON — allowed for some routes */
     }
+  }
+
+  let action = url.searchParams.get('action') || 'authorize'
+  if (typeof parsedBody.action === 'string' && parsedBody.action) {
+    action = parsedBody.action
   }
 
   if (req.method === 'OPTIONS') {
