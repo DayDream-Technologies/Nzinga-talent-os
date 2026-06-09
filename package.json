@@ -10,7 +10,9 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 50",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "supabase:deploy": "supabase functions deploy send-email && supabase functions deploy ringcentral-oauth && supabase functions deploy ringcentral-call && supabase functions deploy ringcentral-sms && supabase functions deploy ringcentral-webhook",
+    "supabase:secrets": "node -e \"console.log('Copy .env.secrets.example to .env.secrets, then run scripts/set-supabase-secrets.ps1 or .sh')\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

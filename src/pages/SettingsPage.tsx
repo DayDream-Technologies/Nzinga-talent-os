@@ -117,6 +117,12 @@ export function SettingsPage() {
           </div>
         </div>
 
+        {!loading && !rcStatus.connected && (
+          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 12, lineHeight: 1.5 }}>
+            Connect your RingCentral extension to enable click-to-call and SMS from talent records.
+          </div>
+        )}
+
         {!loading && rcStatus.connected && (
           <div style={{ background: '#f9fafb', borderRadius: 8, padding: 12, marginBottom: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>

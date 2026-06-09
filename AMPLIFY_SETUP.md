@@ -30,7 +30,9 @@ Database setup: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md).
 
 | Variable | Example | Notes |
 |----------|---------|--------|
-| `VITE_APP_URL` | `https://main.d1234abcdef.amplifyapp.com` | No trailing slash. Used as the prospect portal link in invitation emails. If omitted, the app uses the current browser origin at runtime. |
+| `VITE_APP_URL` | `https://talentmanagerx.com` | No trailing slash. Production custom domain. Used for prospect portal links in invitation emails. If omitted, the app uses the current browser origin at runtime. |
+
+Production RingCentral + webhook alignment: [RINGCENTRAL_TALENTMANAGERX_SETUP.md](./RINGCENTRAL_TALENTMANAGERX_SETUP.md).
 
 ---
 
@@ -86,7 +88,7 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 2. Staff Auth users created and `users.auth_uid` linked.
 3. Private `documents` storage bucket created.
 4. Amplify env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DEMO_MODE=false`.
-5. Amplify env: `VITE_APP_URL` = your Amplify URL (or custom domain).
+5. Amplify env: `VITE_APP_URL=https://talentmanagerx.com` (or your custom domain).
 6. Supabase secrets: Mailjet keys, RingCentral credentials (see SUPABASE_SETUP.md).
 7. Deploy Edge Functions: `supabase functions deploy --all`.
 8. Redeploy Amplify after saving env vars.
@@ -110,7 +112,10 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 
 | File | Purpose |
 |------|---------|
-| `.env.example` | Local template |
+| `.env.example` | Local frontend env template |
+| `.env.secrets.example` | Supabase Edge Function secrets template (copy to `.env.secrets`) |
+| `RINGCENTRAL_TALENTMANAGERX_SETUP.md` | Production RC webhook + secrets for talentmanagerx.com |
+| `scripts/set-supabase-secrets.ps1` | Apply secrets from `.env.secrets` (Windows) |
 | `src/lib/supabase.ts` | Supabase client; demo mode detection |
 | `src/lib/email.ts` | Email via Supabase Edge Function (Mailjet) |
 | `src/lib/phone.ts` | Phone/SMS via Supabase Edge Function (RingCentral) |

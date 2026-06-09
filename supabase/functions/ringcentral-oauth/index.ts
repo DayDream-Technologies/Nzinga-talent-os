@@ -132,7 +132,18 @@ async function deleteWebhookSubscription(
 serve(async (req) => {
   const origin = req.headers.get('origin') ?? undefined
   const url = new URL(req.url)
-  const action = url.searchParams.get('action') || 'authorize'
+  let action = url.searchParams.get('action') || 'authorize'
+
+  if (req.method === 'POST') {
+    try {
+      const body = await req.clone().json()
+      if (typeof body?.action === 'string' && body.action) {
+        action = body.action
+      }
+    } catch {
+      /* empty or non-JSON body */
+    }
+  }
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders(origin) })

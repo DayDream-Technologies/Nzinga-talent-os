@@ -11,43 +11,33 @@ export function isRingCentralAvailable(): boolean {
   return supabaseConfigured
 }
 
+async function invokeRcOAuth<T>(action: string, body: Record<string, unknown> = {}): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  return invokeEdgeFunction<T>('ringcentral-oauth', { action, ...body })
+}
+
 export async function getRcConnectionStatus(): Promise<RcConnectionStatus> {
   if (!isRingCentralAvailable()) {
     return { connected: false }
   }
 
-  const result = await invokeEdgeFunction<RcConnectionStatus>(
-    'ringcentral-oauth?action=status',
-    {},
-  )
-
+  const result = await invokeRcOAuth<RcConnectionStatus>('status')
   if (!result.ok) return { connected: false }
   return result.data
 }
 
 export async function getRcAuthUrl(): Promise<string | null> {
-  const result = await invokeEdgeFunction<RcAuthUrlResponse>(
-    'ringcentral-oauth?action=authorize',
-    {},
-  )
-
+  const result = await invokeRcOAuth<RcAuthUrlResponse>('authorize')
   if (!result.ok) return null
   return result.data.auth_url
 }
 
 export async function disconnectRc(): Promise<boolean> {
-  const result = await invokeEdgeFunction(
-    'ringcentral-oauth?action=disconnect',
-    {},
-  )
+  const result = await invokeRcOAuth('disconnect')
   return result.ok
 }
 
 export async function refreshRcToken(): Promise<boolean> {
-  const result = await invokeEdgeFunction(
-    'ringcentral-oauth?action=refresh',
-    {},
-  )
+  const result = await invokeRcOAuth('refresh')
   return result.ok
 }
 
