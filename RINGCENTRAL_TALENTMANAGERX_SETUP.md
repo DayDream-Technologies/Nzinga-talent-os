@@ -1,5 +1,7 @@
 # RingCentral + talentmanagerx.com — Production alignment
 
+> **Full setup, curl tests, and 400 error troubleshooting:** see [EDGE_FUNCTIONS_SETUP.md](./EDGE_FUNCTIONS_SETUP.md)
+
 Production app: **https://talentmanagerx.com**  
 Webhook target: **Supabase** `ringcentral-webhook` (not `talentmanagerx.com/api/webhook`)
 

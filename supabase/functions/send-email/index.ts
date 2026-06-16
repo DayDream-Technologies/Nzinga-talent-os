@@ -85,7 +85,17 @@ serve(async (req) => {
     if (!res.ok) {
       const errBody = await res.text()
       console.error('Mailjet error:', res.status, errBody)
-      return errorResponse('Email delivery failed', 502, origin)
+      let detail = 'Email delivery failed'
+      try {
+        const parsed = JSON.parse(errBody)
+        const msg = parsed?.Messages?.[0]?.Errors?.[0]?.ErrorMessage
+          ?? parsed?.ErrorMessage
+          ?? parsed?.message
+        if (msg) detail = `${detail}: ${msg}`
+      } catch {
+        if (errBody) detail = `${detail}: ${errBody.slice(0, 200)}`
+      }
+      return errorResponse(detail, 502, origin)
     }
 
     const result = await res.json()
