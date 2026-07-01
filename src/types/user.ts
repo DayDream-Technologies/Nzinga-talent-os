@@ -17,6 +17,7 @@ export interface User {
   color: string
   auth_uid?: string | null
   company_code?: string
+  active?: boolean
 }
 
 export interface ProspectProfile {

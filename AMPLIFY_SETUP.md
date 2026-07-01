@@ -42,6 +42,8 @@ Email (Mailjet) and Phone (RingCentral) API keys are stored as **Supabase secret
 
 See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for the full list of secrets to configure.
 
+**Complete setup & testing guide:** [EDGE_FUNCTIONS_SETUP.md](./EDGE_FUNCTIONS_SETUP.md)
+
 The frontend communicates with these services through Supabase Edge Functions:
 - `send-email` — Mailjet transactional email
 - `ringcentral-oauth` — RingCentral account linking

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { USERS } from '@/constants'
 import {
   T,
@@ -13,8 +13,11 @@ import {
   PriBadge,
 } from '@/components/ui-compat'
 
-function Tasks({ tasks, setTasks, talents, currentUser }) {
-  const [filter, setFilter] = useState('mine')
+function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
+  const [filter, setFilter] = useState(initialFilter || 'mine')
+  useEffect(() => {
+    if (initialFilter) setFilter(initialFilter)
+  }, [initialFilter])
   const [showAdd, setShowAdd] = useState(false)
   const [nt, setNt] = useState({
     title: '',

@@ -19,6 +19,11 @@ const PAGE_TITLES: Record<string, string> = {
   'new-entry': 'New Holding Entry',
   applications: 'Applications',
   settings: 'Settings',
+  training: 'My Training',
+  'admin/users': 'All Users',
+  'admin/roles': 'Role Management',
+  'admin/audit-log': 'Global Audit Log',
+  'admin/settings': 'System Settings',
 }
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
@@ -52,7 +57,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const pageTitle = PAGE_TITLES[view] || view
 
   function nav(path: string) {
-    navigate(`/${path}`)
+    if (path.includes('?')) {
+      const [pathname, search] = path.split('?')
+      navigate({ pathname: `/${pathname}`, search: `?${search}` })
+    } else {
+      navigate(`/${path}`)
+    }
   }
 
   function handleLogout(switchTo?: typeof user) {

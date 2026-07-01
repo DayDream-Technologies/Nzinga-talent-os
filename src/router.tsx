@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { RoleGuard } from '@/components/auth/RoleGuard'
 import { AppDataProvider } from '@/context/AppDataContext'
 import { AppShell } from '@/components/layout/AppShell'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -33,6 +34,21 @@ const NewEntryPage = lazy(() =>
 )
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+)
+const TrainingPage = lazy(() =>
+  import('@/pages/TrainingPage').then((m) => ({ default: m.TrainingPage })),
+)
+const AdminUsersPage = lazy(() =>
+  import('@/pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })),
+)
+const AdminRolesPage = lazy(() =>
+  import('@/pages/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage })),
+)
+const AdminAuditPage = lazy(() =>
+  import('@/pages/AdminAuditPage').then((m) => ({ default: m.AdminAuditPage })),
+)
+const AdminSettingsPage = lazy(() =>
+  import('@/pages/AdminSettingsPage').then((m) => ({ default: m.AdminSettingsPage })),
 )
 
 function PageLoader() {
@@ -142,20 +158,70 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: 'applications',
+            path: 'training',
             element: (
               <Lazy>
-                <ApplicationsPage />
+                <TrainingPage />
               </Lazy>
             ),
           },
           {
-            path: 'new-entry',
-            element: (
-              <Lazy>
-                <NewEntryPage />
-              </Lazy>
-            ),
+            element: <RoleGuard allowedRoles={['scout', 'director']} />,
+            children: [
+              {
+                path: 'applications',
+                element: (
+                  <Lazy>
+                    <ApplicationsPage />
+                  </Lazy>
+                ),
+              },
+              {
+                path: 'new-entry',
+                element: (
+                  <Lazy>
+                    <NewEntryPage />
+                  </Lazy>
+                ),
+              },
+            ],
+          },
+          {
+            element: <RoleGuard allowedRoles={['director']} />,
+            children: [
+              {
+                path: 'admin/users',
+                element: (
+                  <Lazy>
+                    <AdminUsersPage />
+                  </Lazy>
+                ),
+              },
+              {
+                path: 'admin/roles',
+                element: (
+                  <Lazy>
+                    <AdminRolesPage />
+                  </Lazy>
+                ),
+              },
+              {
+                path: 'admin/audit-log',
+                element: (
+                  <Lazy>
+                    <AdminAuditPage />
+                  </Lazy>
+                ),
+              },
+              {
+                path: 'admin/settings',
+                element: (
+                  <Lazy>
+                    <AdminSettingsPage />
+                  </Lazy>
+                ),
+              },
+            ],
           },
           {
             path: 'settings',

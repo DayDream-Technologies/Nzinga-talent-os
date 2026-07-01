@@ -91,7 +91,25 @@ function FullMenu({ onClose, onNav, userRole }) {
     "Reports":{ "Pipeline":["Pipeline Summary","Jordan Score Report"],"Revenue":["Revenue Forecast"] },
     ...(userRole==="director"?{"Administration":{"Users":["All Users","Role Management"],"System":["Audit Log","System Settings"]}}:{}),
   };
-  const nm={"Pipeline Matrix":"pipeline","All Talent":"roster","My Tasks":"tasks","History / Notes":"history","Pipeline Summary":"reports","Revenue Forecast":"reports","Jordan Score Report":"reports","New Holding Entry":"new_entry","Applications":"applications","My Queue":"dashboard"};
+  const nm={
+    "Pipeline Matrix":"pipeline",
+    "All Talent":"roster",
+    "My Tasks":"tasks",
+    "All Open Tasks":"tasks?filter=all_open",
+    "History / Notes":"history",
+    "Flagged Notes":"history?filter=flagged",
+    "Pipeline Summary":"reports?tab=pipeline_summary",
+    "Revenue Forecast":"reports?tab=revenue_forecast",
+    "Jordan Score Report":"reports?tab=jordan_scores",
+    "New Holding Entry":"new-entry",
+    "Applications":"applications",
+    "My Queue":"dashboard",
+    "Signed Clients":"pipeline?stage=signed_onboarding",
+    "All Users":"admin/users",
+    "Role Management":"admin/roles",
+    "Audit Log":"admin/audit-log",
+    "System Settings":"admin/settings",
+  };
   return(
     <div style={{ position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-start" }}>
       <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,0.4)" }}/>
@@ -131,7 +149,7 @@ function Sidebar({ view, onNav, talents, tasks, currentUser }) {
     {label:"TALENT",items:[
       {id:"pipeline",label:"Pipeline",icon:"◈"},
       {id:"roster",label:"Full Roster",icon:"☰"},
-      ...(role==="scout"||role==="director"?[{id:"new_entry",label:"New Entry",icon:"+"},{id:"applications",label:"Applications",icon:"📋",badge:submittedApps>0?submittedApps:pendingApps}]:[]),
+      ...(role==="scout"||role==="director"?[{id:"new-entry",label:"New Entry",icon:"+"},{id:"applications",label:"Applications",icon:"📋",badge:submittedApps>0?submittedApps:pendingApps}]:[]),
     ]},
     {label:"OPERATIONS",items:[
       {id:"tasks",label:"Tasks",icon:"☑",badge:tasks.filter(t=>t.assigned_to===currentUser.id&&t.status==="open").length},
@@ -153,7 +171,7 @@ function Sidebar({ view, onNav, talents, tasks, currentUser }) {
         <div style={{ padding:"9px 0 2px 11px",fontSize:9,color:"rgba(255,255,255,0.25)",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase" }}>{sec.label}</div>
         {sec.items.map(item=>{
           const active=view===item.id||(item.id.startsWith("stage_")&&view==="pipeline");
-          return <div key={item.id} onClick={()=>{ if(item.id==="new_entry"||item.id==="applications")onNav(item.id); else if(item.id.startsWith("stage_"))onNav("pipeline"); else onNav(item.id); }} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 9px 5px 11px",cursor:"pointer",background:active?"rgba(255,255,255,0.08)":"transparent",borderLeft:`2px solid ${active?"#fff":"transparent"}`,marginBottom:1 }}>
+          return <div key={item.id} onClick={()=>{ if(item.id.startsWith("stage_"))onNav("pipeline?stage="+item.id.replace("stage_","")); else onNav(item.id); }} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 9px 5px 11px",cursor:"pointer",background:active?"rgba(255,255,255,0.08)":"transparent",borderLeft:`2px solid ${active?"#fff":"transparent"}`,marginBottom:1 }}>
             <div style={{ display:"flex",alignItems:"center",gap:6 }}>
               {item.dot?<span style={{ width:6,height:6,borderRadius:"50%",background:item.isMyStage?item.dot:item.dot+"88",flexShrink:0 }}/>:<span style={{ fontSize:11,color:active?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.4)" }}>{item.icon}</span>}
               <span style={{ fontSize:11,color:active?"#fff":"#94a3b8" }}>{item.label}</span>

@@ -111,7 +111,15 @@ function Workspace({ currentUser, onNav }) {
     "Reports":["Jordan Score Report","Revenue Forecast","Pipeline Summary"],
   };
   const reports={"Pipeline":["Pipeline Summary","Prospect Box Score"],"Scoring":["Jordan Score Report"],"Revenue":["Revenue Forecast"]};
-  const nm={"All Talent":"roster","Pipeline":"pipeline","New Holding Entry":"new_entry","Tasks":"tasks","History / Notes":"history","Jordan Score Report":"reports","Revenue Forecast":"reports","Pipeline Summary":"reports","Prospect Box Score":"reports","Applications":"applications"};
+  const nm={"All Talent":"roster","Pipeline":"pipeline","New Holding Entry":"new-entry","Tasks":"tasks","History / Notes":"history","Jordan Score Report":"reports?tab=jordan_scores","Revenue Forecast":"reports?tab=revenue_forecast","Pipeline Summary":"reports?tab=pipeline_summary","Prospect Box Score":"reports?tab=prospect_box_score","Applications":"applications"};
+  function navTo(item) {
+    const target=nm[item];
+    if(!target) return;
+    if(target.includes("?")) {
+      const [path,search]=target.split("?");
+      onNav(path+"?"+search);
+    } else onNav(target);
+  }
   return(
     <div style={{ padding:"22px 26px",flex:1,overflowY:"auto" }}>
       <div style={{ textAlign:"center",marginBottom:28 }}>
@@ -127,7 +135,7 @@ function Workspace({ currentUser, onNav }) {
                 <div style={{ width:26,height:26,borderRadius:7,background:cat==="Talent"?"#dcfce7":cat==="Operations"?"#dbeafe":"#f3e8ff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Talent"?"🏠":cat==="Operations"?"⚙":"📊"}</div>
                 <span style={{ fontSize:12,fontWeight:700,color:T.t1 }}>{cat}</span>
               </div>
-              {items.map(item=><div key={item} onClick={()=>onNav(nm[item]||"dashboard")} style={{ fontSize:12,color:T.blue,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
+              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:T.blue,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
             </div>)}
           </div>
         </div>
@@ -139,14 +147,14 @@ function Workspace({ currentUser, onNav }) {
                 <div style={{ width:26,height:26,borderRadius:7,background:cat==="Pipeline"?"#dcfce7":cat==="Scoring"?"#dbeafe":"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Pipeline"?"🏠":cat==="Scoring"?"💰":"📊"}</div>
                 <span style={{ fontSize:12,fontWeight:700,color:T.t1 }}>{cat}</span>
               </div>
-              {items.map(item=><div key={item} onClick={()=>onNav("reports")} style={{ fontSize:12,color:T.blue,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
+              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:T.blue,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
             </div>)}
           </div>
         </div>
       </div>
       <div style={{ marginTop:14,background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,padding:"9px 14px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
         <span style={{ fontSize:12,color:T.t3 }}>📢 <strong>Announcements</strong> — No new announcements</span>
-        <span style={{ fontSize:12,color:T.blue,cursor:"pointer" }}>🎓 My Training</span>
+        <span onClick={()=>onNav("training")} style={{ fontSize:12,color:T.blue,cursor:"pointer" }}>🎓 My Training</span>
       </div>
     </div>
   );

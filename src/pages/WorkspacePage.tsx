@@ -6,5 +6,15 @@ export function WorkspacePage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   if (!user) return null
-  return <Workspace currentUser={user} onNav={(v: string) => navigate(`/${v}`)} />
+
+  function nav(path: string) {
+    if (path.includes('?')) {
+      const [pathname, search] = path.split('?')
+      navigate({ pathname: `/${pathname}`, search: `?${search}` })
+    } else {
+      navigate(`/${path}`)
+    }
+  }
+
+  return <Workspace currentUser={user} onNav={nav} />
 }

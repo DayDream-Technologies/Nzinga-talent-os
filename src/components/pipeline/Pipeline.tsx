@@ -1,20 +1,24 @@
 // @ts-nocheck
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 
-function Pipeline({ talents, onSelectTalent, userRole }) {
+function Pipeline({ talents, onSelectTalent, userRole, focusStage }) {
   const accessible=ROLE_STAGE_ACCESS[userRole]||[];
   const visibleTalents=userRole==="director"?talents:talents.filter(t=>accessible.includes(t.stage));
+  const stageRefs=useRef({});
+  const stagesToShow=focusStage&&accessible.includes(focusStage)?[focusStage]:accessible.filter(s=>s!=="not_viable");
+  useEffect(()=>{if(focusStage&&stageRefs.current[focusStage])stageRefs.current[focusStage].scrollIntoView({behavior:"smooth",block:"start"});},[focusStage]);
+  if(focusStage&&!accessible.includes(focusStage))return <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}><div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,padding:28,textAlign:"center",color:T.t3,fontSize:13 }}>You do not have access to view talents in {STAGE_LABELS[focusStage]||focusStage}.</div></div>;
   return <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}>
-    <div style={{ fontSize:16,fontWeight:700,color:T.t1,marginBottom:12,fontFamily:"Georgia,serif" }}>Prospects</div>
-    {accessible.filter(s=>s!=="not_viable").map(stage=>{
-      const group=visibleTalents.filter(t=>t.stage===stage); if(!group.length)return null; const c=STAGE_COLORS[stage];
-      return <div key={stage} style={{ marginBottom:16 }}>
+    <div style={{ fontSize:16,fontWeight:700,color:T.t1,marginBottom:12,fontFamily:"Georgia,serif" }}>{focusStage?STAGE_LABELS[focusStage]||"Prospects":"Prospects"}</div>
+    {stagesToShow.map(stage=>{
+      const group=visibleTalents.filter(t=>t.stage===stage); if(!group.length&&!focusStage)return null; const c=STAGE_COLORS[stage];
+      return <div key={stage} ref={el=>{stageRefs.current[stage]=el;}} style={{ marginBottom:16 }}>
         <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:5 }}><div style={{ width:7,height:7,borderRadius:"50%",background:c }}/><span style={{ fontSize:11,fontWeight:700,color:T.t2,textTransform:"uppercase",letterSpacing:"0.08em" }}>{STAGE_LABELS[stage]}</span><span style={{ background:c+"20",color:c,borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700 }}>{group.length}</span></div>
         <table style={{ width:"100%",borderCollapse:"collapse",background:"#fff",borderRadius:7,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
           <thead><tr><TH>Name</TH><TH>Niche</TH><TH>Score</TH><TH>Handle</TH><TH>Application</TH><TH>Action</TH></tr></thead>
-          <tbody>{group.map(t=><tr key={t.id} onMouseEnter={e=>e.currentTarget.style.background="#f8f9fb"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+          <tbody>{group.length===0?<tr><TD colSpan={6} muted>No talents in this stage</TD></tr>:group.map(t=><tr key={t.id} onMouseEnter={e=>e.currentTarget.style.background="#f8f9fb"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
             <TD><span style={{ color:T.blue,fontWeight:600,cursor:"pointer" }} onClick={()=>onSelectTalent(t)}>{t.name}</span></TD>
             <TD>{t.niches.map(n=><NichePill key={n} n={n}/>)}</TD>
             <TD>{t.jordan_score>0?<ScoreBar score={t.jordan_score}/>:<span style={{ color:T.t4 }}>—</span>}</TD>

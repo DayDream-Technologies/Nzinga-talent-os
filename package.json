@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "supabase:deploy": "supabase functions deploy send-email && supabase functions deploy ringcentral-oauth && supabase functions deploy ringcentral-call && supabase functions deploy ringcentral-sms && supabase functions deploy ringcentral-webhook",
+    "supabase:deploy": "supabase functions deploy send-email && supabase functions deploy ringcentral-oauth && supabase functions deploy ringcentral-call && supabase functions deploy ringcentral-sms && supabase functions deploy ringcentral-webhook && supabase functions deploy admin-users && supabase functions deploy admin-audit && supabase functions deploy admin-settings",
     "supabase:secrets": "node -e \"console.log('Copy .env.secrets.example to .env.secrets, then run scripts/set-supabase-secrets.ps1 or .sh')\""
   },
   "dependencies": {
