@@ -1,5 +1,5 @@
 import { useAppData } from '@/context/AppDataContext'
-import { ROLE_STAGE_ACCESS } from '@/constants/roles'
+import { isTalentVisibleToRole } from '@/constants/roles'
 import type { Role, Talent } from '@/types'
 
 export function useTalents() {
@@ -7,9 +7,7 @@ export function useTalents() {
   return { talents, updateTalent, handleNewTalent }
 }
 
-export function useVisibleTalents(role: Role): Talent[] {
+export function useVisibleTalents(role: Role, userId?: string): Talent[] {
   const { talents } = useAppData()
-  const accessible = ROLE_STAGE_ACCESS[role] || []
-  if (role === 'director') return talents
-  return talents.filter((t) => accessible.includes(t.stage))
+  return talents.filter((t) => isTalentVisibleToRole(t, role, userId))
 }

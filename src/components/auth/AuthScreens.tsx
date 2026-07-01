@@ -2,6 +2,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
+import { CompanyLogo, TMXLogo } from "@/components/branding";
+import { PLATFORM_BRAND } from "@/constants/company-branding";
 
 function CompanyCodeScreen({ onCode, onProspectPortal }) {
   const [code,setCode]=useState(""); const [err,setErr]=useState("");
@@ -12,12 +14,12 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
       <div style={{ position:"absolute",width:400,height:400,borderRadius:"50%",background:"rgba(37,99,235,0.05)",bottom:-100,left:-80,pointerEvents:"none" }}/>
       <div style={{ width:440,zIndex:1 }}>
         <div style={{ textAlign:"center",marginBottom:24 }}>
-          <div style={{ fontSize:38,fontWeight:800,color:"#1a2332",fontFamily:"Georgia,serif" }}>Nzinga</div>
-          <div style={{ fontSize:11,color:"#6b7280",letterSpacing:"0.18em",textTransform:"uppercase",marginTop:2 }}>Talent Operating System</div>
+          <CompanyLogo variant="platform" size="lg" />
+          <div style={{ fontSize:11,color:"#6b7280",letterSpacing:"0.18em",textTransform:"uppercase",marginTop:8 }}>{PLATFORM_BRAND.tagline}</div>
         </div>
         <div style={{ background:"#fff",borderRadius:12,boxShadow:"0 4px 24px rgba(0,0,0,0.10)",padding:"32px 36px" }}>
           <div style={{ display:"flex",justifyContent:"center",marginBottom:20 }}>
-            <div style={{ width:50,height:50,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:"#fff",fontFamily:"Georgia,serif",fontWeight:800 }}>N</div>
+            <TMXLogo size="md" />
           </div>
           <div style={{ fontSize:18,fontWeight:700,textAlign:"center",color:"#111827",marginBottom:4,fontFamily:"Georgia,serif" }}>Welcome</div>
           <div style={{ fontSize:13,textAlign:"center",color:"#6b7280",marginBottom:20 }}>Enter your company code to continue</div>
@@ -51,7 +53,8 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack }) {
       <div style={{ display:"flex",width:800,background:"#fff",borderRadius:14,boxShadow:"0 8px 40px rgba(0,0,0,0.12)",overflow:"hidden",zIndex:1 }}>
         <div style={{ flex:1,padding:"40px 36px" }}>
           <button type="button" onClick={onBack} style={{ background:"none",border:"none",color:T.blue,fontSize:12,cursor:"pointer",marginBottom:16,fontFamily:"inherit",padding:0,textDecoration:"underline" }}>← Back to company code</button>
-          <div style={{ fontSize:11,color:T.t4,marginTop:-10,marginBottom:16 }}>Current code: <strong style={{ color:T.t2 }}>{companyCode}</strong></div>
+          <div style={{ marginBottom:20 }}><TMXLogo size="md" /></div>
+          <div style={{ fontSize:11,color:T.t4,marginBottom:16 }}>Current code: <strong style={{ color:T.t2 }}>{companyCode}</strong></div>
           <div style={{ fontSize:20,fontWeight:700,color:"#111827",marginBottom:3,fontFamily:"Georgia,serif" }}>Welcome Back</div>
           <div style={{ fontSize:13,color:"#6b7280",marginBottom:24 }}>Log into your account</div>
           <div style={{ marginBottom:12 }}>
@@ -80,8 +83,8 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack }) {
         <div style={{ width:300,background:"linear-gradient(160deg,#1a2332,#243044 60%,#1e3a5f)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:28,position:"relative",overflow:"hidden" }}>
           <div style={{ position:"absolute",width:260,height:260,borderRadius:"50%",background:"rgba(124,58,237,0.08)",top:-80,right:-60 }}/>
           <div style={{ textAlign:"center",zIndex:1,width:"100%" }}>
-            <div style={{ fontSize:32,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif",marginBottom:16 }}>Nzinga<br/>Talent OS</div>
-            <div style={{ fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:20 }}>Multi-role talent pipeline with full compliance tracking.</div>
+            <div style={{ display:"flex",justifyContent:"center",marginBottom:16 }}><TMXLogo size="md" theme="dark" /></div>
+            <div style={{ fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:20 }}>{PLATFORM_BRAND.tagline} — multi-role talent pipeline with full compliance tracking.</div>
             <div style={{ fontSize:10,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8 }}>Quick Demo Access</div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:5 }}>
               {USERS.map(u=><div key={u.id} onClick={()=>{setEmail(u.email);setPass(u.password);}} style={{ background:"rgba(255,255,255,0.06)",border:`1px solid ${u.color}44`,borderRadius:6,padding:"5px 8px",cursor:"pointer" }}>

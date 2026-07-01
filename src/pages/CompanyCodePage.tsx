@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { COMPANY_CODES } from '@/constants/roles'
+import { PLATFORM_BRAND } from '@/constants/company-branding'
+import { PlatformBrandHeader } from '@/components/branding'
 
 export function CompanyCodePage() {
   const navigate = useNavigate()
@@ -43,13 +45,7 @@ export function CompanyCodePage() {
       {/* Main content */}
       <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px' }}>
         {/* Logo & Brand */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ margin: '0 auto 16px', width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg, #7c3aed, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(124,58,237,0.3)' }}>
-            <span style={{ fontFamily: 'Georgia, serif', fontSize: 26, fontWeight: 700, color: '#fff' }}>N</span>
-          </div>
-          <h1 style={{ fontFamily: 'Georgia, serif', fontSize: 40, fontWeight: 800, color: '#111827', margin: 0 }}>Nzinga</h1>
-          <p style={{ fontSize: 11, color: '#9ca3af', letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: 4 }}>Talent Operating System</p>
-        </div>
+        <PlatformBrandHeader style={{ marginBottom: 32 }} />
 
         {/* Card */}
         <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 12, padding: '32px 36px', boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}>
@@ -142,7 +138,7 @@ export function CompanyCodePage() {
 
       {/* Footer */}
       <footer style={{ position: 'relative', zIndex: 1, padding: '16px 0', textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>
-        &copy; {new Date().getFullYear()} Nzinga Talent OS &mdash; Streamlined Talent Management
+        &copy; {new Date().getFullYear()} {PLATFORM_BRAND.footer}
       </footer>
     </div>
   )

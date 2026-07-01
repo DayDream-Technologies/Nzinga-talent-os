@@ -6,5 +6,12 @@ export function RosterPage() {
   const { user } = useAuth()
   const { talents, setSelectedTalent } = useAppData()
   if (!user) return null
-  return <Roster talents={talents} onSelectTalent={setSelectedTalent} userRole={user.role} />
+  return (
+    <Roster
+      talents={talents}
+      onSelectTalent={setSelectedTalent}
+      userRole={user.role}
+      currentUserId={user.id}
+    />
+  )
 }

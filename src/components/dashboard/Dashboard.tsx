@@ -3,6 +3,33 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 
+const DASH = {
+  pageBg: '#e8eef5',
+  pagePattern: 'radial-gradient(circle at 15% 85%, rgba(59,130,246,0.06) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(0,45,86,0.04) 0%, transparent 40%)',
+  card: { bg: '#ffffff', border: '#dce4ed', radius: 10, shadow: '0 2px 10px rgba(0,45,86,0.07)' },
+  header: { bg: '#ffffff', border: '#e5e7eb' },
+  text: { primary: '#111827', secondary: '#6b7280', muted: '#9ca3af' },
+  blue: { link: '#2563eb', accent: '#2563eb', light: '#dbeafe', dark: '#002d56', mid: '#3b82f6' },
+  iconBgs: ['#dbeafe', '#bfdbfe', '#93c5fd', '#3b82f6'],
+};
+
+function dashPageStyle(padding) {
+  return { padding, flex: 1, overflowY: 'auto', minHeight: '100%', background: DASH.pageBg, backgroundImage: DASH.pagePattern };
+}
+function dashCardStyle(extra = {}) {
+  return { background: DASH.card.bg, border: `1px solid ${DASH.card.border}`, borderRadius: DASH.card.radius, boxShadow: DASH.card.shadow, overflow: 'hidden', ...extra };
+}
+function dashPanelHeaderStyle(extra = {}) {
+  return { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: DASH.header.bg, borderBottom: `2px solid ${DASH.blue.accent}`, ...extra };
+}
+function dashSubCardStyle() {
+  return { border: `1px solid ${DASH.header.border}`, borderRadius: 8, padding: '10px 12px', background: DASH.card.bg };
+}
+function dashAlertStyle(variant = 'accent') {
+  const borderColor = variant === 'dark' ? DASH.blue.dark : DASH.blue.accent;
+  return { background: DASH.card.bg, border: `1px solid ${DASH.card.border}`, borderLeft: `4px solid ${borderColor}`, borderRadius: 8, padding: '10px 14px', marginBottom: 12, boxShadow: DASH.card.shadow };
+}
+
 function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav, applications }) {
   const role=currentUser.role;
   const actionStage=ROLE_ACTION_STAGE[role];
@@ -14,24 +41,24 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
   const incompleteApps=Object.values(applications).filter(a=>a.status==="submitted"&&!isAppComplete(a));
 
   return(
-    <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}>
+    <div style={dashPageStyle("14px 18px")}>
       {/* Submitted complete apps alert */}
       {submittedApps.length>0&&(role==="scout"||role==="director")&&(
-        <div onClick={()=>onNav("applications")} style={{ background:"linear-gradient(135deg,#dcfce7,#d1fae5)",border:"1px solid #86efac",borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer" }}>
+        <div onClick={()=>onNav("applications")} style={{ ...dashAlertStyle('accent'), display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer" }}>
           <div style={{ display:"flex",alignItems:"center",gap:10 }}>
             <span style={{ fontSize:20 }}>✅</span>
-            <div><div style={{ fontWeight:700,color:T.green,fontSize:13 }}>{submittedApps.length} Application{submittedApps.length>1?"s":""} Ready to Import</div><div style={{ fontSize:11,color:T.t3 }}>100% complete — ready to enter pipeline automatically</div></div>
+            <div><div style={{ fontWeight:700,color:DASH.text.primary,fontSize:13 }}>{submittedApps.length} Application{submittedApps.length>1?"s":""} Ready to Import</div><div style={{ fontSize:11,color:DASH.text.secondary }}>100% complete — ready to enter pipeline automatically</div></div>
           </div>
-          <Btn sm variant="success">Import Now →</Btn>
+          <Btn sm>Import Now →</Btn>
         </div>
       )}
       {incompleteApps.length>0&&(role==="scout"||role==="director")&&(
-        <div onClick={()=>onNav("applications")} style={{ background:T.amberL,border:`1px solid ${T.amber}55`,borderRadius:8,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer" }}>
+        <div onClick={()=>onNav("applications")} style={{ ...dashAlertStyle('dark'), display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer" }}>
           <div style={{ display:"flex",alignItems:"center",gap:10 }}>
             <span style={{ fontSize:20 }}>⏳</span>
-            <div><div style={{ fontWeight:700,color:T.amber,fontSize:13 }}>{incompleteApps.length} Application{incompleteApps.length>1?"s":""} Submitted but Incomplete</div><div style={{ fontSize:11,color:T.t3 }}>Required fields missing — will not auto-import until complete</div></div>
+            <div><div style={{ fontWeight:700,color:DASH.text.primary,fontSize:13 }}>{incompleteApps.length} Application{incompleteApps.length>1?"s":""} Submitted but Incomplete</div><div style={{ fontSize:11,color:DASH.text.secondary }}>Required fields missing — will not auto-import until complete</div></div>
           </div>
-          <Btn sm variant="warning">Review →</Btn>
+          <Btn sm>Review →</Btn>
         </div>
       )}
 
@@ -43,9 +70,9 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
           return latest>0&&(now-latest)>24*60*60*1000;
         });
         if(!idleStages.length)return null;
-        return(<div style={{ background:"#fef3c7",border:"1px solid #f59e0b55",borderRadius:8,padding:"10px 14px",marginBottom:12 }}>
-          <div style={{ fontWeight:700,color:T.amber,fontSize:13,marginBottom:4 }}>⏰ Pipeline Idle Alert</div>
-          <div style={{ fontSize:12,color:T.t2 }}>{idleStages.map(s=>{
+        return(<div style={{ ...dashAlertStyle('dark'), background:DASH.blue.light }}>
+          <div style={{ fontWeight:700,color:DASH.text.primary,fontSize:13,marginBottom:4 }}>⏰ Pipeline Idle Alert</div>
+          <div style={{ fontSize:12,color:DASH.text.secondary }}>{idleStages.map(s=>{
             const inStage=talents.filter(t=>t.stage===s);const latest=Math.max(...inStage.map(t=>{const log=t.audit_log||[];return log.length?Date.parse(log[log.length-1].ts):0;}));
             const hrs=Math.round((now-latest)/3600000);
             return <div key={s} style={{ marginBottom:2 }}>• <strong>{STAGE_LABELS[s]}</strong> — no activity for {hrs}h ({inStage.length} talent{inStage.length>1?"s":""})</div>;
@@ -54,20 +81,20 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
       })()}
 
       {/* My Queue */}
-      <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,marginBottom:14,overflow:"hidden" }}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 14px",borderBottom:"2px solid "+T.blue,background:"#fafbfc" }}>
-          <span style={{ fontSize:12,fontWeight:700,color:T.t1,textTransform:"uppercase",letterSpacing:"0.05em" }}>My Queue — {ROLE_LABELS[role]}</span>
-          <span style={{ background:T.blueL,color:T.blue,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{myQueue.length}</span>
+      <div style={dashCardStyle({ marginBottom:14 })}>
+        <div style={dashPanelHeaderStyle()}>
+          <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary,textTransform:"uppercase",letterSpacing:"0.05em" }}>My Queue — {ROLE_LABELS[role]}</span>
+          <span style={{ background:DASH.blue.light,color:DASH.blue.link,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{myQueue.length}</span>
         </div>
-        {myQueue.length===0?<div style={{ padding:"18px",textAlign:"center",color:T.t4,fontSize:12 }}>✓ Your queue is clear</div>:(
+        {myQueue.length===0?<div style={{ padding:"18px",textAlign:"center",color:DASH.text.muted,fontSize:12 }}>✓ Your queue is clear</div>:(
           <table style={{ width:"100%",borderCollapse:"collapse" }}>
             <thead><tr><TH>Name</TH><TH>Stage</TH><TH>Niche</TH><TH>Score</TH><TH>App Status</TH><TH>Action</TH></tr></thead>
-            <tbody>{myQueue.map(t=><tr key={t.id} onMouseEnter={e=>e.currentTarget.style.background="#f8f9fb"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-              <TD><span style={{ color:T.blue,fontWeight:600,cursor:"pointer" }} onClick={()=>onSelectTalent(t)}>{t.name}</span><div style={{ fontSize:10,color:T.t4 }}>{t.social_handle}</div></TD>
+            <tbody>{myQueue.map(t=><tr key={t.id} onMouseEnter={e=>e.currentTarget.style.background="#f0f4f8"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+              <TD><span style={{ color:DASH.blue.link,fontWeight:600,cursor:"pointer" }} onClick={()=>onSelectTalent(t)}>{t.name}</span><div style={{ fontSize:10,color:DASH.text.muted }}>{t.social_handle}</div></TD>
               <TD><StageBadge stage={t.stage}/></TD>
               <TD>{t.niches.map(n=><NichePill key={n} n={n}/>)}</TD>
-              <TD>{t.jordan_score>0?<ScoreBar score={t.jordan_score}/>:<span style={{ color:T.t4 }}>—</span>}</TD>
-              <TD>{t.application_status?<span style={{ fontSize:11,fontWeight:600,color:t.application_status==="submitted"?T.green:T.amber }}>{t.application_status}</span>:<span style={{ color:T.t4,fontSize:11 }}>—</span>}</TD>
+              <TD>{t.jordan_score>0?<ScoreBar score={t.jordan_score}/>:<span style={{ color:DASH.text.muted }}>—</span>}</TD>
+              <TD>{t.application_status?<span style={{ fontSize:11,fontWeight:600,color:t.application_status==="submitted"?T.green:T.amber }}>{t.application_status}</span>:<span style={{ color:DASH.text.muted,fontSize:11 }}>—</span>}</TD>
               <TD><Btn sm onClick={()=>onSelectTalent(t)}>Open →</Btn></TD>
             </tr>)}</tbody>
           </table>
@@ -75,26 +102,26 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
       </div>
 
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
-        <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,overflow:"hidden" }}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 14px",borderBottom:"2px solid "+T.amber,background:"#fafbfc" }}>
-            <span style={{ fontSize:12,fontWeight:700,color:T.t1,textTransform:"uppercase",letterSpacing:"0.05em" }}>Open Tasks</span>
+        <div style={dashCardStyle()}>
+          <div style={dashPanelHeaderStyle()}>
+            <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary,textTransform:"uppercase",letterSpacing:"0.05em" }}>Open Tasks</span>
             <Btn sm onClick={()=>onNav("tasks")}>View All</Btn>
           </div>
           <div style={{ padding:"8px 14px" }}>
-            {myTasks.length===0?<div style={{ color:T.t4,fontSize:12,padding:"6px 0" }}>No open tasks.</div>:myTasks.slice(0,4).map(tk=><div key={tk.id} style={{ display:"flex",gap:8,padding:"5px 0",borderBottom:"1px solid #f5f5f5",alignItems:"flex-start" }}>
+            {myTasks.length===0?<div style={{ color:DASH.text.muted,fontSize:12,padding:"6px 0" }}>No open tasks.</div>:myTasks.slice(0,4).map(tk=><div key={tk.id} style={{ display:"flex",gap:8,padding:"5px 0",borderBottom:"1px solid #f0f4f8",alignItems:"flex-start" }}>
               <PriBadge p={tk.priority}/>
-              <div style={{ flex:1 }}><div style={{ fontSize:12,color:T.t1,fontWeight:500 }}>{tk.title}</div><div style={{ fontSize:10,color:T.t4 }}>Due {tk.due}</div></div>
+              <div style={{ flex:1 }}><div style={{ fontSize:12,color:DASH.text.primary,fontWeight:500 }}>{tk.title}</div><div style={{ fontSize:10,color:DASH.text.muted }}>Due {tk.due}</div></div>
             </div>)}
           </div>
         </div>
-        <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,overflow:"hidden" }}>
-          <div style={{ padding:"9px 14px",borderBottom:"2px solid "+T.purple,background:"#fafbfc" }}>
-            <span style={{ fontSize:12,fontWeight:700,color:T.t1,textTransform:"uppercase",letterSpacing:"0.05em" }}>Recent Activity</span>
+        <div style={dashCardStyle()}>
+          <div style={dashPanelHeaderStyle({ justifyContent:'flex-start' })}>
+            <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary,textTransform:"uppercase",letterSpacing:"0.05em" }}>Recent Activity</span>
           </div>
           <div style={{ padding:"8px 14px" }}>
-            {history.slice(0,5).map(h=>{const tal=talents.find(t=>t.id===h.talent_id);const usr=USERS.find(u=>u.id===h.user_id);return <div key={h.id} style={{ display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid #f5f5f5" }}>
+            {history.slice(0,5).map(h=>{const tal=talents.find(t=>t.id===h.talent_id);const usr=USERS.find(u=>u.id===h.user_id);return <div key={h.id} style={{ display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid #f0f4f8" }}>
               <HIcon type={h.type}/>
-              <div style={{ flex:1 }}><span style={{ color:T.blue,fontSize:11,fontWeight:600 }}>{tal?.name}</span><span style={{ color:T.t4,fontSize:11 }}> · {usr?.name}</span><div style={{ fontSize:11,color:T.t2 }}>{h.text.slice(0,60)}{h.text.length>60?"…":""}</div></div>
+              <div style={{ flex:1 }}><span style={{ color:DASH.blue.link,fontSize:11,fontWeight:600 }}>{tal?.name}</span><span style={{ color:DASH.text.muted,fontSize:11 }}> · {usr?.name}</span><div style={{ fontSize:11,color:DASH.text.secondary }}>{h.text.slice(0,60)}{h.text.length>60?"…":""}</div></div>
             </div>;})}
           </div>
         </div>
@@ -121,40 +148,40 @@ function Workspace({ currentUser, onNav }) {
     } else onNav(target);
   }
   return(
-    <div style={{ padding:"22px 26px",flex:1,overflowY:"auto" }}>
+    <div style={dashPageStyle("22px 26px")}>
       <div style={{ textAlign:"center",marginBottom:28 }}>
-        <div style={{ fontSize:26,fontWeight:700,color:T.t1,fontFamily:"Georgia,serif" }}>Welcome, {currentUser.name.split(" ")[0]}</div>
-        <div style={{ fontSize:13,color:T.t3,marginTop:3 }}>Let's get to work.</div>
+        <div style={{ fontSize:26,fontWeight:700,color:DASH.text.primary,fontFamily:"Georgia,serif" }}>Welcome, {currentUser.name.split(" ")[0]}</div>
+        <div style={{ fontSize:13,color:DASH.text.secondary,marginTop:3 }}>Let's get to work.</div>
       </div>
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18 }}>
-        <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:10,overflow:"hidden" }}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 14px",borderBottom:"1px solid #f0f0f0" }}><span style={{ fontSize:14,fontWeight:700,color:T.t1 }}>My Favorites</span></div>
+        <div style={dashCardStyle()}>
+          <div style={dashPanelHeaderStyle({ justifyContent:'flex-start' })}><span style={{ fontSize:14,fontWeight:700,color:DASH.text.primary }}>My Favorites</span></div>
           <div style={{ padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
-            {Object.entries(favItems).map(([cat,items])=><div key={cat}>
+            {Object.entries(favItems).map(([cat,items],idx)=><div key={cat} style={dashSubCardStyle()}>
               <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:5 }}>
-                <div style={{ width:26,height:26,borderRadius:7,background:cat==="Talent"?"#dcfce7":cat==="Operations"?"#dbeafe":"#f3e8ff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Talent"?"🏠":cat==="Operations"?"⚙":"📊"}</div>
-                <span style={{ fontSize:12,fontWeight:700,color:T.t1 }}>{cat}</span>
+                <div style={{ width:26,height:26,borderRadius:7,background:DASH.iconBgs[idx%DASH.iconBgs.length],display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Talent"?"🏠":cat==="Operations"?"⚙":"📊"}</div>
+                <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary }}>{cat}</span>
               </div>
-              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:T.blue,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
+              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:DASH.blue.link,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
             </div>)}
           </div>
         </div>
-        <div style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:10,overflow:"hidden" }}>
-          <div style={{ padding:"11px 14px",borderBottom:"3px solid #16a34a" }}><span style={{ fontSize:14,fontWeight:700,color:T.t1 }}>My Reports</span></div>
+        <div style={dashCardStyle()}>
+          <div style={dashPanelHeaderStyle({ justifyContent:'flex-start' })}><span style={{ fontSize:14,fontWeight:700,color:DASH.text.primary }}>My Reports</span></div>
           <div style={{ padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
-            {Object.entries(reports).map(([cat,items])=><div key={cat}>
+            {Object.entries(reports).map(([cat,items],idx)=><div key={cat} style={dashSubCardStyle()}>
               <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:5 }}>
-                <div style={{ width:26,height:26,borderRadius:7,background:cat==="Pipeline"?"#dcfce7":cat==="Scoring"?"#dbeafe":"#fef3c7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Pipeline"?"🏠":cat==="Scoring"?"💰":"📊"}</div>
-                <span style={{ fontSize:12,fontWeight:700,color:T.t1 }}>{cat}</span>
+                <div style={{ width:26,height:26,borderRadius:7,background:DASH.iconBgs[idx%DASH.iconBgs.length],display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Pipeline"?"🏠":cat==="Scoring"?"💰":"📊"}</div>
+                <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary }}>{cat}</span>
               </div>
-              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:T.blue,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
+              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:DASH.blue.link,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
             </div>)}
           </div>
         </div>
       </div>
-      <div style={{ marginTop:14,background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,padding:"9px 14px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-        <span style={{ fontSize:12,color:T.t3 }}>📢 <strong>Announcements</strong> — No new announcements</span>
-        <span onClick={()=>onNav("training")} style={{ fontSize:12,color:T.blue,cursor:"pointer" }}>🎓 My Training</span>
+      <div style={{ ...dashCardStyle(), marginTop:14, padding:"9px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <span style={{ fontSize:12,color:DASH.text.secondary }}>📢 <strong style={{ color:DASH.text.primary }}>Announcements</strong> — No new announcements</span>
+        <span onClick={()=>onNav("training")} style={{ fontSize:12,color:DASH.blue.link,cursor:"pointer" }}>🎓 My Training</span>
       </div>
     </div>
   );

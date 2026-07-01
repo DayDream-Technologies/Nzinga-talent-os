@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, isTalentVisibleToRole } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 
-function Pipeline({ talents, onSelectTalent, userRole, focusStage }) {
+function Pipeline({ talents, onSelectTalent, userRole, focusStage, currentUserId }) {
   const accessible=ROLE_STAGE_ACCESS[userRole]||[];
-  const visibleTalents=userRole==="director"?talents:talents.filter(t=>accessible.includes(t.stage));
+  const visibleTalents=talents.filter(t=>isTalentVisibleToRole(t,userRole,currentUserId));
   const stageRefs=useRef({});
   const stagesToShow=focusStage&&accessible.includes(focusStage)?[focusStage]:accessible.filter(s=>s!=="not_viable");
   useEffect(()=>{if(focusStage&&stageRefs.current[focusStage])stageRefs.current[focusStage].scrollIntoView({behavior:"smooth",block:"start"});},[focusStage]);
@@ -33,10 +33,10 @@ function Pipeline({ talents, onSelectTalent, userRole, focusStage }) {
 }
 
 // ─── FULL ROSTER ──────────────────────────────────────────────────────────────
-function Roster({ talents, onSelectTalent, userRole }) {
+function Roster({ talents, onSelectTalent, userRole, currentUserId }) {
   const [search,setSearch]=useState(""); const [sf,setSf]=useState("all");
   const accessible=ROLE_STAGE_ACCESS[userRole]||[];
-  const visible=userRole==="director"?talents:talents.filter(t=>accessible.includes(t.stage));
+  const visible=talents.filter(t=>isTalentVisibleToRole(t,userRole,currentUserId));
   const filt=visible.filter(t=>{if(search&&!t.name.toLowerCase().includes(search.toLowerCase())&&!t.social_handle.toLowerCase().includes(search.toLowerCase()))return false;if(sf!=="all"&&t.stage!==sf)return false;return true;});
   return <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}>
     <div style={{ display:"flex",gap:8,marginBottom:12,alignItems:"center" }}>

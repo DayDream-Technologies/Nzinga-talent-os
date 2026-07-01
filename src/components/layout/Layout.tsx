@@ -1,14 +1,15 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, isTalentVisibleToRole } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
+import { CompanyLogo } from "@/components/branding";
 
 function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectTalent, tasks }) {
   const [profileOpen,setProfileOpen]=useState(false);
   const [q,setQ]=useState(""); const [qOpen,setQOpen]=useState(false);
   const ref=useRef();
   const accessible=ROLE_STAGE_ACCESS[user.role]||[];
-  const visibleTalents=user.role==="director"?talents:talents.filter(t=>accessible.includes(t.stage));
+  const visibleTalents=talents.filter(t=>isTalentVisibleToRole(t,user.role,user.id));
   const results=q.length>1?visibleTalents.filter(t=>t.name.toLowerCase().includes(q.toLowerCase())||t.social_handle.toLowerCase().includes(q.toLowerCase())).slice(0,6):[];
   const urgentTasks=tasks.filter(t=>t.assigned_to===user.id&&t.status==="open"&&t.priority==="urgent").length;
   const openTasks=tasks.filter(t=>t.assigned_to===user.id&&t.status==="open").length;
@@ -16,8 +17,7 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
   return(
     <div ref={ref} style={{ background:T.navBg,borderBottom:`1px solid ${T.navBorder}`,display:"flex",alignItems:"center",height:48,padding:"0 14px",gap:8,flexShrink:0,zIndex:100,position:"relative" }}>
       <div style={{ display:"flex",alignItems:"center",gap:8,marginRight:4 }}>
-        <div style={{ width:28,height:28,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif" }}>N</div>
-        <span style={{ color:"#fff",fontWeight:700,fontSize:14,fontFamily:"Georgia,serif" }}>Nzinga</span>
+        <CompanyLogo variant="company" companyCode={companyCode} size="sm" theme="dark" showWordmark />
       </div>
       <div style={{ display:"flex",gap:1,marginRight:6 }}>
         {[["☰","Menu",onMenu],["📄","Records",()=>onNav("roster")],["★","Workspace",()=>onNav("workspace")]].map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }}>{icon}</button>)}
@@ -83,7 +83,7 @@ function Scoreboard({ talents, role }) {
   </div>;
 }
 
-function FullMenu({ onClose, onNav, userRole }) {
+function FullMenu({ onClose, onNav, userRole, companyCode }) {
   const [cat,setCat]=useState("Talent");
   const allCats={
     "Talent":{ "General":["All Talent","Pipeline Matrix","New Holding Entry","Applications"],"Pipeline":["My Queue","Signed Clients"] },
@@ -115,7 +115,7 @@ function FullMenu({ onClose, onNav, userRole }) {
       <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,0.4)" }}/>
       <div style={{ position:"relative",width:820,margin:"48px 0 0",background:"#fff",borderRadius:"0 0 10px 0",boxShadow:"0 8px 40px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",maxHeight:"calc(100vh - 48px)",overflow:"hidden" }}>
         <div style={{ display:"flex",alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #f0f0f0",background:"#fafbfc",gap:10 }}>
-          <div style={{ width:26,height:26,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif" }}>N</div>
+          <CompanyLogo variant="company" companyCode={companyCode} size="sm" showWordmark />
           <span style={{ fontSize:14,fontWeight:700,color:T.t1 }}>Menu</span>
           {["Workspace","Dashboard"].map(l=><button key={l} onClick={()=>{onNav(l.toLowerCase());onClose();}} style={{ background:"transparent",border:"none",padding:"5px 10px",cursor:"pointer",fontSize:12,color:T.t2,borderRadius:5,fontFamily:"inherit" }}>{l}</button>)}
           <div style={{ flex:1 }}/><button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>

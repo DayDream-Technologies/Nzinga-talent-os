@@ -28,7 +28,7 @@ const TRAINING_BY_ROLE: Record<
     items: [
       {
         label: 'Review Criteria',
-        description: 'Gate decisions at Team 1 Review — approve, hold, or return to scout.',
+        description: 'Gate decisions at Team 1 Review — approve for Ops, return for revision, or reject.',
       },
       {
         label: 'Escalation Procedures',

@@ -16,6 +16,7 @@ export function PipelinePage() {
       onSelectTalent={setSelectedTalent}
       userRole={user.role}
       focusStage={stageParam || undefined}
+      currentUserId={user.id}
     />
   )
 }

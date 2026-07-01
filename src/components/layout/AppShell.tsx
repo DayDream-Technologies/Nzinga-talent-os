@@ -127,6 +127,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
             setMenuOpen(false)
           }}
           userRole={user.role}
+          companyCode={companyCode}
         />
       )}
       {reviewingApp && (

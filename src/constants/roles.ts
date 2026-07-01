@@ -38,3 +38,32 @@ export const ROLE_ACTION_STAGE: Record<Role, TalentStage> = {
   director: 'executive_review',
   success_manager: 'signed_onboarding',
 }
+
+/** Stages where a scout may edit the talent packet (SOP: revision or initial build). */
+export const SCOUT_EDITABLE_STAGES: TalentStage[] = ['holding_entry', 'scout_complete']
+
+export function isTalentVisibleToRole(
+  talent: { stage: TalentStage; scout_id?: string | null },
+  role: Role,
+  userId?: string,
+): boolean {
+  if (role === 'director') return true
+  const accessible = ROLE_STAGE_ACCESS[role] || []
+  if (accessible.includes(talent.stage)) return true
+  // SOP Step 6: scouts track their own submissions downstream (read-only)
+  if (role === 'scout' && userId && talent.scout_id === userId) return true
+  return false
+}
+
+export function canScoutEditTalent(stage: TalentStage): boolean {
+  return SCOUT_EDITABLE_STAGES.includes(stage)
+}
+
+export function isScoutReadOnlyView(
+  role: Role,
+  stage: TalentStage,
+  scoutId: string | null | undefined,
+  userId: string,
+): boolean {
+  return role === 'scout' && scoutId === userId && !canScoutEditTalent(stage)
+}

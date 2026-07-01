@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, canScoutEditTalent, isScoutReadOnlyView } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
 import { ComposeEmail } from "@/components/talent/ComposeEmail";
@@ -19,7 +19,9 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
   const tTasks=allTasks.filter(t=>t.related_talent===local.id);
   const [newNote,setNewNote]=useState(""); const [noteType,setNoteType]=useState("note");
   const [historyFilter,setHistoryFilter]=useState("all");
+  const [opsReturnNotes,setOpsReturnNotes]=useState("");
   const scoutUser=USERS.find(u=>u.id===local.scout_id);
+  const scoutReadOnly=isScoutReadOnlyView(role,local.stage,local.scout_id,currentUser.id);
   const creatorUser=USERS.find(u=>u.id===local.created_by);
   const createdByLabel=local.created_by===null?"Prospect":creatorUser?`${ROLE_LABELS[creatorUser.role]} (${creatorUser.name})`:"System";
   const linkedApp=local.application_id?applications[local.application_id]:null;
@@ -54,9 +56,13 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
 
   // Pipeline action handlers
   function scoutSubmit(){
-    for(let i=0;i<5;i++){if(!local.pillar_rationales[i]){setErr("All 5 pillar rationales required.");return;}}
+    for(let i=0;i<5;i++){
+      if(!local.pillar_rationales[i]){setErr("All 5 pillar rationales required.");return;}
+      if(local.pillar_scores[i]<3){setErr(`Pillar ${i+1} (${PILLAR_NAMES[i]}) must be at least 3.`);return;}
+    }
+    if(local.jordan_score<3.5){setErr("Jordan Score must be at least 3.5.");return;}
     if(!local.revenue_path||!local.scout_summary||!local.niches.length){setErr("Complete all required fields.");return;}
-    setErr("");save({...local,stage:"scout_complete",audit_log:auditLog("Completed Talent Packet → Scout Complete","scout_complete")});onClose();
+    setErr("");save({...local,stage:"team1_review",audit_log:auditLog("Submitted Talent Packet → Team 1 Review","team1_review")});onClose();
   }
   function scoutArchive(){save({...local,stage:"not_viable",audit_log:auditLog("Marked Not Viable","not_viable")});onClose();}
   function markLost(){save({...local,stage:"not_viable",audit_log:auditLog("Marked Lost","not_viable")});onClose();}
@@ -76,6 +82,14 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
     if(Object.values(local.compliance||{}).filter(Boolean).length<6){setErr("At least 6/8 compliance items must be verified.");return;}
     if(!local.rep_type||!local.commission||!local.term_length){setErr("Complete all Framework fields first.");return;}
     save({...local,stage:"team2_audit",audit_log:auditLog("Compliance verified → Team 2 Audit","ops_processing")});onClose();
+  }
+  function opsReturnTeam1(){
+    if(!opsReturnNotes.trim()){setErr("Return notes required for Team 1 Lead.");return;}
+    setErr("");
+    save({...local,stage:"team1_review",team1_notes:opsReturnNotes,audit_log:auditLog("Returned to Team 1 Lead for clarification","ops_processing")});
+    const t1User=USERS.find(u=>u.role==="team1_lead");
+    setTasks(prev=>[{id:"tk_"+Date.now(),title:"Ops Return — Review: "+local.name,assigned_to:t1User?t1User.id:"u2",related_talent:local.id,due:new Date(Date.now()+3*86400000).toISOString().slice(0,10),priority:"high",status:"open",created_by:currentUser.id,created_at:new Date().toISOString(),notes:opsReturnNotes},...prev]);
+    onClose();
   }
   function t2(d){
     if(d==="approved"){save({...local,stage:"executive_review",team2_decision:"approved",audit_log:auditLog("Approved for Director Review","team2_audit")});onClose();}
@@ -137,11 +151,15 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                 <div style={{ fontSize:15,fontWeight:700,color:T.green }}>${parseInt(local.revenue_ytd).toLocaleString()}</div>
                 <div style={{ fontSize:9,color:T.t4,textTransform:"uppercase" }}>YTD</div>
               </div>}
-              {role==="scout"&&<Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send App</Btn>}
+              {role==="scout"&&!scoutReadOnly&&<Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send App</Btn>}
               <button onClick={onClose} style={{ background:"transparent",border:"1px solid #e5e7eb",borderRadius:6,color:T.t3,cursor:"pointer",padding:"5px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
             </div>
           </div>
         </div>
+
+        {scoutReadOnly&&<div style={{ background:T.blueL,borderBottom:`1px solid ${T.blue}33`,padding:"8px 16px",fontSize:12,color:T.blue }}>
+          <strong>Read-only view</strong> — This talent has moved beyond your action stage. You can track status per SOP pipeline maintenance rules.
+        </div>}
 
         {/* ── Incomplete app alert with jump links (role-gated) ── */}
         {linkedApp&&appHasIncomplete&&(role==="director"||ROLE_STAGE_ACCESS[role]?.includes(local.stage))&&(
@@ -216,13 +234,13 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
             {linkedApp?.data?.parent_name&&<Section title="Parent / Guardian" accent={T.purple} style={{ marginBottom:10 }}>
               {[["Name",linkedApp.data.parent_name],["Phone",linkedApp.data.parent_phone],["Email",linkedApp.data.parent_email],["Relationship",linkedApp.data.parent_relationship]].filter(([,v])=>v).map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
             </Section>}
-            {role==="scout"&&local.stage==="holding_entry"&&<div style={{ display:"flex",gap:7 }}><Btn variant="primary" onClick={()=>setTab("Scoring")}>Complete Talent Packet →</Btn><Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send Application</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>}
+            {role==="scout"&&local.stage==="holding_entry"&&!scoutReadOnly&&<div style={{ display:"flex",gap:7 }}><Btn variant="primary" onClick={()=>setTab("Scoring")}>Complete Talent Packet →</Btn><Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send Application</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>}
             {role==="team1_lead"&&local.stage==="team1_review"&&<Section title="Gate 1 Decision" accent={T.amber} style={{ marginTop:10 }}><div style={{ marginBottom:8 }}><Lbl>Correction Notes (required for revision)</Lbl><FTextarea value={local.team1_notes} onChange={v=>p("team1_notes",v)} rows={2}/></div><div style={{ display:"flex",gap:7 }}><Btn variant="success" onClick={()=>t1("approved")}>✓ Approve for Ops</Btn><Btn variant="warning" onClick={()=>t1("revision")}>↩ Return for Revision</Btn><Btn variant="danger" onClick={()=>t1("rejected")}>✗ Reject</Btn></div></Section>}
           </div>}
 
           {/* ─ SCORING ─ */}
           {tab==="Scoring"&&<div>
-            {role==="scout"&&(local.stage==="holding_entry"||local.stage==="scout_complete")?<div>
+            {role==="scout"&&(local.stage==="holding_entry"||local.stage==="scout_complete")&&!scoutReadOnly?<div>
               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10 }}>
                 <Section title="Scout Summary" accent={T.purple}><FTextarea value={local.scout_summary} onChange={v=>p("scout_summary",v)} rows={4} error={!local.scout_summary}/></Section>
                 <Section title="90-Day Revenue Path" accent={T.green}><FTextarea value={local.revenue_path} onChange={v=>p("revenue_path",v)} rows={4} error={!local.revenue_path}/></Section>
@@ -241,7 +259,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                   <div style={{ fontSize:12,color:local.jordan_score>=3.5?T.green:T.red,fontWeight:600 }}>{local.jordan_score>=3.5?"✓ Meets 3.5 threshold":local.jordan_score>0?"✗ Below 3.5 threshold — cannot advance":"Enter pillar scores above"}</div>
                 </div>
               </Section>
-              <div style={{ display:"flex",gap:7,marginTop:10 }}><Btn variant="primary" onClick={scoutSubmit} disabled={local.jordan_score<3.5} title={local.jordan_score<3.5?"Jordan Score must be at least 3.5 to send up.":""}>Submit Packet → Team 1 Review</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>
+              <div style={{ display:"flex",gap:7,marginTop:10 }}><Btn variant="primary" onClick={scoutSubmit} disabled={local.jordan_score<3.5||local.pillar_scores.some(s=>s<3)} title={local.jordan_score<3.5?"Jordan Score must be at least 3.5.":local.pillar_scores.some(s=>s<3)?"Every pillar must be at least 3.":""}>Submit Packet → Team 1 Review</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>
             </div>:<div>
               {PILLAR_NAMES.map((name,i)=><Section key={i} title={`P${i+1}: ${name}`} accent={local.pillar_scores[i]>=3?T.green:local.pillar_scores[i]>0?T.red:T.t5} style={{ marginBottom:8 }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4 }}><div style={{ flex:1,marginRight:10 }}><ScoreBar score={local.pillar_scores[i]}/></div><div style={{ width:32,height:32,borderRadius:6,background:local.pillar_scores[i]>=3?T.greenL:T.redL,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:15,color:local.pillar_scores[i]>=3?T.green:T.red }}>{local.pillar_scores[i]}</div></div>
@@ -262,7 +280,14 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                   <span style={{ fontSize:11,color:T.t3 }}>{Object.values(local.compliance||{}).filter(Boolean).length}/8 verified</span>
                   <div style={{ height:5,width:140,background:"#e5e7eb",borderRadius:3,overflow:"hidden" }}><div style={{ height:"100%",width:(Object.values(local.compliance||{}).filter(Boolean).length/8*100)+"%",background:T.green,borderRadius:3 }}/></div>
                 </div>
-                {role==="ops_specialist"&&local.stage==="ops_processing"&&<div style={{ marginTop:10 }}><Btn variant="success" onClick={ops}>Advance to Team 2 Audit →</Btn></div>}
+                {role==="ops_specialist"&&local.stage==="ops_processing"&&<div style={{ marginTop:10,display:"flex",flexDirection:"column",gap:8 }}>
+                  <Btn variant="success" onClick={ops}>Advance to Team 2 Audit →</Btn>
+                  <div style={{ borderTop:"1px solid #f0f0f0",paddingTop:8 }}>
+                    <Lbl>Return to Team 1 Lead (clarification required)</Lbl>
+                    <FTextarea value={opsReturnNotes} onChange={setOpsReturnNotes} rows={2} placeholder="Describe what needs Team 1 clarification…"/>
+                    <Btn variant="warning" sm onClick={opsReturnTeam1} style={{ marginTop:6 }}>↩ Return to Team 1 Lead</Btn>
+                  </div>
+                </div>}
               </Section>
               <Section title="Status Overview" accent={T.green}>
                 {compFields.map(([key,label])=><div key={key} style={{ display:"flex",gap:6,padding:"3px 0",fontSize:12 }}>
