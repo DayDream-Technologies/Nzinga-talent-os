@@ -3,7 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { supabaseConfigured } from "@/lib/supabase";
-import { prospectSignup, prospectLogin } from "@/services/auth.service";
+import { prospectSignup, prospectLogin, sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
 import { checkDuplicateEmail, fetchApplicationByCode, fetchApplicationByEmail, fetchApplicationById } from "@/services/application.service";
 import { AgreementViewer } from "@/components/application/AgreementViewer";
 
@@ -66,11 +66,22 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
     setMode("form");
   }
 
+  const [resetSent,setResetSent]=useState(false);
+
+  async function handleResetPassword(){
+    if(!newData.talent_email){setLookupErr("Enter your email address first.");return;}
+    setLookupErr("");setAuthLoading(true);
+    const {error}=await sendPasswordResetEmail(newData.talent_email.trim());
+    setAuthLoading(false);
+    if(error){setLookupErr(error);return;}
+    setResetSent(true);
+  }
+
   async function loginAndResume(){
     if(!newData.talent_email||!newData.talent_password){setLookupErr("Email and password required.");return;}
-    setLookupErr("");setAuthLoading(true);
+    setLookupErr("");setResetSent(false);setAuthLoading(true);
     const {profile,error}=await prospectLogin(newData.talent_email.trim(),newData.talent_password);
-    if(error||!profile){setLookupErr(error||"Login failed.");setAuthLoading(false);return;}
+    if(error||!profile){setLookupErr(friendlyAuthError(error||"Login failed."));setAuthLoading(false);return;}
     let app=profile.application_id?Object.values(apps).find(a=>a.id===profile.application_id&&belongsToCompany(a)):Object.values(apps).find(a=>String(a.talent_email||"").trim().toLowerCase()===profile.email.toLowerCase()&&belongsToCompany(a));
     if(!app){
       try{
@@ -144,9 +155,13 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
               <div style={{ fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:4 }}>Password *</div>
               <input type="password" value={newData.talent_password||""} onChange={e=>setNewData(p=>({...p,talent_password:e.target.value}))} placeholder="Your password" style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
             </div>
-            {lookupErr&&<div style={{ color:"#fca5a5",fontSize:12,marginBottom:8 }}>{lookupErr}</div>}
+            {lookupErr&&<div style={{ color:"#fca5a5",fontSize:12,marginBottom:8,lineHeight:1.5 }}>{lookupErr}</div>}
+            {resetSent&&<div style={{ color:"#4ade80",fontSize:12,marginBottom:8,lineHeight:1.5 }}>Password reset email sent. Check your inbox and follow the link to set a new password.</div>}
             <button onClick={loginAndResume} disabled={authLoading} style={{ width:"100%",padding:"11px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",opacity:authLoading?0.6:1 }}>{authLoading?"Logging in…":"Log In →"}</button>
-            <div style={{ marginTop:12,textAlign:"center" }}><button onClick={()=>setMode("lookup")} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Use access code instead</button></div>
+            <div style={{ marginTop:12,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <button onClick={()=>setMode("lookup")} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Use access code instead</button>
+              <button onClick={handleResetPassword} disabled={authLoading} style={{ background:"transparent",border:"none",color:"#60a5fa",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Forgot password?</button>
+            </div>
           </div>
         )}
 

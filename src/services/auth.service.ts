@@ -35,7 +35,7 @@ export async function loginWithCredentials(
     if (companyCode) {
       query = query.eq('company_code', companyCode.toUpperCase())
     }
-    const { data: profile } = await query.single()
+    const { data: profile } = await query.maybeSingle()
     if (!profile) {
       await supabase.auth.signOut()
       return null
@@ -58,7 +58,7 @@ export async function restoreSession(): Promise<User | null> {
       .from('users')
       .select('*')
       .eq('auth_uid', session.user.id)
-      .single()
+      .maybeSingle()
     // Prospect (or orphan) auth sessions have no staff profile — not an error
     return (profile as User) ?? null
   } catch {
@@ -183,6 +183,37 @@ export async function prospectLogin(
     'Prospect'
 
   return ensureProspectProfile(authData.user.id, email, metaName)
+}
+
+export async function sendPasswordResetEmail(email: string): Promise<{ error: string | null }> {
+  if (!supabaseConfigured || !supabase) {
+    return { error: 'Not available in demo mode.' }
+  }
+  const redirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/tmx` : undefined
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+  if (error) return { error: error.message }
+  return { error: null }
+}
+
+/**
+ * Map Supabase auth error messages to user-friendly copy.
+ */
+export function friendlyAuthError(raw: string): string {
+  const lower = raw.toLowerCase()
+  if (lower.includes('invalid login credentials') || lower.includes('invalid email or password')) {
+    return 'Incorrect email or password. Please try again or reset your password below.'
+  }
+  if (lower.includes('email not confirmed')) {
+    return 'Your email has not been confirmed yet. Check your inbox for a verification link.'
+  }
+  if (lower.includes('too many requests') || lower.includes('rate limit')) {
+    return 'Too many login attempts. Please wait a moment and try again.'
+  }
+  if (lower.includes('user not found')) {
+    return 'No account found with this email. Did you mean to create a new application?'
+  }
+  return raw
 }
 
 export async function getProspectProfile(): Promise<ProspectProfile | null> {

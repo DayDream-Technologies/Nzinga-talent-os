@@ -31,3 +31,8 @@ ON CONFLICT (code) DO NOTHING;
 -- UPDATE users SET auth_uid = '<auth.users.id for devon>'  WHERE id = 'u4';
 -- UPDATE users SET auth_uid = '<auth.users.id for simone>' WHERE id = 'u5';
 -- UPDATE users SET auth_uid = '<auth.users.id for alexis>' WHERE id = 'u6';
+
+-- Test applicants + pipeline talents (NZG):
+--   node scripts/seed-test-applicants.mjs
+-- Covers application statuses (sent / in_progress / submitted incomplete+complete)
+-- and pipeline stages including scout_complete and team2_audit.

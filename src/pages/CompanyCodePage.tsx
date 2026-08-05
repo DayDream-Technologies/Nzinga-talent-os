@@ -200,7 +200,18 @@ export function CompanyCodePage() {
       </div>
 
       <footer style={{ position: 'relative', zIndex: 1, padding: '16px 0', textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>
-        &copy; {new Date().getFullYear()} {PLATFORM_BRAND.footer}
+        <div>&copy; {new Date().getFullYear()} {PLATFORM_BRAND.footer}</div>
+        <div style={{ marginTop: 4, fontSize: 11, opacity: 0.7 }}>
+          Designed &amp; developed by{' '}
+          <a
+            href="https://www.daydreamtechnologies.net/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#7c3aed', textDecoration: 'none' }}
+          >
+            DayDream Technologies
+          </a>
+        </div>
       </footer>
     </div>
   )

@@ -358,33 +358,45 @@ export function HomePage() {
           padding: '28px clamp(20px, 5vw, 72px)',
           borderTop: '1px solid var(--mh-line)',
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: 12,
-          justifyContent: 'space-between',
+          flexDirection: 'column',
+          gap: 10,
           alignItems: 'center',
           fontSize: 12,
           color: 'var(--mh-muted)',
         }}
       >
-        <span>
-          © {new Date().getFullYear()} {PLATFORM_BRAND.footer}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <span>
+            © {new Date().getFullYear()} {PLATFORM_BRAND.footer}
+          </span>
+          <button
+            type="button"
+            className="mh-ghost"
+            onClick={() => navigate('/tmx')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--mh-muted)',
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Staff login →
+          </button>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--mh-muted)', opacity: 0.7 }}>
+          Designed & developed by{' '}
+          <a
+            href="https://www.daydreamtechnologies.net/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--mh-accent)', textDecoration: 'none' }}
+          >
+            DayDream Technologies
+          </a>
         </span>
-        <button
-          type="button"
-          className="mh-ghost"
-          onClick={() => navigate('/tmx')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--mh-muted)',
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          Staff login →
-        </button>
       </footer>
     </div>
   )

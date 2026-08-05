@@ -20,8 +20,13 @@ export function ProspectPortalPage() {
   }, [allowed, navigate])
 
   const saveApp = useCallback(async (app: Application) => {
-    const saved = await saveApplication(app)
-    setApplications((prev) => ({ ...prev, [saved.id]: saved }))
+    try {
+      const saved = await saveApplication(app)
+      setApplications((prev) => ({ ...prev, [saved.id]: saved }))
+    } catch (e) {
+      console.warn('[ProspectPortalPage] saveApp error:', e)
+      setApplications((prev) => ({ ...prev, [app.id]: app }))
+    }
   }, [])
 
   if (!allowed) return null

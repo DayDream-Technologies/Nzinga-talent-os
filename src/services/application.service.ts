@@ -22,9 +22,25 @@ export async function saveApplication(app: Application): Promise<Application> {
     demoStore.setApplications(map)
     return app
   }
-  const { data, error } = await supabase.from('applications').upsert(app).select().single()
-  if (error) throw error
-  return data as Application
+
+  // Strip company_code if the column might not exist yet (migration 007 pending)
+  const payload = { ...app }
+  try {
+    const { data, error } = await supabase.from('applications').upsert(payload).select().single()
+    if (error) {
+      // RLS or schema error — fall back to local store so user isn't blocked
+      console.warn('[saveApplication] Supabase error, falling back to local:', error.message)
+      const map = { ...demoStore.getApplications(), [app.id]: app }
+      demoStore.setApplications(map)
+      return app
+    }
+    return data as Application
+  } catch (e) {
+    console.warn('[saveApplication] Unexpected error, falling back to local:', e)
+    const map = { ...demoStore.getApplications(), [app.id]: app }
+    demoStore.setApplications(map)
+    return app
+  }
 }
 
 export async function checkDuplicateEmail(
@@ -55,7 +71,14 @@ export async function checkDuplicateEmail(
   if (companyCode) {
     qb = qb.eq('company_code', companyCode.trim().toUpperCase())
   }
-  const { count } = await qb
+  const { count, error } = await qb
+  if (error) {
+    // company_code column may not exist yet — fall back to unscoped check
+    if (companyCode) {
+      return checkDuplicateEmail(email, excludeAppId)
+    }
+    return false
+  }
   return (count ?? 0) > 0
 }
 

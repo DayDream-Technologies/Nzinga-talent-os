@@ -4,6 +4,8 @@ import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { CompanyLogo, TMXLogo } from "@/components/branding";
 import { PLATFORM_BRAND } from "@/constants/company-branding";
+import { sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
+import { supabaseConfigured } from "@/lib/supabase";
 
 function CompanyCodeScreen({ onCode, onProspectPortal }) {
   const [code,setCode]=useState(""); const [err,setErr]=useState("");
@@ -41,11 +43,25 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
 // ─── EMPLOYEE LOGIN ───────────────────────────────────────────────────────────
 function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) {
   const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
+  const [resetSent,setResetSent]=useState(false);
   async function go(){
+    setErr("");setResetSent(false);setLoading(true);
+    try{
+      const u=onSignIn?await onSignIn(email,pass):USERS.find(u=>u.email===email&&u.password===pass);
+      setLoading(false);
+      if(u)onLoginSuccess(u);else setErr(friendlyAuthError("Invalid login credentials"));
+    }catch(e){
+      setLoading(false);
+      setErr(friendlyAuthError(e?.message||"Login failed."));
+    }
+  }
+  async function handleForgotPassword(){
+    if(!email){setErr("Enter your email address first, then click Forgot Password.");return;}
     setErr("");setLoading(true);
-    const u=onSignIn?await onSignIn(email,pass):USERS.find(u=>u.email===email&&u.password===pass);
+    const {error}=await sendPasswordResetEmail(email.trim());
     setLoading(false);
-    if(u)onLoginSuccess(u);else setErr("Invalid email or password.");
+    if(error){setErr(error);return;}
+    setResetSent(true);
   }
   const goHome = onHome || onBack;
   return (
@@ -73,9 +89,10 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) 
           </div>
           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
             <label style={{ display:"flex",alignItems:"center",gap:5,fontSize:12,color:T.t2,cursor:"pointer" }}><input type="checkbox"/> Remember Me</label>
-            <span style={{ fontSize:12,color:T.blue,cursor:"pointer" }}>Forgot Password?</span>
+            {supabaseConfigured&&<button type="button" onClick={handleForgotPassword} disabled={loading} style={{ background:"none",border:"none",fontSize:12,color:T.blue,cursor:"pointer",fontFamily:"inherit",padding:0 }}>Forgot Password?</button>}
           </div>
-          {err&&<div style={{ color:T.red,fontSize:11,marginBottom:8 }}>{err}</div>}
+          {err&&<div style={{ color:T.red,fontSize:12,marginBottom:8,lineHeight:1.5 }}>{err}</div>}
+          {resetSent&&<div style={{ color:T.green,fontSize:12,marginBottom:8,lineHeight:1.5 }}>Password reset email sent. Check your inbox for a link to set a new password.</div>}
           <button type="button" onClick={go} disabled={loading} style={{ width:"100%",padding:"10px",background:T.orange,color:"#fff",border:"none",borderRadius:6,fontSize:14,fontWeight:600,cursor:loading?"wait":"pointer",fontFamily:"inherit",opacity:loading?0.7:1 }}>{loading?"Signing in…":"Sign In"}</button>
           <div style={{ marginTop:12,textAlign:"center" }}>
             <button type="button" onClick={onBack} style={{ background:"transparent",border:"none",color:T.t3,fontSize:12,cursor:"pointer",fontFamily:"inherit",textDecoration:"underline" }}>Use a different company code</button>
@@ -95,6 +112,10 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) 
             </div>
           </div>
         </div>
+      </div>
+      <div style={{ position:"absolute",bottom:16,left:0,right:0,textAlign:"center",fontSize:11,color:"#9ca3af",opacity:0.7,zIndex:1 }}>
+        Designed &amp; developed by{" "}
+        <a href="https://www.daydreamtechnologies.net/" target="_blank" rel="noopener noreferrer" style={{ color:T.blue,textDecoration:"none" }}>DayDream Technologies</a>
       </div>
     </div>
   );
