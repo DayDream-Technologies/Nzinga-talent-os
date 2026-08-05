@@ -1,29 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppData } from '@/context/AppDataContext'
+import { useAgencyData } from '@/context/AgencyDataContext'
 import { ApplicationReview } from '@/components/application/ApplicationModals'
 import { TalentRecord } from '@/components/talent/TalentRecord'
 import { InviteUserModal } from '@/components/admin/InviteUserModal'
 import { TopNav, BreadcrumbBar, Scoreboard, FullMenu, Sidebar } from '@/components/layout/Layout'
+import { AGENCY_PAGE_TITLES } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
-
-const PAGE_TITLES: Record<string, string> = {
-  workspace: 'My Workspace',
-  pipeline: 'Pipeline',
-  roster: 'Full Roster',
-  tasks: 'Tasks',
-  history: 'History / Notes',
-  reports: 'Reports',
-  'new-entry': 'New Holding Entry',
-  applications: 'Applications',
-  settings: 'Settings',
-  training: 'My Training',
-  'admin/users': 'All Users',
-  'admin/roles': 'Role Management',
-  'admin/audit-log': 'Global Audit Log',
-  'admin/settings': 'System Settings',
-}
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, companyCode, switchUser, logout } = useAuth()
@@ -48,12 +33,45 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     refreshAll,
   } = useAppData()
 
+  const agency = useAgencyData()
+
   const [menuOpen, setMenuOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
 
+  const agencyStats = useMemo(
+    () => [
+      {
+        label: 'Open Tickets',
+        value: agency.tickets.filter((t) => t.status !== 'resolved').length,
+        color: T.amber,
+      },
+      {
+        label: 'Agency Tasks',
+        value: agency.tasks.filter((t) => t.status === 'open').length,
+        color: T.blue,
+      },
+      {
+        label: 'Open Invoices',
+        value: agency.invoices.filter((i) => i.status === 'sent' || i.status === 'overdue').length,
+        color: T.purple,
+      },
+      {
+        label: 'Pending Payouts',
+        value: agency.expenseLogs.filter((e) => e.status === 'pending').length,
+        color: T.green,
+      },
+      {
+        label: 'Active Roster',
+        value: agency.talent.filter((t) => t.status === 'active').length,
+        color: T.cyan,
+      },
+    ],
+    [agency.tickets, agency.tasks, agency.invoices, agency.expenseLogs, agency.talent],
+  )
+
   if (!user) return null
 
-  const pageTitle = PAGE_TITLES[view] || view
+  const pageTitle = AGENCY_PAGE_TITLES[view] || view
 
   function nav(path: string) {
     if (path.includes('?')) {
@@ -105,15 +123,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </button>
         </div>
       )}
-      <Scoreboard talents={talents} role={user.role} />
+      <Scoreboard agencyStats={agencyStats} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar
-          view={view}
-          onNav={nav}
-          talents={talents}
-          tasks={tasks}
-          currentUser={user}
-        />
+        <Sidebar view={view} onNav={nav} />
         <div className="flex flex-1 flex-col overflow-hidden">
           {children ?? <Outlet />}
         </div>

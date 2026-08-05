@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, isTalentVisibleToRole } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { CompanyLogo } from "@/components/branding";
+import { AGENCY_NAV, AGENCY_SIDEBAR } from "@/constants/agency-nav";
 
 function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectTalent, tasks }) {
   const [profileOpen,setProfileOpen]=useState(false);
@@ -20,7 +21,7 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
         <CompanyLogo variant="company" companyCode={companyCode} size="sm" theme="dark" showWordmark />
       </div>
       <div style={{ display:"flex",gap:1,marginRight:6 }}>
-        {[["☰","Menu",onMenu],["📄","Records",()=>onNav("roster")],["★","Workspace",()=>onNav("workspace")]].map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }}>{icon}</button>)}
+        {[["☰","Menu",onMenu],["📄","Roster",()=>onNav("active-roster")],["★","Workspace",()=>onNav("workspace")]].map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }}>{icon}</button>)}
       </div>
       <div style={{ flex:1,maxWidth:420,position:"relative" }}>
         <div style={{ display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:6,padding:"4px 10px" }}>
@@ -34,7 +35,7 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
       </div>
       <div style={{ flex:1 }}/>
       <div style={{ textAlign:"right",marginRight:4 }}><div style={{ fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em" }}>Company</div><div style={{ fontSize:12,color:"#fff",fontWeight:600 }}>{companyCode}</div></div>
-      {openTasks>0&&<div onClick={()=>onNav("tasks")} style={{ background:urgentTasks>0?"#dc2626":"rgba(255,255,255,0.08)",borderRadius:6,padding:"3px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><span style={{ fontSize:13 }}>🔔</span>{urgentTasks>0&&<span style={{ fontSize:11,fontWeight:700,color:"#fff" }}>{urgentTasks}</span>}</div>}
+      {openTasks>0&&<div onClick={()=>onNav("agency-tasks")} style={{ background:urgentTasks>0?"#dc2626":"rgba(255,255,255,0.08)",borderRadius:6,padding:"3px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><span style={{ fontSize:13 }}>🔔</span>{urgentTasks>0&&<span style={{ fontSize:11,fontWeight:700,color:"#fff" }}>{urgentTasks}</span>}</div>}
       <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"2px 8px" }}>
         <div style={{ fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.06em" }}>Role</div>
         <select value={user.role} onChange={e=>{const u=USERS.find(u=>u.role===e.target.value);if(u)onLogout(u);}} style={{ background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>
@@ -61,20 +62,13 @@ function BreadcrumbBar({ label, sub }) {
   </div>;
 }
 
-function Scoreboard({ talents, role }) {
-  const accessible=ROLE_STAGE_ACCESS[role]||[];
-  const visible=role==="director"?talents:talents.filter(t=>accessible.includes(t.stage));
-  const active=visible.filter(t=>!["archived","not_viable"].includes(t.stage));
-  const signed=talents.filter(t=>t.stage==="signed_onboarding");
-  const totalRev=talents.reduce((a,t)=>a+parseFloat(t.revenue_ytd||0),0);
-  const avg=active.filter(t=>t.jordan_score>0).reduce((a,t,_,arr)=>a+t.jordan_score/arr.length,0)||0;
-  const tiles=[
-    {label:"My Pipeline",value:active.length,color:T.purple},
-    {label:"Signed Clients",value:signed.length,color:T.green},
-    {label:"Avg Jordan Score",value:avg>0?avg.toFixed(2):"—",color:T.amber},
-    {label:"YTD Revenue",value:"$"+Math.round(totalRev/1000)+"k",color:T.cyan},
+function Scoreboard({ agencyStats }) {
+  const tiles=agencyStats||[
+    {label:"Open Tickets",value:"—",color:T.amber},
+    {label:"Agency Tasks",value:"—",color:T.blue},
+    {label:"Open Invoices",value:"—",color:T.purple},
+    {label:"Pending Payouts",value:"—",color:T.green},
   ];
-  if(role==="director"||role==="scout"){tiles.push({label:"Pending Apps",value:talents.filter(t=>t.application_status==="sent"||t.application_status==="in_progress").length,color:T.purple});}
   return <div style={{ display:"flex",gap:8,padding:"8px 18px",background:"#f8f9fb",borderBottom:"1px solid #e5e7eb",overflowX:"auto",flexShrink:0 }}>
     {tiles.map(t=><div key={t.label} style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:7,padding:"6px 14px",minWidth:90,flexShrink:0,boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
       <div style={{ fontSize:20,fontWeight:800,color:t.color,lineHeight:1.2 }}>{t.value}</div>
@@ -84,50 +78,27 @@ function Scoreboard({ talents, role }) {
 }
 
 function FullMenu({ onClose, onNav, userRole, companyCode }) {
-  const [cat,setCat]=useState("Talent");
-  const allCats={
-    "Talent":{ "General":["All Talent","Pipeline Matrix","New Holding Entry","Applications"],"Pipeline":["My Queue","Signed Clients"] },
-    "Operations":{ "Tasks":["My Tasks","All Open Tasks"],"Communications":["History / Notes","Flagged Notes"] },
-    "Reports":{ "Pipeline":["Pipeline Summary","Jordan Score Report"],"Revenue":["Revenue Forecast"] },
-    ...(userRole==="director"?{"Administration":{"Users":["All Users","Role Management"],"System":["Audit Log","System Settings"]}}:{}),
-  };
-  const nm={
-    "Pipeline Matrix":"pipeline",
-    "All Talent":"roster",
-    "My Tasks":"tasks",
-    "All Open Tasks":"tasks?filter=all_open",
-    "History / Notes":"history",
-    "Flagged Notes":"history?filter=flagged",
-    "Pipeline Summary":"reports?tab=pipeline_summary",
-    "Revenue Forecast":"reports?tab=revenue_forecast",
-    "Jordan Score Report":"reports?tab=jordan_scores",
-    "New Holding Entry":"new-entry",
-    "Applications":"applications",
-    "My Queue":"workspace",
-    "Signed Clients":"pipeline?stage=signed_onboarding",
-    "All Users":"admin/users",
-    "Role Management":"admin/roles",
-    "Audit Log":"admin/audit-log",
-    "System Settings":"admin/settings",
-  };
+  const [cat,setCat]=useState(AGENCY_NAV[0]?.id || "talent");
+  const current=AGENCY_NAV.find(c=>c.id===cat) || AGENCY_NAV[0];
   return(
     <div style={{ position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-start" }}>
       <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,0.4)" }}/>
-      <div style={{ position:"relative",width:820,margin:"48px 0 0",background:"#fff",borderRadius:"0 0 10px 0",boxShadow:"0 8px 40px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",maxHeight:"calc(100vh - 48px)",overflow:"hidden" }}>
+      <div style={{ position:"relative",width:860,margin:"48px 0 0",background:"#fff",borderRadius:"0 0 10px 0",boxShadow:"0 8px 40px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",maxHeight:"calc(100vh - 48px)",overflow:"hidden" }}>
         <div style={{ display:"flex",alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #f0f0f0",background:"#fafbfc",gap:10 }}>
           <CompanyLogo variant="company" companyCode={companyCode} size="sm" showWordmark />
           <span style={{ fontSize:14,fontWeight:700,color:T.t1 }}>Menu</span>
           <button onClick={()=>{onNav("workspace");onClose();}} style={{ background:"transparent",border:"none",padding:"5px 10px",cursor:"pointer",fontSize:12,color:T.t2,borderRadius:5,fontFamily:"inherit" }}>Workspace</button>
+          {userRole==="director"&&<button onClick={()=>{onNav("admin/users");onClose();}} style={{ background:"transparent",border:"none",padding:"5px 10px",cursor:"pointer",fontSize:12,color:T.t2,borderRadius:5,fontFamily:"inherit" }}>Admin</button>}
           <div style={{ flex:1 }}/><button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>
         </div>
         <div style={{ display:"flex",flex:1,overflow:"hidden" }}>
-          <div style={{ width:150,background:"#f8f9fb",borderRight:"1px solid #e5e7eb",padding:"8px 0",flexShrink:0 }}>
-            {Object.keys(allCats).map(c=><div key={c} onMouseEnter={()=>setCat(c)} style={{ padding:"8px 12px",cursor:"pointer",fontSize:13,fontWeight:cat===c?700:400,color:cat===c?T.blue:T.t2,background:cat===c?"#fff":"transparent",borderLeft:`3px solid ${cat===c?T.blue:"transparent"}` }}>{c}</div>)}
+          <div style={{ width:160,background:"#f8f9fb",borderRight:"1px solid #e5e7eb",padding:"8px 0",flexShrink:0 }}>
+            {AGENCY_NAV.map(c=><div key={c.id} onMouseEnter={()=>setCat(c.id)} style={{ padding:"8px 12px",cursor:"pointer",fontSize:13,fontWeight:cat===c.id?700:400,color:cat===c.id?T.blue:T.t2,background:cat===c.id?"#fff":"transparent",borderLeft:`3px solid ${cat===c.id?T.blue:"transparent"}` }}>{c.label}</div>)}
           </div>
-          <div style={{ flex:1,padding:"14px 18px",display:"flex",gap:28,overflowY:"auto" }}>
-            {Object.entries(allCats[cat]||{}).map(([group,items])=><div key={group} style={{ minWidth:150 }}>
-              <div style={{ fontSize:11,fontWeight:700,color:T.t3,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8 }}>{group}</div>
-              {items.map(item=><div key={item} onClick={()=>{if(nm[item])onNav(nm[item]);onClose();}} style={{ padding:"5px 0",fontSize:13,color:T.blue,cursor:"pointer" }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
+          <div style={{ flex:1,padding:"14px 18px",display:"flex",gap:28,overflowY:"auto",flexWrap:"wrap" }}>
+            {(current?.groups||[]).map(group=><div key={group.label} style={{ minWidth:160 }}>
+              <div style={{ fontSize:11,fontWeight:700,color:T.t3,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8 }}>{group.label}</div>
+              {group.items.map(item=><div key={item.id} onClick={()=>{onNav(item.path);onClose();}} style={{ padding:"5px 0",fontSize:13,color:T.blue,cursor:"pointer" }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item.label}</div>)}
             </div>)}
           </div>
         </div>
@@ -136,47 +107,15 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
   );
 }
 
-function Sidebar({ view, onNav, talents, tasks, currentUser }) {
-  const role=currentUser.role;
-  const accessible=ROLE_STAGE_ACCESS[role]||[];
-  const actionStage=ROLE_ACTION_STAGE[role];
-  const myQueue=talents.filter(t=>t.stage===actionStage).length;
-  const pendingApps=talents.filter(t=>t.application_status==="sent"||t.application_status==="in_progress").length;
-  const submittedApps=talents.filter(t=>t.application_status==="submitted"&&t.stage==="holding_entry").length;
-
-  const sections=[
-    {label:"WORKSPACE",items:[{id:"workspace",label:"My Workspace",icon:"★"}]},
-    {label:"TALENT",items:[
-      {id:"pipeline",label:"Pipeline",icon:"◈"},
-      {id:"roster",label:"Full Roster",icon:"☰"},
-      ...(role==="scout"||role==="director"?[{id:"new-entry",label:"New Entry",icon:"+"},{id:"applications",label:"Applications",icon:"📋",badge:submittedApps>0?submittedApps:pendingApps}]:[]),
-    ]},
-    {label:"OPERATIONS",items:[
-      {id:"tasks",label:"Tasks",icon:"☑",badge:tasks.filter(t=>t.assigned_to===currentUser.id&&t.status==="open").length},
-      {id:"history",label:"History / Notes",icon:"✎"},
-      {id:"reports",label:"Reports",icon:"⬡"},
-      {id:"settings",label:"Settings",icon:"⚙"},
-    ]},
-    {label:"MY QUEUE",items:[{id:"stage_"+actionStage,label:STAGE_LABELS[actionStage]||"My Stage",dot:STAGE_COLORS[actionStage],count:myQueue,isMyStage:true}]},
-    ...(role==="director"?[{label:"ALL STAGES",items:STAGES.filter(s=>!["archived","not_viable"].includes(s)).map(s=>({id:"stage_"+s,label:STAGE_LABELS[s],dot:STAGE_COLORS[s],count:talents.filter(t=>t.stage===s).length}))}]:[]),
-  ];
-
+function Sidebar({ view, onNav }) {
   return(
     <div style={{ width:186,background:T.navBg,borderRight:`1px solid ${T.navBorder}`,display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto" }}>
-      {myQueue>0&&<div style={{ margin:"8px 8px 2px",background:"rgba(37,99,235,0.15)",border:"1px solid rgba(37,99,235,0.3)",borderRadius:6,padding:"5px 9px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-        <span style={{ fontSize:11,color:"rgba(255,255,255,0.7)" }}>My Queue</span>
-        <span style={{ background:T.blue,color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:700 }}>{myQueue}</span>
-      </div>}
-      {sections.map((sec,si)=><div key={si}>
+      {AGENCY_SIDEBAR.map((sec,si)=><div key={si}>
         <div style={{ padding:"9px 0 2px 11px",fontSize:9,color:"rgba(255,255,255,0.25)",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase" }}>{sec.label}</div>
         {sec.items.map(item=>{
-          const active=view===item.id||(item.id.startsWith("stage_")&&view==="pipeline");
-          return <div key={item.id} onClick={()=>{ if(item.id.startsWith("stage_"))onNav("pipeline?stage="+item.id.replace("stage_","")); else onNav(item.id); }} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 9px 5px 11px",cursor:"pointer",background:active?"rgba(255,255,255,0.08)":"transparent",borderLeft:`2px solid ${active?"#fff":"transparent"}`,marginBottom:1 }}>
-            <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-              {item.dot?<span style={{ width:6,height:6,borderRadius:"50%",background:item.isMyStage?item.dot:item.dot+"88",flexShrink:0 }}/>:<span style={{ fontSize:11,color:active?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.4)" }}>{item.icon}</span>}
-              <span style={{ fontSize:11,color:active?"#fff":"#94a3b8" }}>{item.label}</span>
-            </div>
-            {(item.count>0||item.badge>0)&&<span style={{ background:item.badge>0?"rgba(220,38,38,0.5)":item.isMyStage?"rgba(37,99,235,0.5)":"rgba(255,255,255,0.1)",color:"#fff",fontSize:10,padding:"1px 5px",borderRadius:8,fontWeight:600 }}>{item.count||item.badge}</span>}
+          const active=view===item.path;
+          return <div key={item.id} onClick={()=>onNav(item.path)} style={{ display:"flex",alignItems:"center",padding:"5px 9px 5px 11px",cursor:"pointer",background:active?"rgba(255,255,255,0.08)":"transparent",borderLeft:`2px solid ${active?"#fff":"transparent"}`,marginBottom:1 }}>
+            <span style={{ fontSize:11,color:active?"#fff":"#94a3b8" }}>{item.label}</span>
           </div>;
         })}
       </div>)}
