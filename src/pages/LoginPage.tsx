@@ -16,7 +16,7 @@ export function LoginPage() {
   return (
     <LoginScreen
       companyCode={companyCode}
-      onSignIn={(email, password) => login(email, password)}
+      onSignIn={(email: string, password: string) => login(email, password)}
       onLoginSuccess={() => navigate('/workspace')}
       onBack={() => {
         setCompanyCode('')
