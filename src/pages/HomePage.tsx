@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
 import { TMXLogo } from '@/components/branding'
+import { hasEmailConfirmationInUrl } from '@/lib/auth-redirect'
 
 const STAGES = [
   'Holding Entry',
@@ -14,6 +16,12 @@ const STAGES = [
 
 export function HomePage() {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!hasEmailConfirmationInUrl()) return
+    const { search, hash } = window.location
+    navigate({ pathname: '/auth/confirmed', search, hash }, { replace: true })
+  }, [navigate])
 
   return (
     <div

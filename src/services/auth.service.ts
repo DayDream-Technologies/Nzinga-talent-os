@@ -80,6 +80,35 @@ export async function logout(): Promise<void> {
 
 // ─── Prospect Auth ───────────────────────────────────────────────────────────
 
+async function ensureProspectProfile(
+  authUid: string,
+  email: string,
+  name: string,
+): Promise<{ profile: ProspectProfile | null; error: string | null }> {
+  if (!supabase) return { profile: null, error: 'Database not configured (demo mode).' }
+
+  const { data: existing } = await supabase
+    .from('prospect_profiles')
+    .select('*')
+    .eq('auth_uid', authUid)
+    .maybeSingle()
+
+  if (existing) {
+    return { profile: existing as ProspectProfile, error: null }
+  }
+
+  const { data: profile, error } = await supabase
+    .from('prospect_profiles')
+    .upsert({ auth_uid: authUid, email, name }, { onConflict: 'auth_uid' })
+    .select()
+    .single()
+
+  if (error) {
+    return { profile: null, error: error.message }
+  }
+  return { profile: profile as ProspectProfile, error: null }
+}
+
 export async function prospectSignup(
   email: string,
   password: string,
@@ -89,27 +118,46 @@ export async function prospectSignup(
     return { profile: null, error: 'Database not configured (demo mode).' }
   }
 
+  const emailRedirectTo =
+    typeof window !== 'undefined' ? `${window.location.origin}/auth/confirmed` : undefined
+
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name, account_type: 'prospect' } },
+    options: {
+      data: { name, account_type: 'prospect' },
+      emailRedirectTo,
+    },
   })
 
   if (authError || !authData.user) {
-    return { profile: null, error: authError?.message ?? 'Signup failed.' }
+    const msg = authError?.message ?? 'Signup failed.'
+    if (/already|registered|exists/i.test(msg)) {
+      return {
+        profile: null,
+        error: 'An account with this email already exists. Log in to resume your application.',
+      }
+    }
+    return { profile: null, error: msg }
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('prospect_profiles')
-    .insert({ auth_uid: authData.user.id, email, name })
-    .select()
-    .single()
-
-  if (profileError) {
-    return { profile: null, error: profileError.message }
+  // Email confirmation on → usually no session yet. Profile is created by DB trigger
+  // (008_prospect_profile_trigger). Client INSERT would fail RLS as anon.
+  if (!authData.session) {
+    return {
+      profile: {
+        id: '',
+        auth_uid: authData.user.id,
+        email,
+        name,
+        application_id: null,
+        created_at: new Date().toISOString(),
+      },
+      error: null,
+    }
   }
 
-  return { profile: profile as ProspectProfile, error: null }
+  return ensureProspectProfile(authData.user.id, email, name)
 }
 
 export async function prospectLogin(
@@ -129,17 +177,12 @@ export async function prospectLogin(
     return { profile: null, error: authError?.message ?? 'Login failed.' }
   }
 
-  const { data: profile } = await supabase
-    .from('prospect_profiles')
-    .select('*')
-    .eq('auth_uid', authData.user.id)
-    .single()
+  const metaName =
+    (authData.user.user_metadata?.name as string | undefined) ||
+    email.split('@')[0] ||
+    'Prospect'
 
-  if (!profile) {
-    return { profile: null, error: 'No prospect profile found for this account.' }
-  }
-
-  return { profile: profile as ProspectProfile, error: null }
+  return ensureProspectProfile(authData.user.id, email, metaName)
 }
 
 export async function getProspectProfile(): Promise<ProspectProfile | null> {

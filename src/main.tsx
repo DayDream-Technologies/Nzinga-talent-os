@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/AuthContext'
 import { CompanyCodePage } from '@/pages/CompanyCodePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { HomePage } from '@/pages/HomePage'
+import { EmailConfirmedPage } from '@/pages/EmailConfirmedPage'
 import './index.css'
 
 const ProtectedApp = lazy(() => import('@/components/ProtectedApp'))
@@ -21,6 +22,7 @@ const queryClient = new QueryClient({
 
 const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
+  { path: '/auth/confirmed', element: <EmailConfirmedPage /> },
   { path: '/tmx', element: <CompanyCodePage /> },
   { path: '/login', element: <LoginPage /> },
   {
