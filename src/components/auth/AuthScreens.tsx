@@ -39,7 +39,7 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
 }
 
 // ─── EMPLOYEE LOGIN ───────────────────────────────────────────────────────────
-function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack }) {
+function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) {
   const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
   async function go(){
     setErr("");setLoading(true);
@@ -47,13 +47,14 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack }) {
     setLoading(false);
     if(u)onLoginSuccess(u);else setErr("Invalid email or password.");
   }
+  const goHome = onHome || onBack;
   return (
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#f5f0ea,#ede8e0 40%,#e8e2f5)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",position:"relative",overflow:"hidden" }}>
       <div style={{ position:"absolute",width:500,height:500,borderRadius:"50%",background:"rgba(124,58,237,0.06)",top:-100,right:-80,pointerEvents:"none" }}/>
       <div style={{ display:"flex",width:800,background:"#fff",borderRadius:14,boxShadow:"0 8px 40px rgba(0,0,0,0.12)",overflow:"hidden",zIndex:1 }}>
         <div style={{ flex:1,padding:"40px 36px" }}>
           <button type="button" onClick={onBack} style={{ background:"none",border:"none",color:T.blue,fontSize:12,cursor:"pointer",marginBottom:16,fontFamily:"inherit",padding:0,textDecoration:"underline" }}>← Back to company code</button>
-          <div style={{ marginBottom:20 }}><TMXLogo size="md" /></div>
+          <button type="button" onClick={goHome} aria-label={`${PLATFORM_BRAND.name} — go to home`} style={{ background:"none",border:"none",padding:0,cursor:"pointer",marginBottom:20,display:"block",font:"inherit" }}><TMXLogo size="md" /></button>
           <div style={{ fontSize:11,color:T.t4,marginBottom:16 }}>Current code: <strong style={{ color:T.t2 }}>{companyCode}</strong></div>
           <div style={{ fontSize:20,fontWeight:700,color:"#111827",marginBottom:3,fontFamily:"Georgia,serif" }}>Welcome Back</div>
           <div style={{ fontSize:13,color:"#6b7280",marginBottom:24 }}>Log into your account</div>
@@ -83,7 +84,7 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack }) {
         <div style={{ width:300,background:"linear-gradient(160deg,#1a2332,#243044 60%,#1e3a5f)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:28,position:"relative",overflow:"hidden" }}>
           <div style={{ position:"absolute",width:260,height:260,borderRadius:"50%",background:"rgba(124,58,237,0.08)",top:-80,right:-60 }}/>
           <div style={{ textAlign:"center",zIndex:1,width:"100%" }}>
-            <div style={{ display:"flex",justifyContent:"center",marginBottom:16 }}><TMXLogo size="md" theme="dark" /></div>
+            <button type="button" onClick={goHome} aria-label={`${PLATFORM_BRAND.name} — go to home`} style={{ background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",justifyContent:"center",marginBottom:16,width:"100%",font:"inherit" }}><TMXLogo size="md" theme="dark" /></button>
             <div style={{ fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.6,marginBottom:20 }}>{PLATFORM_BRAND.tagline} — multi-role talent pipeline with full compliance tracking.</div>
             <div style={{ fontSize:10,color:"rgba(255,255,255,0.3)",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8 }}>Quick Demo Access</div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:5 }}>

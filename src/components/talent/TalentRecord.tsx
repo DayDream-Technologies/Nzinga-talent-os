@@ -5,8 +5,10 @@ import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FText
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
 import { ComposeEmail } from "@/components/talent/ComposeEmail";
 import { PhoneActions } from "@/components/talent/PhoneActions";
+import { useAuth } from "@/hooks/useAuth";
 
 function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
+  const { companyCode } = useAuth();
   const TABS=["Details","Scoring","Compliance","Documents","Framework","Executive","Onboarding","History / Notes","Tasks","Audit Log"];
   const [tab,setTab]=useState("Details");
   const [local,setLocal]=useState(()=>JSON.parse(JSON.stringify(talent)));
@@ -119,7 +121,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
 
   return(
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-start",justifyContent:"center",zIndex:300,overflowY:"auto",padding:"16px 0" }}>
-      {showSendApp&&<SendApplicationModal talent={local} onSend={app=>{onSendApp(app);setLocal(x=>({...x,application_id:app.id,application_status:"sent"}));setShowSendApp(false);}} onClose={()=>setShowSendApp(false)}/>}
+      {showSendApp&&<SendApplicationModal talent={local} companyCode={companyCode||"NZG"} onSend={app=>{onSendApp(app);setLocal(x=>({...x,application_id:app.id,application_status:"sent"}));setShowSendApp(false);}} onClose={()=>setShowSendApp(false)}/>}
       {viewingDoc&&<DocViewer doc={viewingDoc} onClose={()=>setViewingDoc(null)}/>}
 
       <div style={{ width:970,background:T.pageBg,borderRadius:10,overflow:"hidden",flexShrink:0,boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>

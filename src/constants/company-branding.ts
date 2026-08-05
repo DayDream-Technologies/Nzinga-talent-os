@@ -43,3 +43,10 @@ export function resolveCompanyBrand(companyCode: string): CompanyBrandId {
 export function getCompanyBrand(companyCode: string): CompanyBrandConfig {
   return COMPANY_BRANDS[resolveCompanyBrand(companyCode)]
 }
+
+/** Company codes that currently offer a public talent application portal. */
+export const APPLICATION_COMPANY_CODES = new Set(['NZG'])
+
+export function canApplyWithCompanyCode(companyCode: string): boolean {
+  return APPLICATION_COMPANY_CODES.has(companyCode.trim().toUpperCase())
+}

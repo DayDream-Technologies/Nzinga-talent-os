@@ -517,6 +517,7 @@ export const APPLICATIONS_SEED: ApplicationsMap = {
     id: 'app_kai',
     talent_id: 't4',
     access_code: 'KAI2026',
+    company_code: 'NZG',
     talent_name: 'Kai Johnson',
     talent_email: 'kai@example.com',
     status: 'in_progress',

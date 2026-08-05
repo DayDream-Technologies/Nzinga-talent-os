@@ -19,7 +19,7 @@ function PageLoader() {
 
 export default function ProtectedApp() {
   const { user } = useAuth()
-  if (!user) return <Navigate to="/company-code" replace />
+  if (!user) return <Navigate to="/tmx" replace />
 
   return (
     <AppDataProvider>

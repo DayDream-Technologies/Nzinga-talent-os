@@ -142,9 +142,37 @@ export function CompanyLogo({
   )
 }
 
-/** Platform hero block for company-code landing page. */
-export function PlatformBrandHeader({ style }: { style?: React.CSSProperties }) {
-  return <PlatformLogoBlock size="hero" tagline style={style} />
+/** Platform hero block for company-code / pre-auth screens. */
+export function PlatformBrandHeader({
+  style,
+  onHomeClick,
+}: {
+  style?: React.CSSProperties
+  /** When set, logo is clickable and navigates home (marketing `/`). */
+  onHomeClick?: () => void
+}) {
+  const block = <PlatformLogoBlock size="hero" tagline />
+  if (!onHomeClick) {
+    return <PlatformLogoBlock size="hero" tagline style={style} />
+  }
+  return (
+    <button
+      type="button"
+      onClick={onHomeClick}
+      aria-label={`${PLATFORM_BRAND.name} — go to home`}
+      style={{
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        font: 'inherit',
+        display: 'block',
+        ...style,
+      }}
+    >
+      {block}
+    </button>
+  )
 }
 
 export { COMPANY_LOGO_REGISTRY, PLATFORM_BRAND, getCompanyBrand, resolveCompanyBrand }

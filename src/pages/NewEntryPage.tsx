@@ -6,7 +6,7 @@ import { useAppData } from '@/context/AppDataContext'
 import { useNavigate } from 'react-router-dom'
 
 export function NewEntryPage() {
-  const { user } = useAuth()
+  const { user, companyCode } = useAuth()
   const { handleNewTalent, handleSendApp } = useAppData()
   const navigate = useNavigate()
   const [pendingTalent, setPendingTalent] = useState<import('@/types').Talent | null>(null)
@@ -28,6 +28,7 @@ export function NewEntryPage() {
       {pendingTalent && (
         <SendApplicationModal
           talent={pendingTalent}
+          companyCode={companyCode || 'NZG'}
           onClose={() => { setPendingTalent(null); navigate('/pipeline'); }}
           onSend={(app: any) => { if (handleSendApp) handleSendApp(app); setPendingTalent(null); navigate('/pipeline'); }}
         />

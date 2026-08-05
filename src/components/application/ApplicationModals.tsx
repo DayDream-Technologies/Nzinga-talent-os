@@ -4,16 +4,17 @@ import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { isEmailConfigured, sendApplicationInviteEmail } from "@/lib/email";
 
-function SendApplicationModal({ talent, onSend, onClose }) {
+function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) {
   const [email,setEmail]=useState("");
   const [sent,setSent]=useState(false);
   const [sending,setSending]=useState(false);
   const [sendErr,setSendErr]=useState("");
   const [code]=useState(talent.name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999));
   const method="email";
+  const tenantCode=String(companyCode||"NZG").trim().toUpperCase();
 
   async function send(){
-    const app={id:"app_"+talent.id+"_"+Date.now(),talent_id:talent.id,access_code:code,talent_name:talent.name,talent_email:email||"",status:"sent",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{},delivery_method:method};
+    const app={id:"app_"+talent.id+"_"+Date.now(),talent_id:talent.id,access_code:code,company_code:tenantCode,talent_name:talent.name,talent_email:email||"",status:"sent",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{},delivery_method:method};
     if(method==="email"&&email){
       setSending(true);setSendErr("");
       const result=await sendApplicationInviteEmail({toEmail:email,toName:talent.name,accessCode:code});

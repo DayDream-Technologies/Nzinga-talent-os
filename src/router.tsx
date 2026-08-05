@@ -7,7 +7,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { CompanyCodePage } from '@/pages/CompanyCodePage'
 import { LoginPage } from '@/pages/LoginPage'
-import { MarketingHomePage } from '@/pages/MarketingHomePage'
+import { HomePage } from '@/pages/HomePage'
 import { ProspectPortalPage } from '@/pages/ProspectPortalPage'
 
 const WorkspacePage = lazy(() =>
@@ -66,12 +66,12 @@ export const router = createBrowserRouter([
     path: '/',
     element: (
       <ErrorBoundary>
-        <MarketingHomePage />
+        <HomePage />
       </ErrorBoundary>
     ),
   },
   {
-    path: '/company-code',
+    path: '/tmx',
     element: (
       <ErrorBoundary>
         <CompanyCodePage />

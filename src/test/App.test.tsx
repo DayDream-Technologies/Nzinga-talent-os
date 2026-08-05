@@ -16,6 +16,7 @@ describe('app-sections', () => {
       id: 'test',
       talent_id: null,
       access_code: 'X',
+      company_code: 'NZG',
       talent_name: 'Test',
       talent_email: 't@test.com',
       status: 'in_progress',

@@ -7,7 +7,7 @@ import { prospectSignup, prospectLogin } from "@/services/auth.service";
 import { checkDuplicateEmail, fetchApplicationByCode, fetchApplicationByEmail, fetchApplicationById } from "@/services/application.service";
 import { AgreementViewer } from "@/components/application/AgreementViewer";
 
-function ProspectPortal({ applications, onSaveApp, onBack }) {
+function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }) {
   const [mode,setMode]=useState("landing");
   const [accessCode,setAccessCode]=useState("");
   const [foundApp,setFoundApp]=useState(null);
@@ -15,17 +15,25 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
   const [newData,setNewData]=useState({talent_name:"",talent_email:"",talent_password:""});
   const [authLoading,setAuthLoading]=useState(false);
   const [apps,setApps]=useState(applications||{});
+  const tenantCode=String(companyCode||"NZG").trim().toUpperCase();
 
   useEffect(()=>{ setApps(applications||{}); },[applications]);
+
+  function belongsToCompany(app){
+    if(!app) return false;
+    const appCode=String(app.company_code||"NZG").trim().toUpperCase();
+    return appCode===tenantCode;
+  }
 
   async function lookup(){
     const code=accessCode.trim().toUpperCase();
     if(!code){setLookupErr("Enter an access code.");return;}
     setLookupErr("");
-    let app=Object.values(apps).find(a=>a.access_code===code);
+    let app=Object.values(apps).find(a=>a.access_code===code&&belongsToCompany(a));
     if(!app){
-      try{ app=await fetchApplicationByCode(code); }catch{ app=null; }
-      if(app) setApps(prev=>({...prev,[app.id]:app}));
+      try{ app=await fetchApplicationByCode(code, tenantCode); }catch{ app=null; }
+      if(app&&belongsToCompany(app)) setApps(prev=>({...prev,[app.id]:app}));
+      else app=null;
     }
     if(app){setFoundApp(app);setMode("form");}
     else setLookupErr("Access code not found. Check your invitation email.");
@@ -36,7 +44,7 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
     setLookupErr("");setAuthLoading(true);
     const normalizedEmail=newData.talent_email.trim().toLowerCase();
     try{
-      const dup=await checkDuplicateEmail(normalizedEmail);
+      const dup=await checkDuplicateEmail(normalizedEmail, undefined, tenantCode);
       if(dup){
         setLookupErr("An application has already been submitted with this email address.");
         setAuthLoading(false);return;
@@ -50,7 +58,7 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
 
     const id="app_"+Date.now();
     const code=newData.talent_name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999);
-    const app={id,talent_id:null,access_code:code,talent_name:newData.talent_name,talent_email:newData.talent_email.trim(),status:"in_progress",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{}};
+    const app={id,talent_id:null,access_code:code,company_code:tenantCode,talent_name:newData.talent_name,talent_email:newData.talent_email.trim(),status:"in_progress",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{}};
     onSaveApp(app);
     setApps(prev=>({...prev,[app.id]:app}));
     setFoundApp(app);
@@ -63,11 +71,12 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
     setLookupErr("");setAuthLoading(true);
     const {profile,error}=await prospectLogin(newData.talent_email.trim(),newData.talent_password);
     if(error||!profile){setLookupErr(error||"Login failed.");setAuthLoading(false);return;}
-    let app=profile.application_id?Object.values(apps).find(a=>a.id===profile.application_id):Object.values(apps).find(a=>String(a.talent_email||"").trim().toLowerCase()===profile.email.toLowerCase());
+    let app=profile.application_id?Object.values(apps).find(a=>a.id===profile.application_id&&belongsToCompany(a)):Object.values(apps).find(a=>String(a.talent_email||"").trim().toLowerCase()===profile.email.toLowerCase()&&belongsToCompany(a));
     if(!app){
       try{
         if(profile.application_id) app=await fetchApplicationById(profile.application_id);
-        if(!app) app=await fetchApplicationByEmail(profile.email);
+        if(!app) app=await fetchApplicationByEmail(profile.email, tenantCode);
+        if(app&&!belongsToCompany(app)) app=null;
         if(app) setApps(prev=>({...prev,[app.id]:app}));
       }catch{ /* ignore */ }
     }
@@ -98,7 +107,7 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
               {supabaseConfigured&&<button onClick={()=>setMode("login")} style={{ width:"100%",padding:"12px",background:"rgba(22,163,74,0.2)",color:"#4ade80",border:"1px solid rgba(74,222,128,0.3)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>🔐 Log In to Resume</button>}
               <button onClick={()=>setMode("lookup")} style={{ width:"100%",padding:"12px",background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.85)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>🔑 Resume with Access Code</button>
             </div>
-            <div style={{ marginTop:16,textAlign:"center" }}><button onClick={onBack} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>← Back to company login</button></div>
+            <div style={{ marginTop:16,textAlign:"center" }}><button onClick={onBack} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>← Back to company code</button></div>
           </div>
         )}
 

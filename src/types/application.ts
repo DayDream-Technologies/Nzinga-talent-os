@@ -35,6 +35,8 @@ export interface Application {
   id: string
   talent_id: string | null
   access_code: string
+  /** Tenant company code this application belongs to (e.g. NZG). */
+  company_code: string
   talent_name: string
   talent_email: string
   status: ApplicationStatus

@@ -5,7 +5,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext'
 import { CompanyCodePage } from '@/pages/CompanyCodePage'
 import { LoginPage } from '@/pages/LoginPage'
-import { MarketingHomePage } from '@/pages/MarketingHomePage'
+import { HomePage } from '@/pages/HomePage'
 import './index.css'
 
 const ProtectedApp = lazy(() => import('@/components/ProtectedApp'))
@@ -20,8 +20,8 @@ const queryClient = new QueryClient({
 })
 
 const router = createBrowserRouter([
-  { path: '/', element: <MarketingHomePage /> },
-  { path: '/company-code', element: <CompanyCodePage /> },
+  { path: '/', element: <HomePage /> },
+  { path: '/tmx', element: <CompanyCodePage /> },
   { path: '/login', element: <LoginPage /> },
   {
     path: '/portal',

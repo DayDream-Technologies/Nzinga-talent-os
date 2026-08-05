@@ -69,7 +69,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       switchUser(switchTo)
     } else {
       void logout()
-      navigate('/company-code')
+      navigate('/tmx')
     }
   }
 

@@ -12,7 +12,7 @@ const STAGES = [
   'Signed Onboarding',
 ]
 
-export function MarketingHomePage() {
+export function HomePage() {
   const navigate = useNavigate()
 
   return (
@@ -141,7 +141,7 @@ export function MarketingHomePage() {
           <button
             type="button"
             className="mh-login"
-            onClick={() => navigate('/company-code')}
+            onClick={() => navigate('/tmx')}
             style={{
               padding: '10px 18px',
               borderRadius: 8,
@@ -212,7 +212,7 @@ export function MarketingHomePage() {
             <button
               type="button"
               className="mh-login"
-              onClick={() => navigate('/company-code')}
+              onClick={() => navigate('/tmx')}
               style={{
                 padding: '14px 28px',
                 borderRadius: 8,
@@ -231,7 +231,7 @@ export function MarketingHomePage() {
             <button
               type="button"
               className="mh-ghost"
-              onClick={() => navigate('/portal')}
+              onClick={() => navigate('/tmx')}
               style={{
                 background: 'none',
                 border: 'none',
@@ -364,7 +364,7 @@ export function MarketingHomePage() {
         <button
           type="button"
           className="mh-ghost"
-          onClick={() => navigate('/company-code')}
+          onClick={() => navigate('/tmx')}
           style={{
             background: 'none',
             border: 'none',
