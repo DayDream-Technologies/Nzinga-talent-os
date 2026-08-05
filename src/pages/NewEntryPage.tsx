@@ -20,7 +20,7 @@ export function NewEntryPage() {
           handleNewTalent(t)
           navigate('/pipeline')
         }}
-        onCancel={() => navigate('/dashboard')}
+        onCancel={() => navigate('/workspace')}
         onSendApp={(t: import('@/types').Talent) => {
           setPendingTalent(t)
         }}

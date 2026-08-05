@@ -3,6 +3,6 @@ import { useAuth } from '@/hooks/useAuth'
 
 export function ProtectedRoute() {
   const { user } = useAuth()
-  if (!user) return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/company-code" replace />
   return <Outlet />
 }

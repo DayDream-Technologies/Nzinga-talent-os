@@ -119,36 +119,12 @@ export function CompanyCodePage() {
           </div>
         </div>
 
-        {/* Platform Info Section */}
-        <div style={{ marginTop: 40, width: '100%', maxWidth: 680, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
-          <InfoCard
-            title="7-Stage Pipeline"
-            description="Structured workflow from holding entry through signed onboarding with clear ownership at each stage."
-          />
-          <InfoCard
-            title="Role-Based Access"
-            description="Six specialized roles — scouts, leads, ops, directors — each sees only the stages they manage."
-          />
-          <InfoCard
-            title="Talent Scoring"
-            description="Jordan Score framework evaluates prospects across 5 pillars with minimum thresholds to advance."
-          />
-        </div>
       </div>
 
       {/* Footer */}
       <footer style={{ position: 'relative', zIndex: 1, padding: '16px 0', textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>
         &copy; {new Date().getFullYear()} {PLATFORM_BRAND.footer}
       </footer>
-    </div>
-  )
-}
-
-function InfoCard({ title, description }: { title: string; description: string }) {
-  return (
-    <div style={{ borderRadius: 10, border: '1px solid rgba(229,231,235,0.6)', background: 'rgba(255,255,255,0.7)', padding: 16, backdropFilter: 'blur(4px)' }}>
-      <h3 style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 4 }}>{title}</h3>
-      <p style={{ fontSize: 12, lineHeight: 1.6, color: '#6b7280', margin: 0 }}>{description}</p>
     </div>
   )
 }

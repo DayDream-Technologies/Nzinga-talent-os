@@ -455,6 +455,20 @@ curl -X POST "$env:SUPABASE_URL/functions/v1/ringcentral-webhook" `
 2. Redeploy Amplify
 3. Hard refresh browser / clear cache
 
+### Auth CORS / `refresh_token` Failed to fetch on `/portal`
+
+**Symptom:** Browser console shows CORS blocked on  
+`…/auth/v1/token?grant_type=refresh_token` from `https://talentmanagerx.com`.
+
+**Cause:** Almost always a **stale/invalid refresh token** in localStorage. The Auth API error response then looks like a CORS failure. Less often: Site URL not set for production.
+
+**Fix (dashboard):**
+1. Supabase → **Authentication → URL Configuration**
+2. **Site URL** = `https://talentmanagerx.com`
+3. **Additional Redirect URLs** include `https://talentmanagerx.com/**` and `http://localhost:3000/**` (or your Vite port)
+
+**Fix (browser):** Hard refresh, or clear site data for talentmanagerx.com (removes `sb-*-auth-token`). The app also clears local auth when refresh fails.
+
 ### View function logs
 
 ```bash

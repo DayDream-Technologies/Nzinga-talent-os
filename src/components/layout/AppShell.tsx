@@ -9,7 +9,6 @@ import { TopNav, BreadcrumbBar, Scoreboard, FullMenu, Sidebar } from '@/componen
 import { T } from '@/lib/tokens'
 
 const PAGE_TITLES: Record<string, string> = {
-  dashboard: 'Dashboard',
   workspace: 'My Workspace',
   pipeline: 'Pipeline',
   roster: 'Full Roster',
@@ -30,7 +29,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, companyCode, switchUser, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const view = location.pathname.replace(/^\//, '') || 'dashboard'
+  const view = location.pathname.replace(/^\//, '') || 'workspace'
 
   const {
     talents,
@@ -70,7 +69,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       switchUser(switchTo)
     } else {
       void logout()
-      navigate('/')
+      navigate('/company-code')
     }
   }
 

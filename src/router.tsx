@@ -7,11 +7,9 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { CompanyCodePage } from '@/pages/CompanyCodePage'
 import { LoginPage } from '@/pages/LoginPage'
+import { MarketingHomePage } from '@/pages/MarketingHomePage'
 import { ProspectPortalPage } from '@/pages/ProspectPortalPage'
 
-const DashboardPage = lazy(() =>
-  import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
-)
 const WorkspacePage = lazy(() =>
   import('@/pages/WorkspacePage').then((m) => ({ default: m.WorkspacePage })),
 )
@@ -68,6 +66,14 @@ export const router = createBrowserRouter([
     path: '/',
     element: (
       <ErrorBoundary>
+        <MarketingHomePage />
+      </ErrorBoundary>
+    ),
+  },
+  {
+    path: '/company-code',
+    element: (
+      <ErrorBoundary>
         <CompanyCodePage />
       </ErrorBoundary>
     ),
@@ -100,15 +106,7 @@ export const router = createBrowserRouter([
           </AppDataProvider>
         ),
         children: [
-          { index: true, element: <Navigate to="/dashboard" replace /> },
-          {
-            path: 'dashboard',
-            element: (
-              <Lazy>
-                <DashboardPage />
-              </Lazy>
-            ),
-          },
+          { index: true, element: <Navigate to="/workspace" replace /> },
           {
             path: 'workspace',
             element: (

@@ -7,7 +7,7 @@ import {
   restoreSession,
   logout as authLogout,
 } from '@/services/auth.service'
-import { supabaseConfigured, onAuthStateChange } from '@/lib/supabase'
+import { clearLocalAuthSession, supabaseConfigured, onAuthStateChange } from '@/lib/supabase'
 
 interface AuthContextValue {
   user: User | null
@@ -42,22 +42,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }, 3000)
 
-    restoreSession().then((u) => {
-      if (!settled) {
-        settled = true
-        clearTimeout(timeout)
-        if (u) setUser(u)
-        setIsRestoringSession(false)
-      }
-    }).catch(() => {
-      if (!settled) {
-        settled = true
-        clearTimeout(timeout)
-        setIsRestoringSession(false)
-      }
-    })
+    restoreSession()
+      .then((u) => {
+        if (!settled) {
+          settled = true
+          clearTimeout(timeout)
+          if (u) setUser(u)
+          setIsRestoringSession(false)
+        }
+      })
+      .catch(async () => {
+        await clearLocalAuthSession()
+        if (!settled) {
+          settled = true
+          clearTimeout(timeout)
+          setUser(null)
+          setIsRestoringSession(false)
+        }
+      })
 
-    const { data } = onAuthStateChange((_event, session) => {
+    const { data } = onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        void clearLocalAuthSession()
+        setUser(null)
+        return
+      }
       if (!session) {
         setUser(null)
       }

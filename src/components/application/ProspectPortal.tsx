@@ -4,7 +4,7 @@ import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { supabaseConfigured } from "@/lib/supabase";
 import { prospectSignup, prospectLogin } from "@/services/auth.service";
-import { fetchApplicationByCode } from "@/services/application.service";
+import { checkDuplicateEmail, fetchApplicationByCode, fetchApplicationByEmail, fetchApplicationById } from "@/services/application.service";
 import { AgreementViewer } from "@/components/application/AgreementViewer";
 
 function ProspectPortal({ applications, onSaveApp, onBack }) {
@@ -14,11 +14,20 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
   const [lookupErr,setLookupErr]=useState("");
   const [newData,setNewData]=useState({talent_name:"",talent_email:"",talent_password:""});
   const [authLoading,setAuthLoading]=useState(false);
+  const [apps,setApps]=useState(applications||{});
 
-  function lookup(){
+  useEffect(()=>{ setApps(applications||{}); },[applications]);
+
+  async function lookup(){
     const code=accessCode.trim().toUpperCase();
-    const app=Object.values(applications).find(a=>a.access_code===code);
-    if(app){setFoundApp(app);setMode("form");setLookupErr("");}
+    if(!code){setLookupErr("Enter an access code.");return;}
+    setLookupErr("");
+    let app=Object.values(apps).find(a=>a.access_code===code);
+    if(!app){
+      try{ app=await fetchApplicationByCode(code); }catch{ app=null; }
+      if(app) setApps(prev=>({...prev,[app.id]:app}));
+    }
+    if(app){setFoundApp(app);setMode("form");}
     else setLookupErr("Access code not found. Check your invitation email.");
   }
 
@@ -26,13 +35,13 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
     if(!newData.talent_name||!newData.talent_email)return;
     setLookupErr("");setAuthLoading(true);
     const normalizedEmail=newData.talent_email.trim().toLowerCase();
-    const hasSubmittedForEmail=Object.values(applications).some(a=>
-      a.status==="submitted"&&String(a.talent_email||"").trim().toLowerCase()===normalizedEmail
-    );
-    if(hasSubmittedForEmail){
-      setLookupErr("An application has already been submitted with this email address.");
-      setAuthLoading(false);return;
-    }
+    try{
+      const dup=await checkDuplicateEmail(normalizedEmail);
+      if(dup){
+        setLookupErr("An application has already been submitted with this email address.");
+        setAuthLoading(false);return;
+      }
+    }catch{ /* fall through — duplicate check is best-effort */ }
 
     if(supabaseConfigured&&newData.talent_password){
       const {error}=await prospectSignup(newData.talent_email.trim(),newData.talent_password,newData.talent_name);
@@ -43,6 +52,7 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
     const code=newData.talent_name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999);
     const app={id,talent_id:null,access_code:code,talent_name:newData.talent_name,talent_email:newData.talent_email.trim(),status:"in_progress",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{}};
     onSaveApp(app);
+    setApps(prev=>({...prev,[app.id]:app}));
     setFoundApp(app);
     setAuthLoading(false);
     setMode("form");
@@ -53,13 +63,20 @@ function ProspectPortal({ applications, onSaveApp, onBack }) {
     setLookupErr("");setAuthLoading(true);
     const {profile,error}=await prospectLogin(newData.talent_email.trim(),newData.talent_password);
     if(error||!profile){setLookupErr(error||"Login failed.");setAuthLoading(false);return;}
-    const app=profile.application_id?Object.values(applications).find(a=>a.id===profile.application_id):Object.values(applications).find(a=>String(a.talent_email||"").trim().toLowerCase()===profile.email.toLowerCase());
+    let app=profile.application_id?Object.values(apps).find(a=>a.id===profile.application_id):Object.values(apps).find(a=>String(a.talent_email||"").trim().toLowerCase()===profile.email.toLowerCase());
+    if(!app){
+      try{
+        if(profile.application_id) app=await fetchApplicationById(profile.application_id);
+        if(!app) app=await fetchApplicationByEmail(profile.email);
+        if(app) setApps(prev=>({...prev,[app.id]:app}));
+      }catch{ /* ignore */ }
+    }
     if(app){setFoundApp(app);setMode("form");}
     else setLookupErr("No application found for this account.");
     setAuthLoading(false);
   }
 
-  if(mode==="form"&&foundApp) return <ApplicationForm applications={applications} app={foundApp} onSave={updated=>{onSaveApp(updated);setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
+  if(mode==="form"&&foundApp) return <ApplicationForm applications={apps} app={foundApp} onSave={updated=>{onSaveApp(updated);setApps(prev=>({...prev,[updated.id]:updated}));setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
 
   return (
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44,#162038)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",position:"relative",overflow:"hidden" }}>

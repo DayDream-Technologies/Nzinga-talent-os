@@ -63,3 +63,32 @@ export async function fetchApplicationByCode(code: string): Promise<Application 
   if (error || !data) return null
   return data as Application
 }
+
+export async function fetchApplicationById(id: string): Promise<Application | null> {
+  if (!supabaseConfigured || !supabase) {
+    return demoStore.getApplications()[id] ?? null
+  }
+  const { data, error } = await supabase.from('applications').select('*').eq('id', id).single()
+  if (error || !data) return null
+  return data as Application
+}
+
+export async function fetchApplicationByEmail(email: string): Promise<Application | null> {
+  if (!supabaseConfigured || !supabase) {
+    const normalized = email.trim().toLowerCase()
+    return (
+      Object.values(demoStore.getApplications()).find(
+        (a) => String(a.talent_email || '').trim().toLowerCase() === normalized,
+      ) ?? null
+    )
+  }
+  const { data, error } = await supabase
+    .from('applications')
+    .select('*')
+    .ilike('talent_email', email.trim())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error || !data) return null
+  return data as Application
+}

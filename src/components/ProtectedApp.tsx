@@ -4,7 +4,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { AppDataProvider } from '@/context/AppDataContext'
 import { AppShell } from '@/components/layout/AppShell'
 
-const DashboardPage = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const WorkspacePage = lazy(() => import('@/pages/WorkspacePage').then(m => ({ default: m.WorkspacePage })))
 const PipelinePage = lazy(() => import('@/pages/PipelinePage').then(m => ({ default: m.PipelinePage })))
 const RosterPage = lazy(() => import('@/pages/RosterPage').then(m => ({ default: m.RosterPage })))
@@ -20,14 +19,13 @@ function PageLoader() {
 
 export default function ProtectedApp() {
   const { user } = useAuth()
-  if (!user) return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/company-code" replace />
 
   return (
     <AppDataProvider>
       <AppShell>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="workspace" element={<WorkspacePage />} />
             <Route path="pipeline" element={<PipelinePage />} />
             <Route path="roster" element={<RosterPage />} />
@@ -36,7 +34,7 @@ export default function ProtectedApp() {
             <Route path="reports" element={<ReportsPage />} />
             <Route path="applications" element={<ApplicationsPage />} />
             <Route path="new-entry" element={<NewEntryPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/workspace" replace />} />
           </Routes>
         </Suspense>
       </AppShell>

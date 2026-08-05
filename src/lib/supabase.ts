@@ -7,15 +7,52 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabaseConfigured = Boolean(url && anonKey && !isDemoMode())
 
 export const supabase: SupabaseClient | null = supabaseConfigured
-  ? createClient(url!, anonKey!)
+  ? createClient(url!, anonKey!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null
 
 export const DOCUMENTS_BUCKET = 'documents'
 
+/** Clear persisted auth when refresh tokens are invalid / network+CORS fails. */
+export async function clearLocalAuthSession(): Promise<void> {
+  if (!supabase) return
+  try {
+    await supabase.auth.signOut({ scope: 'local' })
+  } catch {
+    // signOut can throw on network failure before clearing storage — force-remove keys
+  }
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && (key.startsWith('sb-') || key.includes('auth-token'))) {
+        keys.push(key)
+      }
+    }
+    for (const key of keys) localStorage.removeItem(key)
+  } catch {
+    // ignore storage errors (private mode, etc.)
+  }
+}
+
 export async function getSession(): Promise<Session | null> {
   if (!supabase) return null
-  const { data } = await supabase.auth.getSession()
-  return data.session
+  try {
+    const { data, error } = await supabase.auth.getSession()
+    if (error) {
+      await clearLocalAuthSession()
+      return null
+    }
+    return data.session
+  } catch {
+    await clearLocalAuthSession()
+    return null
+  }
 }
 
 export function onAuthStateChange(

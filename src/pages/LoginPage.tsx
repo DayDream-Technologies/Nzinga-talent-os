@@ -8,7 +8,7 @@ export function LoginPage() {
   const { companyCode, setCompanyCode, login } = useAuth()
 
   useEffect(() => {
-    if (!companyCode) navigate('/', { replace: true })
+    if (!companyCode) navigate('/company-code', { replace: true })
   }, [companyCode, navigate])
 
   if (!companyCode) return null
@@ -17,10 +17,10 @@ export function LoginPage() {
     <LoginScreen
       companyCode={companyCode}
       onSignIn={(email, password) => login(email, password)}
-      onLoginSuccess={() => navigate('/dashboard')}
+      onLoginSuccess={() => navigate('/workspace')}
       onBack={() => {
         setCompanyCode('')
-        navigate('/')
+        navigate('/company-code')
       }}
     />
   )

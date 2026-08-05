@@ -1,7 +1,7 @@
 import type { ProspectProfile, User } from '@/types'
 import { USERS } from '@/constants/seed-data'
 import { COMPANY_CODES } from '@/constants/roles'
-import { supabase, supabaseConfigured } from '@/lib/supabase'
+import { clearLocalAuthSession, supabase, supabaseConfigured } from '@/lib/supabase'
 
 export function validateCompanyCode(code: string): boolean {
   return Boolean(COMPANY_CODES[code.toUpperCase()])
@@ -47,19 +47,34 @@ export async function loginWithCredentials(
 
 export async function restoreSession(): Promise<User | null> {
   if (!supabaseConfigured || !supabase) return null
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return null
-  const { data: profile } = await supabase
-    .from('users')
-    .select('*')
-    .eq('auth_uid', session.user.id)
-    .single()
-  return (profile as User) ?? null
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error) {
+      await clearLocalAuthSession()
+      return null
+    }
+    if (!session?.user) return null
+    const { data: profile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_uid', session.user.id)
+      .single()
+    // Prospect (or orphan) auth sessions have no staff profile — not an error
+    return (profile as User) ?? null
+  } catch {
+    // Stale refresh tokens often surface as CORS/network Failed to fetch
+    await clearLocalAuthSession()
+    return null
+  }
 }
 
 export async function logout(): Promise<void> {
   if (supabaseConfigured && supabase) {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch {
+      await clearLocalAuthSession()
+    }
   }
 }
 
@@ -129,12 +144,20 @@ export async function prospectLogin(
 
 export async function getProspectProfile(): Promise<ProspectProfile | null> {
   if (!supabaseConfigured || !supabase) return null
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return null
-  const { data } = await supabase
-    .from('prospect_profiles')
-    .select('*')
-    .eq('auth_uid', session.user.id)
-    .single()
-  return (data as ProspectProfile) ?? null
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error || !session?.user) {
+      if (error) await clearLocalAuthSession()
+      return null
+    }
+    const { data } = await supabase
+      .from('prospect_profiles')
+      .select('*')
+      .eq('auth_uid', session.user.id)
+      .single()
+    return (data as ProspectProfile) ?? null
+  } catch {
+    await clearLocalAuthSession()
+    return null
+  }
 }

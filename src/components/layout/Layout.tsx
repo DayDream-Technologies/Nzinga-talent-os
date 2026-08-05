@@ -103,7 +103,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
     "Jordan Score Report":"reports?tab=jordan_scores",
     "New Holding Entry":"new-entry",
     "Applications":"applications",
-    "My Queue":"dashboard",
+    "My Queue":"workspace",
     "Signed Clients":"pipeline?stage=signed_onboarding",
     "All Users":"admin/users",
     "Role Management":"admin/roles",
@@ -117,7 +117,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
         <div style={{ display:"flex",alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #f0f0f0",background:"#fafbfc",gap:10 }}>
           <CompanyLogo variant="company" companyCode={companyCode} size="sm" showWordmark />
           <span style={{ fontSize:14,fontWeight:700,color:T.t1 }}>Menu</span>
-          {["Workspace","Dashboard"].map(l=><button key={l} onClick={()=>{onNav(l.toLowerCase());onClose();}} style={{ background:"transparent",border:"none",padding:"5px 10px",cursor:"pointer",fontSize:12,color:T.t2,borderRadius:5,fontFamily:"inherit" }}>{l}</button>)}
+          <button onClick={()=>{onNav("workspace");onClose();}} style={{ background:"transparent",border:"none",padding:"5px 10px",cursor:"pointer",fontSize:12,color:T.t2,borderRadius:5,fontFamily:"inherit" }}>Workspace</button>
           <div style={{ flex:1 }}/><button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>
         </div>
         <div style={{ display:"flex",flex:1,overflow:"hidden" }}>
@@ -145,7 +145,7 @@ function Sidebar({ view, onNav, talents, tasks, currentUser }) {
   const submittedApps=talents.filter(t=>t.application_status==="submitted"&&t.stage==="holding_entry").length;
 
   const sections=[
-    {label:"WORKSPACE",items:[{id:"dashboard",label:"Dashboard",icon:"⊙"},{id:"workspace",label:"My Workspace",icon:"★"}]},
+    {label:"WORKSPACE",items:[{id:"workspace",label:"My Workspace",icon:"★"}]},
     {label:"TALENT",items:[
       {id:"pipeline",label:"Pipeline",icon:"◈"},
       {id:"roster",label:"Full Roster",icon:"☰"},
