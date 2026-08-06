@@ -1,24 +1,69 @@
 import type { AppSection, Application, ApplicationData, Talent } from '@/types'
+import {
+  ROSTER_DIVISIONS,
+  SECONDARY_SPECIALIZATIONS,
+  CONTRACT_DURATION_PREFS,
+  DISCOVERY_SOURCES,
+  PREFERRED_OUTREACH_CHANNELS,
+  UNION_AFFILIATIONS,
+  YES_NO,
+} from './applicant-fields'
 
 export const APP_SECTIONS: AppSection[] = [
   {
     id: 'personal',
-    label: 'Personal Information',
+    label: 'Basic Information',
     icon: '👤',
     fields: [
-      { id: 'legal_first', label: 'Legal First Name', type: 'text', required: true },
-      { id: 'legal_last', label: 'Legal Last Name', type: 'text', required: true },
+      { id: 'legal_first', label: 'Talent First Name', type: 'text', required: true },
+      { id: 'legal_last', label: 'Talent Last Name', type: 'text', required: true },
+      { id: 'stage_name', label: 'Stage Name / Alias', type: 'text', required: false },
       { id: 'dob', label: 'Date of Birth', type: 'date', required: true },
-      { id: 'phone', label: 'Phone Number', type: 'tel', required: true },
-      { id: 'email', label: 'Email Address', type: 'email', required: true },
-      { id: 'address', label: 'Mailing Address', type: 'text', required: true },
+      { id: 'phone', label: 'Mobile Phone Number', type: 'tel', required: true },
+      { id: 'secondary_phone', label: 'Secondary Contact Line', type: 'tel', required: false },
+      { id: 'email', label: 'Talent Email Address', type: 'email', required: true },
+      {
+        id: 'preferred_contact',
+        label: 'Preferred Outreach Channel',
+        type: 'select',
+        options: [...PREFERRED_OUTREACH_CHANNELS],
+        required: false,
+      },
+      { id: 'address', label: 'Primary Base / Address', type: 'text', required: true },
       { id: 'city', label: 'City', type: 'text', required: true },
       { id: 'state', label: 'State', type: 'text', required: true },
       { id: 'zip', label: 'ZIP Code', type: 'text', required: true },
-      { id: 'parent_name', label: 'Parent/Guardian Full Name', type: 'text', requiredIf: { field: 'dob', condition: 'minor' } },
-      { id: 'parent_phone', label: 'Parent/Guardian Phone', type: 'tel', requiredIf: { field: 'dob', condition: 'minor' } },
-      { id: 'parent_email', label: 'Parent/Guardian Email', type: 'email', requiredIf: { field: 'dob', condition: 'minor' } },
-      { id: 'parent_relationship', label: 'Relationship to Applicant', type: 'select', options: ['Parent', 'Legal Guardian', 'Other'], requiredIf: { field: 'dob', condition: 'minor' } },
+      {
+        id: 'gov_id_number',
+        label: 'Government ID / Passport #',
+        type: 'text',
+        required: false,
+      },
+      {
+        id: 'parent_name',
+        label: 'Parent/Guardian Full Name',
+        type: 'text',
+        requiredIf: { field: 'dob', condition: 'minor' },
+      },
+      {
+        id: 'parent_phone',
+        label: 'Parent/Guardian Phone',
+        type: 'tel',
+        requiredIf: { field: 'dob', condition: 'minor' },
+      },
+      {
+        id: 'parent_email',
+        label: 'Parent/Guardian Email',
+        type: 'email',
+        requiredIf: { field: 'dob', condition: 'minor' },
+      },
+      {
+        id: 'parent_relationship',
+        label: 'Relationship to Applicant',
+        type: 'select',
+        options: ['Parent', 'Legal Guardian', 'Other'],
+        requiredIf: { field: 'dob', condition: 'minor' },
+      },
     ],
   },
   {
@@ -42,20 +87,60 @@ export const APP_SECTIONS: AppSection[] = [
   },
   {
     id: 'talent',
-    label: 'Talent & Niche',
+    label: 'Roster & Casting Preferences',
     icon: '⭐',
     fields: [
+      {
+        id: 'roster_division',
+        label: 'Primary Roster Division',
+        type: 'select',
+        options: [...ROSTER_DIVISIONS],
+        required: false,
+      },
+      {
+        id: 'secondary_specialization',
+        label: 'Secondary Specialization',
+        type: 'select',
+        options: [...SECONDARY_SPECIALIZATIONS],
+        required: false,
+      },
       {
         id: 'niches',
         label: 'Primary Niche(s)',
         type: 'multicheck',
-        options: [
-          'Model',
-          'Actor',
-          'Influencer',
-          'Athlete',
-        ],
+        options: ['Model', 'Actor', 'Influencer', 'Athlete'],
         required: true,
+      },
+      {
+        id: 'earliest_availability',
+        label: 'Earliest Availability Date',
+        type: 'date',
+        required: false,
+      },
+      {
+        id: 'min_day_rate',
+        label: 'Minimum Day Rate / Target Earnings',
+        type: 'text',
+        required: false,
+      },
+      {
+        id: 'contract_duration_pref',
+        label: 'Contract Duration Preference',
+        type: 'select',
+        options: [...CONTRACT_DURATION_PREFS],
+        required: false,
+      },
+      {
+        id: 'travel_logistics',
+        label: 'Travel & Logistics Constraints',
+        type: 'text',
+        required: false,
+      },
+      {
+        id: 'animal_skill_onset',
+        label: 'Animal / Exotic Skill On-Set',
+        type: 'text',
+        required: false,
       },
       { id: 'bio', label: 'Short Bio (2–3 sentences)', type: 'textarea', required: true },
       { id: 'achievements', label: 'Key Achievements / Credits', type: 'textarea', required: true },
@@ -64,11 +149,37 @@ export const APP_SECTIONS: AppSection[] = [
   },
   {
     id: 'business',
-    label: 'Business & Goals',
+    label: 'Background & Goals',
     icon: '💼',
     fields: [
       { id: 'goals_90day', label: '90-Day Goals', type: 'textarea', required: true },
       { id: 'goals_1year', label: '1-Year Vision', type: 'textarea', required: false },
+      {
+        id: 'union_affiliation',
+        label: 'Union Affiliation Status',
+        type: 'select',
+        options: [...UNION_AFFILIATIONS],
+        required: false,
+      },
+      {
+        id: 'current_agency',
+        label: 'Current Non-Exclusive Agency',
+        type: 'text',
+        required: false,
+      },
+      {
+        id: 'prior_annual_revenue',
+        label: 'Prior Annual Booking Revenue',
+        type: 'text',
+        required: false,
+      },
+      {
+        id: 'parent_guardian_required',
+        label: 'Parent / Guardian Required?',
+        type: 'select',
+        options: [...YES_NO],
+        required: false,
+      },
       {
         id: 'rep_type_pref',
         label: 'Representation Preference',
@@ -76,12 +187,37 @@ export const APP_SECTIONS: AppSection[] = [
         options: ['Exclusive', 'Non-Exclusive', 'Open to Discussion'],
         required: false,
       },
-      { id: 'referred_by', label: 'How did you hear about us?', type: 'text', required: false },
+      {
+        id: 'referred_by',
+        label: 'Discovery Source',
+        type: 'select',
+        options: [...DISCOVERY_SOURCES],
+        required: false,
+      },
+    ],
+  },
+  {
+    id: 'specs',
+    label: 'Physical Specs & Media Notes',
+    icon: '📏',
+    fields: [
+      { id: 'height', label: 'Height', type: 'text', required: false },
+      { id: 'bust', label: 'Bust', type: 'text', required: false },
+      { id: 'waist', label: 'Waist', type: 'text', required: false },
+      { id: 'hips', label: 'Hips', type: 'text', required: false },
+      { id: 'shoe_size', label: 'Shoe Size', type: 'text', required: false },
+      { id: 'eye_color', label: 'Eye Color', type: 'text', required: false },
+      {
+        id: 'scout_notes_public',
+        label: 'Additional Notes for Scouts',
+        type: 'textarea',
+        required: false,
+      },
     ],
   },
   {
     id: 'documents',
-    label: 'Required Documents',
+    label: 'Portfolio, Digitals & Documents',
     icon: '📎',
     fields: [
       {
@@ -96,7 +232,7 @@ export const APP_SECTIONS: AppSection[] = [
         label: 'Tax Documentation (W-9)',
         type: 'file_upload',
         required: true,
-        note: 'IRS W-9 form',
+        note: 'IRS W-9 form — SSN/Tax ID encrypted at processing',
       },
       {
         id: 'doc_banking',
@@ -111,6 +247,26 @@ export const APP_SECTIONS: AppSection[] = [
         type: 'file_upload',
         required: true,
         note: 'For self-support verification only — not used in approval decisions',
+      },
+      {
+        id: 'doc_headshot',
+        label: 'Headshot / Digitals',
+        type: 'file_upload',
+        required: false,
+        note: 'Polaroids, digitals, or headshots',
+      },
+      {
+        id: 'doc_reel',
+        label: 'Video Reel',
+        type: 'file_upload',
+        required: false,
+        note: 'Acting or modeling reel',
+      },
+      {
+        id: 'doc_resume',
+        label: 'Acting Resume / Portfolio',
+        type: 'file_upload',
+        required: false,
       },
     ],
   },
@@ -195,15 +351,63 @@ export function talentFromApp(app: Application): Talent {
         .map((s) => s.trim())
         .filter(Boolean)
     : []
+  if (d.roster_division && !niches.includes(String(d.roster_division))) {
+    niches.unshift(String(d.roster_division))
+  }
+  if (d.secondary_specialization && !niches.includes(String(d.secondary_specialization))) {
+    niches.push(String(d.secondary_specialization))
+  }
+
+  const parentRequired =
+    typeof d.parent_guardian_required === 'string' && d.parent_guardian_required
+      ? d.parent_guardian_required
+      : isMinor(d.dob as string | undefined)
+        ? 'Yes'
+        : 'No'
+
   return {
     id: 't_app_' + app.id,
     name: [d.legal_first, d.legal_last].filter(Boolean).join(' ') || app.talent_name,
+    first_name: String(d.legal_first || ''),
+    last_name: String(d.legal_last || ''),
+    stage_name: String(d.stage_name || d.primary_handle || ''),
     stage: 'holding_entry',
     niches,
     scout_id: null,
     created_by: null,
     created_at: new Date().toISOString(),
-    social_handle: String(d.primary_handle || ''),
+    phone: String(d.phone || ''),
+    email: String(d.email || ''),
+    secondary_phone: String(d.secondary_phone || ''),
+    preferred_contact: String(d.preferred_contact || ''),
+    gov_id_number: String(d.gov_id_number || ''),
+    dob: String(d.dob || ''),
+    roster_division: String(d.roster_division || ''),
+    secondary_specialization: String(d.secondary_specialization || ''),
+    earliest_availability: String(d.earliest_availability || ''),
+    min_day_rate: String(d.min_day_rate || ''),
+    contract_duration_pref: String(d.contract_duration_pref || d.rep_type_pref || ''),
+    legal_minor_status: parentRequired,
+    animal_skill_onset: String(d.animal_skill_onset || ''),
+    travel_logistics: String(d.travel_logistics || ''),
+    applicant_stage_status: 'New Inquiry',
+    discovery_source: String(d.referred_by || ''),
+    application_submitted_at: new Date().toISOString().split('T')[0],
+    next_callback_date: '',
+    prior_annual_revenue: String(d.prior_annual_revenue || ''),
+    current_agency: String(d.current_agency || ''),
+    union_affiliation: String(d.union_affiliation || ''),
+    parent_guardian_required: String(parentRequired),
+    onboarding_fee_status: '',
+    reference_check_status: 'Not Started',
+    height: String(d.height || ''),
+    bust: String(d.bust || ''),
+    waist: String(d.waist || ''),
+    hips: String(d.hips || ''),
+    shoe_size: String(d.shoe_size || ''),
+    eye_color: String(d.eye_color || ''),
+    scout_notes: String(d.scout_notes_public || d.bio || ''),
+    social_handle: String(d.primary_handle || d.stage_name || ''),
     follower_count: String(d.follower_count || ''),
     er_pct: String(d.er_pct || ''),
     platform: String(d.primary_platform || ''),
@@ -228,11 +432,11 @@ export function talentFromApp(app: Application): Talent {
     rep_type:
       d.rep_type_pref === 'Exclusive'
         ? 'Exclusive'
-        : d.rep_type_pref === 'Non-Exclusive'
+        : d.rep_type_pref === 'Non-Exclusive' || d.contract_duration_pref === 'Non-Exclusive'
           ? 'Non-Exclusive'
           : '',
     commission: '',
-    term_length: '',
+    term_length: String(d.contract_duration_pref || ''),
     team2_notes: '',
     team2_decision: null,
     director_decision: null,
@@ -241,7 +445,7 @@ export function talentFromApp(app: Application): Talent {
     warm_handoff: '',
     warm_handoff_confirmed: false,
     revenue_ytd: '0',
-    revenue_projected: '0',
+    revenue_projected: String(d.min_day_rate || '0'),
     last_contacted: new Date().toISOString().split('T')[0],
     application_id: app.id,
     application_status: 'submitted',
@@ -272,6 +476,27 @@ export function talentFromApp(app: Application): Talent {
             name: String(d.doc_proof_income_name || 'Proof of Income'),
             data: String(d.doc_proof_income),
             type: String(d.doc_proof_income_type || 'image/jpeg'),
+          }
+        : null,
+      headshot: d.doc_headshot
+        ? {
+            name: String(d.doc_headshot_name || 'Headshot'),
+            data: String(d.doc_headshot),
+            type: String(d.doc_headshot_type || 'image/jpeg'),
+          }
+        : null,
+      reel: d.doc_reel
+        ? {
+            name: String(d.doc_reel_name || 'Video Reel'),
+            data: String(d.doc_reel),
+            type: String(d.doc_reel_type || 'video/mp4'),
+          }
+        : null,
+      resume: d.doc_resume
+        ? {
+            name: String(d.doc_resume_name || 'Resume'),
+            data: String(d.doc_resume),
+            type: String(d.doc_resume_type || 'application/pdf'),
           }
         : null,
     },

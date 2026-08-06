@@ -1051,7 +1051,15 @@ export const TALENTS_SEED: Talent[] = talentsRaw
 /** Minimal placeholder PDF used for complete submitted apps in seed/demo data. */
 const SEED_DOC = 'data:application/pdf;base64,JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoK'
 
-const completeSections = ['personal', 'social', 'talent', 'business', 'documents', 'consent'] as const
+const completeSections = [
+  'personal',
+  'social',
+  'talent',
+  'business',
+  'specs',
+  'documents',
+  'consent',
+] as const
 
 function completeSeedAppData(p: {
   first: string
@@ -1095,7 +1103,10 @@ function completeSeedAppData(p: {
     goals_90day: p.goals90,
     goals_1year: p.goals1y || '',
     rep_type_pref: 'Open to Discussion',
-    referred_by: 'Scout outreach',
+    referred_by: 'Agent Scout',
+    roster_division: 'Commercial',
+    union_affiliation: 'Non-Union',
+    parent_guardian_required: 'No',
     doc_gov_id: SEED_DOC,
     doc_gov_id_name: 'Government_ID.pdf',
     doc_gov_id_type: 'application/pdf',

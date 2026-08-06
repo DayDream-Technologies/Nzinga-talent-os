@@ -28,7 +28,44 @@ export interface AuditLogEntry {
   ts: string
 }
 
-export interface Talent {
+/** Agency applicant fields mapped from RMX New Prospect → Nzinga dictionary. */
+export interface ApplicantProfile {
+  first_name?: string
+  last_name?: string
+  stage_name?: string
+  secondary_phone?: string
+  preferred_contact?: string
+  gov_id_number?: string
+  dob?: string
+  ssn_tax_id?: string
+  roster_division?: string
+  secondary_specialization?: string
+  earliest_availability?: string
+  min_day_rate?: string
+  contract_duration_pref?: string
+  legal_minor_status?: string
+  animal_skill_onset?: string
+  travel_logistics?: string
+  applicant_stage_status?: string
+  discovery_source?: string
+  application_submitted_at?: string
+  next_callback_date?: string
+  prior_annual_revenue?: string
+  current_agency?: string
+  union_affiliation?: string
+  parent_guardian_required?: string
+  onboarding_fee_status?: string
+  reference_check_status?: string
+  height?: string
+  bust?: string
+  waist?: string
+  hips?: string
+  shoe_size?: string
+  eye_color?: string
+  scout_notes?: string
+}
+
+export interface Talent extends ApplicantProfile {
   id: string
   name: string
   stage: TalentStage

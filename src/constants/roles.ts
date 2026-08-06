@@ -67,3 +67,26 @@ export function isScoutReadOnlyView(
 ): boolean {
   return role === 'scout' && scoutId === userId && !canScoutEditTalent(stage)
 }
+
+/** Stage is in the role's actionable RBAC set (director: all). */
+export function canRoleAccessStage(role: Role, stage: TalentStage): boolean {
+  if (role === 'director') return true
+  return (ROLE_STAGE_ACCESS[role] || []).includes(stage)
+}
+
+/**
+ * Whether the user may drag a talent out of its current stage (and optionally into a target).
+ * Locked / view-only stages are not movable; scout downstream tracking stays read-only.
+ */
+export function canRoleMoveTalent(
+  role: Role,
+  talent: { stage: TalentStage; scout_id?: string | null },
+  userId: string,
+  targetStage?: TalentStage,
+): boolean {
+  if (role === 'director') return true
+  if (isScoutReadOnlyView(role, talent.stage, talent.scout_id, userId)) return false
+  if (!canRoleAccessStage(role, talent.stage)) return false
+  if (targetStage !== undefined && !canRoleAccessStage(role, targetStage)) return false
+  return true
+}

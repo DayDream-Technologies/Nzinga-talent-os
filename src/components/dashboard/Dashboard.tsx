@@ -133,12 +133,12 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
 // ─── WORKSPACE ────────────────────────────────────────────────────────────────
 function Workspace({ currentUser, onNav }) {
   const favItems={
-    "Talent":["All Talent","Pipeline","New Holding Entry","Applications"],
+    "Talent":["All Talent","Pipeline","Add Talent Applicant","Applications"],
     "Operations":["Tasks","History / Notes"],
     "Reports":["Jordan Score Report","Revenue Forecast","Pipeline Summary"],
   };
   const reports={"Pipeline":["Pipeline Summary","Prospect Box Score"],"Scoring":["Jordan Score Report"],"Revenue":["Revenue Forecast"]};
-  const nm={"All Talent":"roster","Pipeline":"pipeline","New Holding Entry":"new-entry","Tasks":"tasks","History / Notes":"history","Jordan Score Report":"reports?tab=jordan_scores","Revenue Forecast":"reports?tab=revenue_forecast","Pipeline Summary":"reports?tab=pipeline_summary","Prospect Box Score":"reports?tab=prospect_box_score","Applications":"applications"};
+  const nm={"All Talent":"roster","Pipeline":"pipeline","Add Talent Applicant":"new-entry","Tasks":"tasks","History / Notes":"history","Jordan Score Report":"reports?tab=jordan_scores","Revenue Forecast":"reports?tab=revenue_forecast","Pipeline Summary":"reports?tab=pipeline_summary","Prospect Box Score":"reports?tab=prospect_box_score","Applications":"applications"};
   function navTo(item) {
     const target=nm[item];
     if(!target) return;
