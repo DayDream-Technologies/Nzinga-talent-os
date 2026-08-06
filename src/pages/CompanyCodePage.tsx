@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { COMPANY_CODES } from '@/constants/roles'
 import { PLATFORM_BRAND, canApplyWithCompanyCode, getCompanyBrand } from '@/constants/company-branding'
-import { PlatformBrandHeader } from '@/components/branding'
+import { PlatformBrandHeader, TMXMark } from '@/components/branding'
 
 export function CompanyCodePage() {
   const navigate = useNavigate()
@@ -54,6 +54,56 @@ export function CompanyCodePage() {
     >
       <div style={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'rgba(124,58,237,0.06)', top: -140, right: -100, pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', width: 350, height: 350, borderRadius: '50%', background: 'rgba(37,99,235,0.05)', bottom: -100, left: -80, pointerEvents: 'none' }} />
+
+      <header
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px clamp(16px, 4vw, 40px)',
+          background: 'rgba(255,255,255,0.72)',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          aria-label={`${PLATFORM_BRAND.name} — go to home`}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            font: 'inherit',
+          }}
+        >
+          <TMXMark size="sm" />
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#111827', letterSpacing: '0.02em' }}>
+            {PLATFORM_BRAND.name}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#6b7280',
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          Home
+        </button>
+      </header>
 
       <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px' }}>
         <PlatformBrandHeader style={{ marginBottom: 32 }} onHomeClick={() => navigate('/')} />

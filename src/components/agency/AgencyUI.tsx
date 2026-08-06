@@ -14,7 +14,7 @@ export function Panel({
 }) {
   return (
     <div style={{ padding: 20, overflow: 'auto', height: '100%', background: T.pageBg }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+      <div className="animate-fade-in-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: T.t1, margin: 0 }}>{title}</h1>
           {subtitle && (
@@ -23,14 +23,25 @@ export function Panel({
         </div>
         {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{actions}</div>}
       </div>
-      {children}
+      <div className="animate-fade-in-up stagger-2">{children}</div>
     </div>
   )
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+export function Card({
+  children,
+  style,
+  className = '',
+  hover = true,
+}: {
+  children: ReactNode
+  style?: CSSProperties
+  className?: string
+  hover?: boolean
+}) {
   return (
     <div
+      className={`${hover ? 'ui-card' : ''} ${className}`.trim()}
       style={{
         background: '#fff',
         border: '1px solid #e5e7eb',
@@ -54,7 +65,7 @@ export function Btn({
 }: {
   children: ReactNode
   onClick?: () => void
-  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost'
+  variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'info'
   disabled?: boolean
   type?: 'button' | 'submit'
 }) {
@@ -63,6 +74,7 @@ export function Btn({
     secondary: { background: '#f3f4f6', color: T.t1, border: '1px solid #e5e7eb' },
     success: { background: T.green, color: '#fff', border: 'none' },
     danger: { background: T.red, color: '#fff', border: 'none' },
+    info: { background: T.purple, color: '#fff', border: 'none' },
     ghost: { background: 'transparent', color: T.blue, border: 'none', textDecoration: 'underline' },
   }
   return (
@@ -70,6 +82,7 @@ export function Btn({
       type={type}
       disabled={disabled}
       onClick={onClick}
+      className="ui-btn"
       style={{
         ...styles[variant],
         padding: '8px 14px',
@@ -89,12 +102,20 @@ export function Btn({
 export function Badge({
   children,
   color = T.blue,
+  pulse = false,
 }: {
   children: ReactNode
   color?: string
+  pulse?: boolean
 }) {
+  const urgent =
+    pulse ||
+    (typeof children === 'string' &&
+      /overdue|urgent|pending/i.test(children))
+
   return (
     <span
+      className={urgent ? 'ui-badge-urgent' : undefined}
       style={{
         display: 'inline-block',
         background: `${color}18`,
@@ -142,7 +163,10 @@ export function Table({
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i}>
+            <tr
+              key={i}
+              className={`ui-table-row animate-fade-in-up stagger-${Math.min(i + 1, 8)}`}
+            >
               {row.map((cell, j) => (
                 <td
                   key={j}
@@ -200,6 +224,7 @@ export const inputStyle: CSSProperties = {
   fontFamily: 'inherit',
   boxSizing: 'border-box',
   color: T.t1,
+  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
 }
 
 export function StatusColor(status: string): string {

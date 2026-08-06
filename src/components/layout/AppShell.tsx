@@ -126,7 +126,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       <Scoreboard agencyStats={agencyStats} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar view={view} onNav={nav} />
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div key={view} className="flex flex-1 flex-col overflow-hidden animate-fade-in">
           {children ?? <Outlet />}
         </div>
       </div>

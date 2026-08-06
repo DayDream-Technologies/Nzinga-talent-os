@@ -21,7 +21,7 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
         <CompanyLogo variant="company" companyCode={companyCode} size="sm" theme="dark" showWordmark />
       </div>
       <div style={{ display:"flex",gap:1,marginRight:6 }}>
-        {[["☰","Menu",onMenu],["📄","Roster",()=>onNav("active-roster")],["★","Workspace",()=>onNav("workspace")]].map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }}>{icon}</button>)}
+        {[["☰","Menu",onMenu],["📄","Roster",()=>onNav("active-roster")],["★","Workspace",()=>onNav("workspace")]].map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} className="transition-fast" style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="#94a3b8"}>{icon}</button>)}
       </div>
       <div style={{ flex:1,maxWidth:420,position:"relative" }}>
         <div style={{ display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:6,padding:"4px 10px" }}>
@@ -56,50 +56,134 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
 }
 
 function BreadcrumbBar({ label, sub }) {
-  return <div style={{ background:T.accentBg,padding:"6px 18px",display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
-    <span style={{ color:"rgba(255,255,255,0.7)",fontSize:13,fontWeight:500 }}>{label}</span>
-    {sub&&<><span style={{ color:"rgba(255,255,255,0.4)" }}>›</span><span style={{ color:"#fff",fontSize:13,fontWeight:600 }}>{sub}</span></>}
-  </div>;
+  return (
+    <div
+      key={label + (sub || "")}
+      className="animate-fade-in"
+      style={{
+        background: `linear-gradient(90deg, ${T.accentBg}, #2563eb, ${T.accentBg})`,
+        backgroundSize: "200% 100%",
+        animation: "fadeIn 0.3s ease both, breadcrumbPulse 8s ease infinite",
+        padding: "6px 18px",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexShrink: 0,
+      }}
+    >
+      <span className="animate-slide-left" style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 500 }}>{label}</span>
+      {sub && (
+        <>
+          <span style={{ color: "rgba(255,255,255,0.4)" }}>›</span>
+          <span className="animate-fade-in-up" style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>{sub}</span>
+        </>
+      )}
+    </div>
+  );
 }
 
 function Scoreboard({ agencyStats }) {
-  const tiles=agencyStats||[
-    {label:"Open Tickets",value:"—",color:T.amber},
-    {label:"Agency Tasks",value:"—",color:T.blue},
-    {label:"Open Invoices",value:"—",color:T.purple},
-    {label:"Pending Payouts",value:"—",color:T.green},
+  const tiles = agencyStats || [
+    { label: "Open Tickets", value: "—", color: T.amber },
+    { label: "Agency Tasks", value: "—", color: T.blue },
+    { label: "Open Invoices", value: "—", color: T.purple },
+    { label: "Pending Payouts", value: "—", color: T.green },
   ];
-  return <div style={{ display:"flex",gap:8,padding:"8px 18px",background:"#f8f9fb",borderBottom:"1px solid #e5e7eb",overflowX:"auto",flexShrink:0 }}>
-    {tiles.map(t=><div key={t.label} style={{ background:"#fff",border:"1px solid #e5e7eb",borderRadius:7,padding:"6px 14px",minWidth:90,flexShrink:0,boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
-      <div style={{ fontSize:20,fontWeight:800,color:t.color,lineHeight:1.2 }}>{t.value}</div>
-      <div style={{ fontSize:10,color:T.t4,marginTop:1,whiteSpace:"nowrap",fontWeight:500 }}>{t.label}</div>
-    </div>)}
-  </div>;
+  return (
+    <div style={{ display: "flex", gap: 8, padding: "8px 18px", background: "#f8f9fb", borderBottom: "1px solid #e5e7eb", overflowX: "auto", flexShrink: 0 }}>
+      {tiles.map((t, i) => (
+        <div
+          key={t.label}
+          className={`scoreboard-tile animate-scale-in stagger-${Math.min(i + 1, 8)}`}
+          style={{
+            background: "#fff",
+            border: "1px solid #e5e7eb",
+            borderLeft: `3px solid ${t.color}`,
+            borderRadius: 7,
+            padding: "6px 14px",
+            minWidth: 90,
+            flexShrink: 0,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}
+        >
+          <div style={{ fontSize: 20, fontWeight: 800, color: t.color, lineHeight: 1.2 }}>{t.value}</div>
+          <div style={{ fontSize: 10, color: T.t4, marginTop: 1, whiteSpace: "nowrap", fontWeight: 500 }}>{t.label}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function FullMenu({ onClose, onNav, userRole, companyCode }) {
-  const [cat,setCat]=useState(AGENCY_NAV[0]?.id || "talent");
-  const current=AGENCY_NAV.find(c=>c.id===cat) || AGENCY_NAV[0];
-  return(
-    <div style={{ position:"fixed",inset:0,zIndex:500,display:"flex",alignItems:"flex-start" }}>
-      <div onClick={onClose} style={{ position:"absolute",inset:0,background:"rgba(0,0,0,0.4)" }}/>
-      <div style={{ position:"relative",width:860,margin:"48px 0 0",background:"#fff",borderRadius:"0 0 10px 0",boxShadow:"0 8px 40px rgba(0,0,0,0.18)",display:"flex",flexDirection:"column",maxHeight:"calc(100vh - 48px)",overflow:"hidden" }}>
-        <div style={{ display:"flex",alignItems:"center",padding:"10px 14px",borderBottom:"1px solid #f0f0f0",background:"#fafbfc",gap:10 }}>
+  const [cat, setCat] = useState(AGENCY_NAV[0]?.id || "talent");
+  const current = AGENCY_NAV.find((c) => c.id === cat) || AGENCY_NAV[0];
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "flex-start" }}>
+      <div className="animate-backdrop" onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} />
+      <div
+        className="animate-menu-slide"
+        style={{
+          position: "relative",
+          width: 860,
+          margin: "48px 0 0",
+          background: "#fff",
+          borderRadius: "0 0 10px 0",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+          display: "flex",
+          flexDirection: "column",
+          maxHeight: "calc(100vh - 48px)",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #f0f0f0", background: "#fafbfc", gap: 10 }}>
           <CompanyLogo variant="company" companyCode={companyCode} size="sm" showWordmark />
-          <span style={{ fontSize:14,fontWeight:700,color:T.t1 }}>Menu</span>
-          <button onClick={()=>{onNav("workspace");onClose();}} style={{ background:"transparent",border:"none",padding:"5px 10px",cursor:"pointer",fontSize:12,color:T.t2,borderRadius:5,fontFamily:"inherit" }}>Workspace</button>
-          {userRole==="director"&&<button onClick={()=>{onNav("admin/users");onClose();}} style={{ background:"transparent",border:"none",padding:"5px 10px",cursor:"pointer",fontSize:12,color:T.t2,borderRadius:5,fontFamily:"inherit" }}>Admin</button>}
-          <div style={{ flex:1 }}/><button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>
+          <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>Menu</span>
+          <button onClick={() => { onNav("workspace"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Workspace</button>
+          {userRole === "director" && (
+            <button onClick={() => { onNav("admin/users"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Admin</button>
+          )}
+          <div style={{ flex: 1 }} />
+          <button onClick={onClose} className="transition-fast" style={{ background: "transparent", border: "none", fontSize: 16, cursor: "pointer", color: T.t3 }}>✕</button>
         </div>
-        <div style={{ display:"flex",flex:1,overflow:"hidden" }}>
-          <div style={{ width:160,background:"#f8f9fb",borderRight:"1px solid #e5e7eb",padding:"8px 0",flexShrink:0 }}>
-            {AGENCY_NAV.map(c=><div key={c.id} onMouseEnter={()=>setCat(c.id)} style={{ padding:"8px 12px",cursor:"pointer",fontSize:13,fontWeight:cat===c.id?700:400,color:cat===c.id?T.blue:T.t2,background:cat===c.id?"#fff":"transparent",borderLeft:`3px solid ${cat===c.id?T.blue:"transparent"}` }}>{c.label}</div>)}
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <div style={{ width: 160, background: "#f8f9fb", borderRight: "1px solid #e5e7eb", padding: "8px 0", flexShrink: 0 }}>
+            {AGENCY_NAV.map((c, i) => (
+              <div
+                key={c.id}
+                className={`animate-fade-in-up stagger-${Math.min(i + 1, 8)} transition-all`}
+                onMouseEnter={() => setCat(c.id)}
+                style={{
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: cat === c.id ? 700 : 400,
+                  color: cat === c.id ? T.blue : T.t2,
+                  background: cat === c.id ? "#fff" : "transparent",
+                  borderLeft: `3px solid ${cat === c.id ? T.blue : "transparent"}`,
+                }}
+              >
+                {c.label}
+              </div>
+            ))}
           </div>
-          <div style={{ flex:1,padding:"14px 18px",display:"flex",gap:28,overflowY:"auto",flexWrap:"wrap" }}>
-            {(current?.groups||[]).map(group=><div key={group.label} style={{ minWidth:160 }}>
-              <div style={{ fontSize:11,fontWeight:700,color:T.t3,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8 }}>{group.label}</div>
-              {group.items.map(item=><div key={item.id} onClick={()=>{onNav(item.path);onClose();}} style={{ padding:"5px 0",fontSize:13,color:T.blue,cursor:"pointer" }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item.label}</div>)}
-            </div>)}
+          <div key={cat} className="animate-fade-in" style={{ flex: 1, padding: "14px 18px", display: "flex", gap: 28, overflowY: "auto", flexWrap: "wrap" }}>
+            {(current?.groups || []).map((group, gi) => (
+              <div key={group.label} className={`animate-fade-in-up stagger-${Math.min(gi + 1, 8)}`} style={{ minWidth: 160 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.t3, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>{group.label}</div>
+                {group.items.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => { onNav(item.path); onClose(); }}
+                    className="transition-fast"
+                    style={{ padding: "5px 0", fontSize: 13, color: T.blue, cursor: "pointer" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.textDecoration = "underline"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.textDecoration = "none"; }}
+                  >
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -108,17 +192,34 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
 }
 
 function Sidebar({ view, onNav }) {
-  return(
-    <div style={{ width:186,background:T.navBg,borderRight:`1px solid ${T.navBorder}`,display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto" }}>
-      {AGENCY_SIDEBAR.map((sec,si)=><div key={si}>
-        <div style={{ padding:"9px 0 2px 11px",fontSize:9,color:"rgba(255,255,255,0.25)",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase" }}>{sec.label}</div>
-        {sec.items.map(item=>{
-          const active=view===item.path;
-          return <div key={item.id} onClick={()=>onNav(item.path)} style={{ display:"flex",alignItems:"center",padding:"5px 9px 5px 11px",cursor:"pointer",background:active?"rgba(255,255,255,0.08)":"transparent",borderLeft:`2px solid ${active?"#fff":"transparent"}`,marginBottom:1 }}>
-            <span style={{ fontSize:11,color:active?"#fff":"#94a3b8" }}>{item.label}</span>
-          </div>;
-        })}
-      </div>)}
+  return (
+    <div style={{ width: 186, background: T.navBg, borderRight: `1px solid ${T.navBorder}`, display: "flex", flexDirection: "column", flexShrink: 0, overflowY: "auto" }}>
+      {AGENCY_SIDEBAR.map((sec, si) => (
+        <div key={si} className={`animate-fade-in-up stagger-${Math.min(si + 1, 8)}`}>
+          <div style={{ padding: "9px 0 2px 11px", fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>{sec.label}</div>
+          {sec.items.map((item) => {
+            const active = view === item.path;
+            return (
+              <div
+                key={item.id}
+                onClick={() => onNav(item.path)}
+                className="sidebar-item"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "5px 9px 5px 11px",
+                  cursor: "pointer",
+                  background: active ? "rgba(255,255,255,0.08)" : "transparent",
+                  borderLeft: `2px solid ${active ? "#fff" : "transparent"}`,
+                  marginBottom: 1,
+                }}
+              >
+                <span style={{ fontSize: 11, color: active ? "#fff" : "#94a3b8", transition: "color 0.2s ease" }}>{item.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

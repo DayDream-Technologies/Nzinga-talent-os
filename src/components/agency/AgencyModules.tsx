@@ -38,8 +38,13 @@ export function AgencyWorkspace() {
       subtitle={`${AGENCY_STAFF.title} · Today’s ops for ${scenario.client} × ${scenario.talent} · ${scenario.name}`}
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 18 }}>
-        {tiles.map((t) => (
-          <Card key={t.label} style={{ cursor: 'pointer' }}>
+        {tiles.map((t, i) => (
+          <Card
+            key={t.label}
+            className={`workspace-tile animate-scale-in stagger-${Math.min(i + 1, 8)}`}
+            style={{ cursor: 'pointer', borderLeft: `3px solid ${t.color}` }}
+            hover={false}
+          >
             <div onClick={() => nav(t.path)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && nav(t.path)}>
               <div style={{ fontSize: 22, fontWeight: 800, color: t.color }}>{t.value}</div>
               <div style={{ fontSize: 11, color: T.t3, marginTop: 4 }}>{t.label}</div>
@@ -49,7 +54,7 @@ export function AgencyWorkspace() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <Card>
+        <Card className="animate-slide-left stagger-3">
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Morning checklist</div>
           <ol style={{ margin: 0, paddingLeft: 18, color: T.t2, fontSize: 13, lineHeight: 1.7 }}>
             <li>Review Nike support ticket — confirm Maya availability</li>
@@ -63,7 +68,7 @@ export function AgencyWorkspace() {
             <Btn variant="secondary" onClick={() => nav('/calendar')}>Calendar</Btn>
           </div>
         </Card>
-        <Card>
+        <Card className="animate-slide-right stagger-4">
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Scenario snapshot</div>
           <div style={{ fontSize: 13, color: T.t2, lineHeight: 1.6 }}>
             <div><strong>Client:</strong> {scenario.client}</div>
@@ -76,13 +81,13 @@ export function AgencyWorkspace() {
           <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Btn onClick={() => nav('/client-invoices')}>Client Invoices</Btn>
             <Btn variant="secondary" onClick={() => nav('/escrow-deposit')}>Record Escrow</Btn>
-            <Btn variant="secondary" onClick={() => nav('/issue-payouts')}>Issue Payouts</Btn>
+            <Btn variant="success" onClick={() => nav('/issue-payouts')}>Issue Payouts</Btn>
           </div>
         </Card>
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <Card>
+        <Card className="animate-fade-in-up stagger-5">
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Next up</div>
           <Table
             headers={['When', 'Item', 'Type']}
@@ -170,7 +175,7 @@ export function AgencyModule({ moduleId }: { moduleId: string }) {
     default:
       return (
         <Panel title="Not found" subtitle="This agency module is not registered.">
-          <Btn onClick={() => window.history.back()}>Go back</Btn>
+          <Btn variant="secondary" onClick={() => window.history.back()}>Go back</Btn>
         </Panel>
       )
   }
@@ -189,7 +194,7 @@ function ProspectsModule() {
             <Badge key={p.id} color={StatusColor(p.stage)}>{p.stage}</Badge>,
             p.source,
             new Date(p.submittedAt).toLocaleDateString(),
-            <Btn key={`a-${p.id}`} variant="secondary" onClick={() => advanceProspect(p.id)}>Advance</Btn>,
+            <Btn key={`a-${p.id}`} variant="success" onClick={() => advanceProspect(p.id)}>Advance</Btn>,
           ])}
         />
       </Card>
@@ -388,7 +393,7 @@ function SupportTicketsModule() {
             <Badge key={`st-${t.id}`} color={StatusColor(t.status)}>{t.status}</Badge>,
             <div key={`a-${t.id}`} style={{ display: 'flex', gap: 6 }}>
               {t.status !== 'resolved' && (
-                <Btn variant="secondary" onClick={() => updateTicket(t.id, { status: 'in_progress' })}>Start</Btn>
+                <Btn onClick={() => updateTicket(t.id, { status: 'in_progress' })}>Start</Btn>
               )}
               {t.status !== 'resolved' && (
                 <Btn variant="success" onClick={() => updateTicket(t.id, { status: 'resolved' })}>Resolve</Btn>
@@ -671,6 +676,7 @@ function BatchReceiptsModule() {
         />
         <div style={{ marginTop: 12 }}>
           <Btn
+            variant="success"
             disabled={selected.length === 0}
             onClick={() => {
               batchReceipts(selected)

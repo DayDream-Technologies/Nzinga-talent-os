@@ -8,6 +8,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { HomePage } from '@/pages/HomePage'
 import { EmailConfirmedPage } from '@/pages/EmailConfirmedPage'
 import './index.css'
+import './styles/animations.css'
 
 const ProtectedApp = lazy(() => import('@/components/ProtectedApp'))
 const ProspectPortalPage = lazy(() => import('@/pages/ProspectPortalPage').then(m => ({ default: m.ProspectPortalPage })))

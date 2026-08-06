@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
 import { TMXLogo } from '@/components/branding'
 import { hasEmailConfirmationInUrl } from '@/lib/auth-redirect'
+import { useInView } from '@/hooks/useInView'
 
 const STAGES = [
   'Holding Entry',
@@ -13,6 +14,15 @@ const STAGES = [
   'Executive Review',
   'Signed Onboarding',
 ]
+
+function Reveal({ children, className = '', style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  const { ref, inView } = useInView<HTMLDivElement>()
+  return (
+    <div ref={ref} className={`reveal ${inView ? 'is-visible' : ''} ${className}`.trim()} style={style}>
+      {children}
+    </div>
+  )
+}
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -145,10 +155,26 @@ export function HomePage() {
             padding: '20px clamp(20px, 4vw, 48px)',
           }}
         >
-          <TMXLogo size="sm" theme="dark" />
           <button
             type="button"
-            className="mh-login"
+            onClick={() => navigate('/')}
+            aria-label={`${PLATFORM_BRAND.name} — go to home`}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              font: 'inherit',
+            }}
+          >
+            <TMXLogo size="sm" theme="dark" />
+          </button>
+          <button
+            type="button"
+            className="mh-login mh-cta"
             onClick={() => navigate('/tmx')}
             style={{
               padding: '10px 18px',
@@ -160,7 +186,6 @@ export function HomePage() {
               fontWeight: 600,
               cursor: 'pointer',
               fontFamily: 'inherit',
-              transition: 'background 0.15s',
             }}
           >
             Login
@@ -219,7 +244,7 @@ export function HomePage() {
           <div className="mh-hero-item" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center' }}>
             <button
               type="button"
-              className="mh-login"
+              className="mh-login mh-cta"
               onClick={() => navigate('/tmx')}
               style={{
                 padding: '14px 28px',
@@ -231,14 +256,13 @@ export function HomePage() {
                 fontWeight: 600,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                transition: 'background 0.15s',
               }}
             >
               Login
             </button>
             <button
               type="button"
-              className="mh-ghost"
+              className="mh-ghost mh-link-underline"
               onClick={() => navigate('/tmx')}
               style={{
                 background: 'none',
@@ -248,7 +272,6 @@ export function HomePage() {
                 fontWeight: 500,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                transition: 'color 0.15s',
                 padding: '8px 4px',
               }}
             >
@@ -266,20 +289,22 @@ export function HomePage() {
           background: 'rgba(0,0,0,0.18)',
         }}
       >
-        <h2
-          style={{
-            fontFamily: "'Syne', 'Outfit', sans-serif",
-            fontSize: 'clamp(24px, 3vw, 34px)',
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            marginBottom: 10,
-          }}
-        >
-          A clear path from prospect to roster
-        </h2>
-        <p style={{ color: 'var(--mh-muted)', fontSize: 15, lineHeight: 1.55, maxWidth: 520, marginBottom: 36 }}>
-          Seven sequential stages keep every candidate moving with the right owners and checkpoints.
-        </p>
+        <Reveal>
+          <h2
+            style={{
+              fontFamily: "'Syne', 'Outfit', sans-serif",
+              fontSize: 'clamp(24px, 3vw, 34px)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              marginBottom: 10,
+            }}
+          >
+            A clear path from prospect to roster
+          </h2>
+          <p style={{ color: 'var(--mh-muted)', fontSize: 15, lineHeight: 1.55, maxWidth: 520, marginBottom: 36 }}>
+            Seven sequential stages keep every candidate moving with the right owners and checkpoints.
+          </p>
+        </Reveal>
         <ol
           style={{
             listStyle: 'none',
@@ -289,44 +314,49 @@ export function HomePage() {
             counterReset: 'stage',
           }}
         >
-          {STAGES.map((label) => (
-            <li
-              key={label}
-              style={{
-                padding: '16px 14px',
-                background: 'var(--mh-surface)',
-                border: '1px solid var(--mh-line)',
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                lineHeight: 1.35,
-              }}
-            >
-              <span style={{ display: 'block', color: 'var(--mh-accent)', fontSize: 11, fontWeight: 600, marginBottom: 6, letterSpacing: '0.06em' }}>
-                STAGE
-              </span>
-              {label}
-            </li>
+          {STAGES.map((label, i) => (
+            <Reveal key={label} className={`stagger-${Math.min(i + 1, 8)}`}>
+              <li
+                className="mh-stage-card"
+                style={{
+                  padding: '16px 14px',
+                  background: 'var(--mh-surface)',
+                  border: '1px solid var(--mh-line)',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+                  listStyle: 'none',
+                }}
+              >
+                <span style={{ display: 'block', color: 'var(--mh-accent)', fontSize: 11, fontWeight: 600, marginBottom: 6, letterSpacing: '0.06em' }}>
+                  STAGE {String(i + 1).padStart(2, '0')}
+                </span>
+                {label}
+              </li>
+            </Reveal>
           ))}
         </ol>
       </section>
 
       {/* Roles section */}
       <section style={{ padding: '72px clamp(20px, 5vw, 72px)' }}>
-        <h2
-          style={{
-            fontFamily: "'Syne', 'Outfit', sans-serif",
-            fontSize: 'clamp(24px, 3vw, 34px)',
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            marginBottom: 10,
-          }}
-        >
-          Built for every seat in the process
-        </h2>
-        <p style={{ color: 'var(--mh-muted)', fontSize: 15, lineHeight: 1.55, maxWidth: 520, marginBottom: 36 }}>
-          Role-based views and actions so scouts, team leads, specialists, and directors each see what they need — nothing more.
-        </p>
+        <Reveal>
+          <h2
+            style={{
+              fontFamily: "'Syne', 'Outfit', sans-serif",
+              fontSize: 'clamp(24px, 3vw, 34px)',
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              marginBottom: 10,
+            }}
+          >
+            Built for every seat in the process
+          </h2>
+          <p style={{ color: 'var(--mh-muted)', fontSize: 15, lineHeight: 1.55, maxWidth: 520, marginBottom: 36 }}>
+            Role-based views and actions so scouts, team leads, specialists, and directors each see what they need — nothing more.
+          </p>
+        </Reveal>
         <div
           style={{
             display: 'grid',
@@ -338,17 +368,20 @@ export function HomePage() {
             { title: 'Scouts & leads', body: 'Score talent, advance stages, and keep holding entries moving.' },
             { title: 'Ops & audit', body: 'Process documents, verify compliance, and close the loop.' },
             { title: 'Directors & success', body: 'Executive review, onboarding handoff, and full pipeline visibility.' },
-          ].map((item) => (
-            <div
-              key={item.title}
-              style={{
-                padding: '22px 20px',
-                borderTop: '2px solid var(--mh-accent-deep)',
-              }}
-            >
-              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{item.title}</h3>
-              <p style={{ fontSize: 14, color: 'var(--mh-muted)', lineHeight: 1.5 }}>{item.body}</p>
-            </div>
+          ].map((item, i) => (
+            <Reveal key={item.title} className={`stagger-${i + 1}`}>
+              <div
+                className="mh-role-card"
+                style={{
+                  padding: '22px 20px',
+                  borderTop: '2px solid var(--mh-accent-deep)',
+                  borderRadius: '0 0 8px 8px',
+                }}
+              >
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{item.title}</h3>
+                <p style={{ fontSize: 14, color: 'var(--mh-muted)', lineHeight: 1.5 }}>{item.body}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -371,7 +404,7 @@ export function HomePage() {
           </span>
           <button
             type="button"
-            className="mh-ghost"
+            className="mh-ghost mh-link-underline"
             onClick={() => navigate('/tmx')}
             style={{
               background: 'none',
@@ -392,6 +425,7 @@ export function HomePage() {
             href="https://www.daydreamtechnologies.net/"
             target="_blank"
             rel="noopener noreferrer"
+            className="mh-link-underline"
             style={{ color: 'var(--mh-accent)', textDecoration: 'none' }}
           >
             DayDream Technologies
