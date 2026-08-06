@@ -1,12 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppData } from '@/context/AppDataContext'
-import { useAgencyData } from '@/context/AgencyDataContext'
 import { ApplicationReview } from '@/components/application/ApplicationModals'
 import { TalentRecord } from '@/components/talent/TalentRecord'
 import { InviteUserModal } from '@/components/admin/InviteUserModal'
-import { TopNav, BreadcrumbBar, Scoreboard, FullMenu, Sidebar } from '@/components/layout/Layout'
+import { TopNav, BreadcrumbBar, FullMenu, Sidebar } from '@/components/layout/Layout'
 import { AGENCY_PAGE_TITLES } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
 
@@ -33,41 +32,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     refreshAll,
   } = useAppData()
 
-  const agency = useAgencyData()
-
   const [menuOpen, setMenuOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
-
-  const agencyStats = useMemo(
-    () => [
-      {
-        label: 'Open Tickets',
-        value: agency.tickets.filter((t) => t.status !== 'resolved').length,
-        color: T.amber,
-      },
-      {
-        label: 'Agency Tasks',
-        value: agency.tasks.filter((t) => t.status === 'open').length,
-        color: T.blue,
-      },
-      {
-        label: 'Open Invoices',
-        value: agency.invoices.filter((i) => i.status === 'sent' || i.status === 'overdue').length,
-        color: T.purple,
-      },
-      {
-        label: 'Pending Payouts',
-        value: agency.expenseLogs.filter((e) => e.status === 'pending').length,
-        color: T.green,
-      },
-      {
-        label: 'Active Roster',
-        value: agency.talent.filter((t) => t.status === 'active').length,
-        color: T.cyan,
-      },
-    ],
-    [agency.tickets, agency.tasks, agency.invoices, agency.expenseLogs, agency.talent],
-  )
 
   if (!user) return null
 
@@ -123,7 +89,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </button>
         </div>
       )}
-      <Scoreboard agencyStats={agencyStats} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar view={view} onNav={nav} />
         <div key={view} className="flex flex-1 flex-col overflow-hidden animate-fade-in">

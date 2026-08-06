@@ -3,7 +3,68 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { COMPANY_CODES } from '@/constants/roles'
 import { PLATFORM_BRAND, canApplyWithCompanyCode, getCompanyBrand } from '@/constants/company-branding'
-import { PlatformBrandHeader, TMXMark } from '@/components/branding'
+import { TMXLogo, TMXMark } from '@/components/branding'
+
+const pageShell: React.CSSProperties = {
+  minHeight: '100vh',
+  display: 'flex',
+  flexDirection: 'column',
+  background: 'var(--auth-bg)',
+  color: 'var(--auth-ink)',
+  fontFamily: "'Outfit', 'Segoe UI', sans-serif",
+  position: 'relative',
+  overflow: 'hidden',
+  ['--auth-bg' as string]: '#0c1520',
+  ['--auth-ink' as string]: '#e8eef4',
+  ['--auth-muted' as string]: '#8fa3b5',
+  ['--auth-accent' as string]: '#3d9fd4',
+  ['--auth-surface' as string]: 'rgba(255,255,255,0.06)',
+  ['--auth-line' as string]: 'rgba(255,255,255,0.12)',
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 16px',
+  borderRadius: 8,
+  border: '1px solid var(--auth-line)',
+  background: 'rgba(255,255,255,0.04)',
+  fontSize: 16,
+  fontWeight: 600,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+  textAlign: 'center',
+  color: 'var(--auth-ink)',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+}
+
+const primaryBtn: React.CSSProperties = {
+  width: '100%',
+  padding: '13px 16px',
+  borderRadius: 8,
+  border: 'none',
+  background: 'var(--auth-accent)',
+  color: '#061018',
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+}
+
+const secondaryBtn: React.CSSProperties = {
+  width: '100%',
+  padding: '13px 16px',
+  borderRadius: 8,
+  border: '1px solid var(--auth-line)',
+  background: 'rgba(255,255,255,0.04)',
+  color: 'var(--auth-ink)',
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+}
 
 export function CompanyCodePage() {
   const navigate = useNavigate()
@@ -41,19 +102,36 @@ export function CompanyCodePage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'linear-gradient(135deg, #f5f0ea, #ede8e0 40%, #e8e2f5)',
-        fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'rgba(124,58,237,0.06)', top: -140, right: -100, pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', width: 350, height: 350, borderRadius: '50%', background: 'rgba(37,99,235,0.05)', bottom: -100, left: -80, pointerEvents: 'none' }} />
+    <div style={pageShell}>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap"
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse 70% 50% at 75% 15%, rgba(61,159,212,0.20), transparent 55%),' +
+            'radial-gradient(ellipse 45% 40% at 10% 85%, rgba(29,111,164,0.16), transparent 50%),' +
+            'linear-gradient(165deg, #0c1520 0%, #122033 45%, #0a121c 100%)',
+        }}
+      />
+      <div
+        className="mh-orb"
+        aria-hidden
+        style={{
+          position: 'absolute',
+          width: '50vmax',
+          height: '50vmax',
+          right: '-15%',
+          top: '-20%',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(61,159,212,0.12), transparent 68%)',
+          pointerEvents: 'none',
+        }}
+      />
 
       <header
         style={{
@@ -63,9 +141,9 @@ export function CompanyCodePage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '16px clamp(16px, 4vw, 40px)',
-          background: 'rgba(255,255,255,0.72)',
-          borderBottom: '1px solid rgba(0,0,0,0.06)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(12,21,32,0.65)',
+          borderBottom: '1px solid var(--auth-line)',
+          backdropFilter: 'blur(10px)',
         }}
       >
         <button
@@ -84,17 +162,18 @@ export function CompanyCodePage() {
           }}
         >
           <TMXMark size="sm" />
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#111827', letterSpacing: '0.02em' }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--auth-ink)', letterSpacing: '0.02em' }}>
             {PLATFORM_BRAND.name}
           </span>
         </button>
         <button
           type="button"
+          className="mh-link-underline"
           onClick={() => navigate('/')}
           style={{
             background: 'none',
             border: 'none',
-            color: '#6b7280',
+            color: 'var(--auth-muted)',
             fontSize: 13,
             fontWeight: 500,
             cursor: 'pointer',
@@ -105,63 +184,96 @@ export function CompanyCodePage() {
         </button>
       </header>
 
-      <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px' }}>
-        <PlatformBrandHeader style={{ marginBottom: 32 }} onHomeClick={() => navigate('/')} />
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '48px 16px',
+        }}
+      >
+        <button
+          type="button"
+          className="animate-fade-in-up"
+          onClick={() => navigate('/')}
+          aria-label={`${PLATFORM_BRAND.name} — go to home`}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            marginBottom: 28,
+            font: 'inherit',
+          }}
+        >
+          <TMXLogo size="md" theme="dark" />
+        </button>
 
-        <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 12, padding: '32px 36px', boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}>
+        <div
+          key={step}
+          className="animate-scale-in"
+          style={{
+            width: '100%',
+            maxWidth: 420,
+            background: 'var(--auth-surface)',
+            border: '1px solid var(--auth-line)',
+            borderRadius: 14,
+            padding: '32px 36px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
           {step === 'code' && (
             <>
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 700, color: '#111827', textAlign: 'center', marginBottom: 6 }}>Welcome</h2>
-              <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 24, lineHeight: 1.5 }}>
+              <h2
+                style={{
+                  fontFamily: "'Syne', 'Outfit', sans-serif",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: 'var(--auth-ink)',
+                  textAlign: 'center',
+                  marginBottom: 6,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Welcome
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--auth-muted)', textAlign: 'center', marginBottom: 24, lineHeight: 1.5 }}>
                 Enter your company code to continue to staff login or the talent application.
               </p>
 
               <form onSubmit={handleSubmit}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#6b7280', marginBottom: 4 }}>Company Code</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'var(--auth-muted)', marginBottom: 6 }}>
+                  Company Code
+                </label>
                 <input
                   type="text"
                   value={code}
-                  onChange={(e) => { setCode(e.target.value); setError('') }}
+                  onChange={(e) => {
+                    setCode(e.target.value)
+                    setError('')
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--auth-accent)'
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(61,159,212,0.18)'
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--auth-line)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
                   placeholder="e.g. NZG"
                   autoFocus
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: 8,
-                    border: '1px solid #d1d5db',
-                    background: '#f7f8fa',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    textAlign: 'center',
-                    color: '#111827',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    fontFamily: 'inherit',
-                  }}
+                  style={inputStyle}
                 />
                 {error && (
-                  <p style={{ color: '#dc2626', fontSize: 12, textAlign: 'center', marginTop: 8 }}>{error}</p>
+                  <p style={{ color: '#f87171', fontSize: 12, textAlign: 'center', marginTop: 8 }}>{error}</p>
                 )}
-                <button
-                  type="submit"
-                  style={{
-                    width: '100%',
-                    marginTop: 16,
-                    padding: '12px 16px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
-                    color: '#fff',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    boxShadow: '0 2px 8px rgba(124,58,237,0.25)',
-                  }}
-                >
-                  Continue &rarr;
+                <button type="submit" className="mh-cta" style={{ ...primaryBtn, marginTop: 16 }}>
+                  Continue →
                 </button>
               </form>
             </>
@@ -169,59 +281,38 @@ export function CompanyCodePage() {
 
           {step === 'choice' && (
             <>
-              <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 20, fontWeight: 700, color: '#111827', textAlign: 'center', marginBottom: 6 }}>
+              <h2
+                style={{
+                  fontFamily: "'Syne', 'Outfit', sans-serif",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: 'var(--auth-ink)',
+                  textAlign: 'center',
+                  marginBottom: 6,
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 How would you like to continue?
               </h2>
-              <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 8, lineHeight: 1.5 }}>
-                Company code <strong style={{ color: '#111827' }}>{activeCode}</strong>
+              <p style={{ fontSize: 13, color: 'var(--auth-muted)', textAlign: 'center', marginBottom: 8, lineHeight: 1.5 }}>
+                Company code <strong style={{ color: 'var(--auth-ink)' }}>{activeCode}</strong>
                 {brand ? <> · {brand.displayName}</> : null}
               </p>
-              <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginBottom: 24 }}>
+              <p style={{ fontSize: 12, color: 'var(--auth-muted)', opacity: 0.8, textAlign: 'center', marginBottom: 24 }}>
                 Choose staff access or apply as talent for this company.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => navigate('/login')}
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
-                    color: '#fff',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    boxShadow: '0 2px 8px rgba(124,58,237,0.25)',
-                  }}
-                >
-                  Staff login &rarr;
+                <button type="button" className="mh-cta" onClick={() => navigate('/login')} style={primaryBtn}>
+                  Staff login →
                 </button>
 
                 {showApply ? (
-                  <button
-                    type="button"
-                    onClick={() => navigate('/portal')}
-                    style={{
-                      width: '100%',
-                      padding: '14px 16px',
-                      borderRadius: 8,
-                      border: '1px solid #d1d5db',
-                      background: '#f7f8fa',
-                      color: '#111827',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    Apply as talent &rarr;
+                  <button type="button" className="hover-lift" onClick={() => navigate('/portal')} style={secondaryBtn}>
+                    Apply as talent →
                   </button>
                 ) : (
-                  <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', lineHeight: 1.5, margin: '4px 0 0' }}>
+                  <p style={{ fontSize: 12, color: 'var(--auth-muted)', textAlign: 'center', lineHeight: 1.5, margin: '4px 0 0' }}>
                     Talent applications are not available for this company code yet.
                   </p>
                 )}
@@ -230,15 +321,15 @@ export function CompanyCodePage() {
               <div style={{ marginTop: 20, textAlign: 'center' }}>
                 <button
                   type="button"
+                  className="mh-link-underline"
                   onClick={handleChangeCode}
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#6b7280',
+                    color: 'var(--auth-muted)',
                     fontSize: 12,
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    textDecoration: 'underline',
                   }}
                 >
                   Use a different company code
@@ -249,15 +340,27 @@ export function CompanyCodePage() {
         </div>
       </div>
 
-      <footer style={{ position: 'relative', zIndex: 1, padding: '16px 0', textAlign: 'center', fontSize: 12, color: '#9ca3af' }}>
-        <div>&copy; {new Date().getFullYear()} {PLATFORM_BRAND.footer}</div>
+      <footer
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          padding: '16px 0',
+          textAlign: 'center',
+          fontSize: 12,
+          color: 'var(--auth-muted)',
+        }}
+      >
+        <div>
+          © {new Date().getFullYear()} {PLATFORM_BRAND.footer}
+        </div>
         <div style={{ marginTop: 4, fontSize: 11, opacity: 0.7 }}>
-          Designed &amp; developed by{' '}
+          Designed & developed by{' '}
           <a
             href="https://www.daydreamtechnologies.net/"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#7c3aed', textDecoration: 'none' }}
+            className="mh-link-underline"
+            style={{ color: 'var(--auth-accent)', textDecoration: 'none' }}
           >
             DayDream Technologies
           </a>

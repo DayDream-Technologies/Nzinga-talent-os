@@ -102,6 +102,20 @@
   }
 }
 
+@keyframes mh-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(12px, -10px, 0) scale(1.04);
+  }
+}
+
+.mh-orb {
+  animation: mh-drift 14s ease-in-out infinite;
+}
+
 /* ─── Animation utilities ─────────────────────────────────────────────────── */
 
 .animate-fade-in-up {
