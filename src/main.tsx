@@ -7,6 +7,7 @@ import { CompanyCodePage } from '@/pages/CompanyCodePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { HomePage } from '@/pages/HomePage'
 import { EmailConfirmedPage } from '@/pages/EmailConfirmedPage'
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import './index.css'
 import './styles/animations.css'
 
@@ -24,6 +25,7 @@ const queryClient = new QueryClient({
 const router = createBrowserRouter([
   { path: '/', element: <HomePage /> },
   { path: '/auth/confirmed', element: <EmailConfirmedPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/tmx', element: <CompanyCodePage /> },
   { path: '/login', element: <LoginPage /> },
   {

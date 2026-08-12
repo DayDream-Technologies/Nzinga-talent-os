@@ -190,8 +190,17 @@ export async function sendPasswordResetEmail(email: string): Promise<{ error: st
     return { error: 'Not available in demo mode.' }
   }
   const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/tmx` : undefined
+    typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+  if (error) return { error: error.message }
+  return { error: null }
+}
+
+export async function updatePassword(newPassword: string): Promise<{ error: string | null }> {
+  if (!supabaseConfigured || !supabase) {
+    return { error: 'Not available in demo mode.' }
+  }
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
   if (error) return { error: error.message }
   return { error: null }
 }

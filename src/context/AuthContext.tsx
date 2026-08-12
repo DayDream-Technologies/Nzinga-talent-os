@@ -62,6 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
     const { data } = onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Recovery session — don't restore user so the reset page stays visible
+        return
+      }
       if (event === 'TOKEN_REFRESHED' && !session) {
         void clearLocalAuthSession()
         setUser(null)

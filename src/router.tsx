@@ -9,6 +9,7 @@ import { CompanyCodePage } from '@/pages/CompanyCodePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { HomePage } from '@/pages/HomePage'
 import { EmailConfirmedPage } from '@/pages/EmailConfirmedPage'
+import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { ProspectPortalPage } from '@/pages/ProspectPortalPage'
 
 const WorkspacePage = lazy(() =>
@@ -76,6 +77,14 @@ export const router = createBrowserRouter([
     element: (
       <ErrorBoundary>
         <EmailConfirmedPage />
+      </ErrorBoundary>
+    ),
+  },
+  {
+    path: '/reset-password',
+    element: (
+      <ErrorBoundary>
+        <ResetPasswordPage />
       </ErrorBoundary>
     ),
   },
