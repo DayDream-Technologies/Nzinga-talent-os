@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
+import { TalentLink } from "@/components/talent/TalentLink";
 
 const DASH = {
   pageBg: '#e8eef5',
@@ -90,7 +91,7 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
           <table style={{ width:"100%",borderCollapse:"collapse" }}>
             <thead><tr><TH>Name</TH><TH>Stage</TH><TH>Niche</TH><TH>Score</TH><TH>App Status</TH><TH>Action</TH></tr></thead>
             <tbody>{myQueue.map(t=><tr key={t.id} onMouseEnter={e=>e.currentTarget.style.background="#f0f4f8"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-              <TD><span style={{ color:DASH.blue.link,fontWeight:600,cursor:"pointer" }} onClick={()=>onSelectTalent(t)}>{t.name}</span><div style={{ fontSize:10,color:DASH.text.muted }}>{t.social_handle}</div></TD>
+              <TD><TalentLink accountId={t.account_number} name={t.name} /><div style={{ fontSize:10,color:DASH.text.muted }}>{t.social_handle}</div></TD>
               <TD><StageBadge stage={t.stage}/></TD>
               <TD>{t.niches.map(n=><NichePill key={n} n={n}/>)}</TD>
               <TD>{t.jordan_score>0?<ScoreBar score={t.jordan_score}/>:<span style={{ color:DASH.text.muted }}>—</span>}</TD>
@@ -121,7 +122,7 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
           <div style={{ padding:"8px 14px" }}>
             {history.slice(0,5).map(h=>{const tal=talents.find(t=>t.id===h.talent_id);const usr=USERS.find(u=>u.id===h.user_id);return <div key={h.id} style={{ display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid #f0f4f8" }}>
               <HIcon type={h.type}/>
-              <div style={{ flex:1 }}><span style={{ color:DASH.blue.link,fontSize:11,fontWeight:600 }}>{tal?.name}</span><span style={{ color:DASH.text.muted,fontSize:11 }}> · {usr?.name}</span><div style={{ fontSize:11,color:DASH.text.secondary }}>{h.text.slice(0,60)}{h.text.length>60?"…":""}</div></div>
+              <div style={{ flex:1 }}><TalentLink accountId={tal?.account_number} name={tal?.name} /><span style={{ color:DASH.text.muted,fontSize:11 }}> · {usr?.name}</span><div style={{ fontSize:11,color:DASH.text.secondary }}>{h.text.slice(0,60)}{h.text.length>60?"…":""}</div></div>
             </div>;})}
           </div>
         </div>
@@ -223,7 +224,7 @@ function ApplicationsPanel({ applications, talents, onViewApp, onImportApp }) {
               const missingCount=APP_SECTIONS.reduce((a,s)=>a+(validateSection(s.id,app.data||{}).length),0);
               const st={sent:{bg:T.amberL,c:T.amber,l:"Sent"},in_progress:{bg:T.blueL,c:T.blue,l:"In Progress"},submitted:{bg:complete?T.greenL:T.redL,c:complete?T.green:T.red,l:complete?"✅ Complete":"⚠ Incomplete"}}[app.status]||{bg:"#f3f4f6",c:T.t3,l:"Draft"};
               return <tr key={app.id} onMouseEnter={e=>e.currentTarget.style.background="#f8f9fb"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                <TD><span style={{ fontWeight:600,color:T.t1 }}>{app.talent_name}</span><div style={{ fontSize:10,color:T.t4 }}>{app.talent_email}</div></TD>
+                <TD><TalentLink name={app.talent_name} /><div style={{ fontSize:10,color:T.t4 }}>{app.talent_email}</div></TD>
                 <TD><span style={{ background:st.bg,color:st.c,borderRadius:10,padding:"2px 8px",fontSize:11,fontWeight:700 }}>{st.l}</span></TD>
                 <TD><div style={{ display:"flex",alignItems:"center",gap:5 }}><div style={{ width:60,height:5,background:"#e5e7eb",borderRadius:3,overflow:"hidden" }}><div style={{ height:"100%",width:progress+"%",background:complete?T.green:T.blue,borderRadius:3 }}/></div><span style={{ fontSize:11,color:T.t3,fontWeight:600 }}>{progress}%</span></div></TD>
                 <TD><span style={{ fontFamily:"monospace",fontSize:12,fontWeight:700,color:T.purple,background:T.purpleL,padding:"2px 8px",borderRadius:5 }}>{app.access_code}</span></TD>

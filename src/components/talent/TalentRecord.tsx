@@ -5,6 +5,7 @@ import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FText
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
 import { ComposeEmail } from "@/components/talent/ComposeEmail";
 import { PhoneActions } from "@/components/talent/PhoneActions";
+import { TalentLink } from "@/components/talent/TalentLink";
 import { useAuth } from "@/hooks/useAuth";
 
 function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
@@ -133,6 +134,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
               <div>
                 <div style={{ display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" }}>
                   <span style={{ fontWeight:700,fontSize:16,color:T.t1,fontFamily:"Georgia,serif" }}>{local.name}</span>
+                  {local.account_number&&<TalentLink accountId={local.account_number} name={local.name}><span style={{ fontSize:11,fontWeight:700,fontFamily:"ui-monospace,monospace",padding:"2px 8px",borderRadius:6,background:"#eff6ff",color:T.blue,letterSpacing:"0.04em" }}>{local.account_number}</span></TalentLink>}
                   <StageBadge stage={local.stage}/>
                   {local.niches.map(n=><NichePill key={n} n={n}/>)}
                   {local.application_status&&<span style={{ fontSize:11,fontWeight:600,padding:"1px 8px",borderRadius:10,background:local.application_status==="submitted"?T.greenL:T.amberL,color:local.application_status==="submitted"?T.green:T.amber }}>App: {local.application_status}</span>}
@@ -218,7 +220,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
             </div>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10 }}>
               <Section title="Lead Info" accent={T.blue}>
-                {[["Scout",scoutUser?.name||"—"],["Created By",createdByLabel],["Stage",STAGE_LABELS[local.stage]],["Applicant Status",local.applicant_stage_status||"—"],["Discovery",local.discovery_source||"—"],["Next Callback",local.next_callback_date||"—"],["Created",new Date(local.created_at).toLocaleDateString()]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
+                {[["Account ID",local.account_number||"—"],["Scout",scoutUser?.name||"—"],["Created By",createdByLabel],["Stage",STAGE_LABELS[local.stage]],["Applicant Status",local.applicant_stage_status||"—"],["Discovery",local.discovery_source||"—"],["Next Callback",local.next_callback_date||"—"],["Created",new Date(local.created_at).toLocaleDateString()]].map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
                 {role==="scout"&&local.stage==="holding_entry"&&!scoutReadOnly&&<div style={{ marginTop:6 }}><Lbl>Location</Lbl><FInput value={local.location} onChange={v=>p("location",v)} placeholder="City, State"/><Lbl style={{ marginTop:4 }}>Platform</Lbl><FInput value={local.platform} onChange={v=>p("platform",v)} placeholder="Instagram / TikTok"/></div>}
               </Section>
               <Section title="Social Profile" accent={T.cyan}>

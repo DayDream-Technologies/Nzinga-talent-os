@@ -2,17 +2,17 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import {
   AGENCY_CLIENTS_SEED,
-  AGENCY_PROSPECTS_SEED,
-  AGENCY_TALENT_SEED,
   AGENCY_TASKS_SEED,
   APPOINTMENTS_SEED,
   CALENDAR_EVENTS_SEED,
+  CHECKLIST_SEED,
   DISBURSEMENTS_SEED,
   ESCROW_SEED,
   EXPENSE_LOGS_SEED,
@@ -23,6 +23,7 @@ import {
   SUPPORT_TICKETS_SEED,
   VENDORS_SEED,
 } from '@/constants/agency-seed'
+import { loadAgencyRecords, saveAgencyRecords } from '@/services/agency-store'
 import type {
   AgencyClient,
   AgencyProspect,
@@ -30,6 +31,7 @@ import type {
   AgencyTask,
   Appointment,
   CalendarEvent,
+  ChecklistItem,
   ClientInvoice,
   Disbursement,
   EscrowDeposit,
@@ -46,6 +48,7 @@ interface AgencyDataValue {
   prospects: AgencyProspect[]
   tickets: SupportTicket[]
   tasks: AgencyTask[]
+  checklist: ChecklistItem[]
   appointments: Appointment[]
   calendar: CalendarEvent[]
   invoices: ClientInvoice[]
@@ -59,15 +62,25 @@ interface AgencyDataValue {
   addTicket: (t: Omit<SupportTicket, 'id' | 'createdAt'>) => void
   updateTicket: (id: string, patch: Partial<SupportTicket>) => void
   addTask: (t: Omit<AgencyTask, 'id'>) => void
-  completeTask: (id: string) => void
+  completeTask: (id: string, completedBy: string) => void
+  addChecklistItem: (title: string) => void
+  toggleChecklistItem: (id: string) => void
   addAppointment: (a: Omit<Appointment, 'id'>) => void
+  updateAppointment: (id: string, patch: Partial<Appointment>) => void
+  deleteAppointment: (id: string) => void
   addCalendarEvent: (e: Omit<CalendarEvent, 'id'>) => void
-  createInvoice: (inv: Omit<ClientInvoice, 'id' | 'interestApplied'>) => void
+  createInvoice: (inv: Omit<ClientInvoice, 'id' | 'interestApplied'> & { interestApplied?: number }) => void
+  updateInvoice: (id: string, patch: Partial<ClientInvoice>) => void
+  deleteInvoice: (id: string) => void
   applyOverdueInterest: (invoiceId: string, pct: number) => void
   batchReceipts: (invoiceIds: string[]) => void
   addRetainer: (r: Omit<RetainerPlan, 'id'>) => void
+  updateRetainer: (id: string, patch: Partial<RetainerPlan>) => void
+  deleteRetainer: (id: string) => void
   postRetainers: () => number
   recordEscrow: (e: Omit<EscrowDeposit, 'id'>) => void
+  updateEscrow: (id: string, patch: Partial<EscrowDeposit>) => void
+  deleteEscrow: (id: string) => void
   logExpenseSplit: (input: {
     project: string
     clientName: string
@@ -75,7 +88,16 @@ interface AgencyDataValue {
     gross: number
     commissionPct: number
   }) => void
+  addExpenseLog: (e: Omit<ExpensePayoutLog, 'id'>) => void
+  updateExpenseLog: (id: string, patch: Partial<ExpensePayoutLog>) => void
+  deleteExpenseLog: (id: string) => void
   issuePayout: (logId: string) => void
+  addVendor: (v: Omit<Vendor, 'id'>) => void
+  updateVendor: (id: string, patch: Partial<Vendor>) => void
+  deleteVendor: (id: string) => void
+  addDisbursement: (d: Omit<Disbursement, 'id'>) => void
+  updateDisbursement: (id: string, patch: Partial<Disbursement>) => void
+  deleteDisbursement: (id: string) => void
   sendMessage: (m: Omit<MessageThread, 'id' | 'sentAt' | 'status'>) => void
   advanceProspect: (id: string) => void
   createRenewalOffer: (talentId: string) => string
@@ -87,21 +109,31 @@ function uid(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 999)}`
 }
 
+function patchById<T extends { id: string }>(prev: T[], id: string, patch: Partial<T>): T[] {
+  return prev.map((x) => (x.id === id ? { ...x, ...patch } : x))
+}
+
 export function AgencyDataProvider({ children }: { children: ReactNode }) {
   const [clients] = useState(AGENCY_CLIENTS_SEED)
-  const [talent, setTalent] = useState(AGENCY_TALENT_SEED)
-  const [prospects, setProspects] = useState(AGENCY_PROSPECTS_SEED)
+  const [stored] = useState(loadAgencyRecords)
+  const [talent, setTalent] = useState(stored.talent)
+  const [prospects, setProspects] = useState(stored.prospects)
   const [tickets, setTickets] = useState(SUPPORT_TICKETS_SEED)
   const [tasks, setTasks] = useState(AGENCY_TASKS_SEED)
+  const [checklist, setChecklist] = useState(CHECKLIST_SEED)
   const [appointments, setAppointments] = useState(APPOINTMENTS_SEED)
   const [calendar, setCalendar] = useState(CALENDAR_EVENTS_SEED)
   const [invoices, setInvoices] = useState(INVOICES_SEED)
   const [retainers, setRetainers] = useState(RETAINER_PLANS_SEED)
   const [escrow, setEscrow] = useState(ESCROW_SEED)
   const [expenseLogs, setExpenseLogs] = useState(EXPENSE_LOGS_SEED)
-  const [vendors] = useState(VENDORS_SEED)
+  const [vendors, setVendors] = useState(VENDORS_SEED)
   const [disbursements, setDisbursements] = useState(DISBURSEMENTS_SEED)
   const [messages, setMessages] = useState(MESSAGES_SEED)
+
+  useEffect(() => {
+    saveAgencyRecords({ prospects, talent })
+  }, [prospects, talent])
 
   const addTicket = useCallback((t: Omit<SupportTicket, 'id' | 'createdAt'>) => {
     setTickets((prev) => [
@@ -115,19 +147,46 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const updateTicket = useCallback((id: string, patch: Partial<SupportTicket>) => {
-    setTickets((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+    setTickets((prev) => patchById(prev, id, patch))
   }, [])
 
   const addTask = useCallback((t: Omit<AgencyTask, 'id'>) => {
     setTasks((prev) => [{ ...t, id: uid('task') }, ...prev])
   }, [])
 
-  const completeTask = useCallback((id: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'done' as const } : t)))
+  const completeTask = useCallback((id: string, completedBy: string) => {
+    const completedAt = new Date().toISOString()
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? { ...t, status: 'done' as const, completedBy, completedAt }
+          : t,
+      ),
+    )
+  }, [])
+
+  const addChecklistItem = useCallback((title: string) => {
+    const trimmed = title.trim()
+    if (!trimmed) return
+    setChecklist((prev) => [{ id: uid('chk'), title: trimmed, done: false }, ...prev])
+  }, [])
+
+  const toggleChecklistItem = useCallback((id: string) => {
+    setChecklist((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, done: !item.done } : item)),
+    )
   }, [])
 
   const addAppointment = useCallback((a: Omit<Appointment, 'id'>) => {
     setAppointments((prev) => [{ ...a, id: uid('appt') }, ...prev])
+  }, [])
+
+  const updateAppointment = useCallback((id: string, patch: Partial<Appointment>) => {
+    setAppointments((prev) => patchById(prev, id, patch))
+  }, [])
+
+  const deleteAppointment = useCallback((id: string) => {
+    setAppointments((prev) => prev.filter((x) => x.id !== id))
   }, [])
 
   const addCalendarEvent = useCallback((e: Omit<CalendarEvent, 'id'>) => {
@@ -149,11 +208,33 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const createInvoice = useCallback((inv: Omit<ClientInvoice, 'id' | 'interestApplied'>) => {
-    setInvoices((prev) => [
-      { ...inv, id: uid('inv'), interestApplied: 0 },
-      ...prev,
-    ])
+  const createInvoice = useCallback(
+    (inv: Omit<ClientInvoice, 'id' | 'interestApplied'> & { interestApplied?: number }) => {
+      const amount = inv.amount || 0
+      const taxRatePct = inv.taxRatePct ?? 0
+      const taxAmount = inv.taxAmount ?? Math.round(amount * (taxRatePct / 100))
+      setInvoices((prev) => [
+        {
+          ...inv,
+          id: uid('inv'),
+          interestApplied: inv.interestApplied ?? 0,
+          taxId: inv.taxId ?? '',
+          taxRatePct,
+          taxAmount,
+          document: inv.document ?? null,
+        },
+        ...prev,
+      ])
+    },
+    [],
+  )
+
+  const updateInvoice = useCallback((id: string, patch: Partial<ClientInvoice>) => {
+    setInvoices((prev) => patchById(prev, id, patch))
+  }, [])
+
+  const deleteInvoice = useCallback((id: string) => {
+    setInvoices((prev) => prev.filter((x) => x.id !== id))
   }, [])
 
   const applyOverdueInterest = useCallback((invoiceId: string, pct: number) => {
@@ -161,11 +242,15 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       prev.map((inv) => {
         if (inv.id !== invoiceId) return inv
         const fee = Math.round(inv.amount * (pct / 100))
+        const amount = inv.amount + fee
+        const taxRatePct = inv.taxRatePct ?? 0
+        const taxAmount = Math.round(amount * (taxRatePct / 100))
         return {
           ...inv,
           status: 'overdue' as const,
           interestApplied: inv.interestApplied + fee,
-          amount: inv.amount + fee,
+          amount,
+          taxAmount,
         }
       }),
     )
@@ -184,6 +269,14 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
 
   const addRetainer = useCallback((r: Omit<RetainerPlan, 'id'>) => {
     setRetainers((prev) => [{ ...r, id: uid('ret') }, ...prev])
+  }, [])
+
+  const updateRetainer = useCallback((id: string, patch: Partial<RetainerPlan>) => {
+    setRetainers((prev) => patchById(prev, id, patch))
+  }, [])
+
+  const deleteRetainer = useCallback((id: string) => {
+    setRetainers((prev) => prev.filter((x) => x.id !== id))
   }, [])
 
   const postRetainers = useCallback(() => {
@@ -205,6 +298,15 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
           issuedAt: today,
           dueAt: today,
           interestApplied: 0,
+          taxId: '',
+          taxRatePct: 0,
+          taxAmount: 0,
+          invoiceNumber: `INV-RET-${today.replace(/-/g, '')}`,
+          poNumber: '',
+          paymentTerms: 'Net 30',
+          billingAddress: '',
+          notes: 'Auto-posted retainer',
+          document: null,
         })),
         ...prev,
       ])
@@ -215,6 +317,14 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
 
   const recordEscrow = useCallback((e: Omit<EscrowDeposit, 'id'>) => {
     setEscrow((prev) => [{ ...e, id: uid('esc') }, ...prev])
+  }, [])
+
+  const updateEscrow = useCallback((id: string, patch: Partial<EscrowDeposit>) => {
+    setEscrow((prev) => patchById(prev, id, patch))
+  }, [])
+
+  const deleteEscrow = useCallback((id: string) => {
+    setEscrow((prev) => prev.filter((x) => x.id !== id))
   }, [])
 
   const logExpenseSplit = useCallback(
@@ -245,6 +355,18 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const addExpenseLog = useCallback((e: Omit<ExpensePayoutLog, 'id'>) => {
+    setExpenseLogs((prev) => [{ ...e, id: uid('exp') }, ...prev])
+  }, [])
+
+  const updateExpenseLog = useCallback((id: string, patch: Partial<ExpensePayoutLog>) => {
+    setExpenseLogs((prev) => patchById(prev, id, patch))
+  }, [])
+
+  const deleteExpenseLog = useCallback((id: string) => {
+    setExpenseLogs((prev) => prev.filter((x) => x.id !== id))
+  }, [])
+
   const issuePayout = useCallback((logId: string) => {
     setExpenseLogs((prev) => {
       const log = prev.find((l) => l.id === logId)
@@ -265,6 +387,30 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
         l.id === logId ? { ...l, status: 'completed' as const } : l,
       )
     })
+  }, [])
+
+  const addVendor = useCallback((v: Omit<Vendor, 'id'>) => {
+    setVendors((prev) => [{ ...v, id: uid('ven') }, ...prev])
+  }, [])
+
+  const updateVendor = useCallback((id: string, patch: Partial<Vendor>) => {
+    setVendors((prev) => patchById(prev, id, patch))
+  }, [])
+
+  const deleteVendor = useCallback((id: string) => {
+    setVendors((prev) => prev.filter((x) => x.id !== id))
+  }, [])
+
+  const addDisbursement = useCallback((d: Omit<Disbursement, 'id'>) => {
+    setDisbursements((prev) => [{ ...d, id: uid('dis') }, ...prev])
+  }, [])
+
+  const updateDisbursement = useCallback((id: string, patch: Partial<Disbursement>) => {
+    setDisbursements((prev) => patchById(prev, id, patch))
+  }, [])
+
+  const deleteDisbursement = useCallback((id: string) => {
+    setDisbursements((prev) => prev.filter((x) => x.id !== id))
   }, [])
 
   const sendMessage = useCallback((m: Omit<MessageThread, 'id' | 'sentAt' | 'status'>) => {
@@ -305,6 +451,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       prospects,
       tickets,
       tasks,
+      checklist,
       appointments,
       calendar,
       invoices,
@@ -319,16 +466,35 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       updateTicket,
       addTask,
       completeTask,
+      addChecklistItem,
+      toggleChecklistItem,
       addAppointment,
+      updateAppointment,
+      deleteAppointment,
       addCalendarEvent,
       createInvoice,
+      updateInvoice,
+      deleteInvoice,
       applyOverdueInterest,
       batchReceipts,
       addRetainer,
+      updateRetainer,
+      deleteRetainer,
       postRetainers,
       recordEscrow,
+      updateEscrow,
+      deleteEscrow,
       logExpenseSplit,
+      addExpenseLog,
+      updateExpenseLog,
+      deleteExpenseLog,
       issuePayout,
+      addVendor,
+      updateVendor,
+      deleteVendor,
+      addDisbursement,
+      updateDisbursement,
+      deleteDisbursement,
       sendMessage,
       advanceProspect,
       createRenewalOffer,
@@ -339,6 +505,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       prospects,
       tickets,
       tasks,
+      checklist,
       appointments,
       calendar,
       invoices,
@@ -352,16 +519,35 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       updateTicket,
       addTask,
       completeTask,
+      addChecklistItem,
+      toggleChecklistItem,
       addAppointment,
+      updateAppointment,
+      deleteAppointment,
       addCalendarEvent,
       createInvoice,
+      updateInvoice,
+      deleteInvoice,
       applyOverdueInterest,
       batchReceipts,
       addRetainer,
+      updateRetainer,
+      deleteRetainer,
       postRetainers,
       recordEscrow,
+      updateEscrow,
+      deleteEscrow,
       logExpenseSplit,
+      addExpenseLog,
+      updateExpenseLog,
+      deleteExpenseLog,
       issuePayout,
+      addVendor,
+      updateVendor,
+      deleteVendor,
+      addDisbursement,
+      updateDisbursement,
+      deleteDisbursement,
       sendMessage,
       advanceProspect,
       createRenewalOffer,

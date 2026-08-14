@@ -12,6 +12,7 @@ import {
   TD,
   PriBadge,
 } from '@/components/ui-compat'
+import { TalentLink } from '@/components/talent/TalentLink'
 
 function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
   const [filter, setFilter] = useState(initialFilter || 'mine')
@@ -215,7 +216,7 @@ function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
                     <span style={{ fontSize: 11 }}>{asn?.name}</span>
                   </div>
                 </TD>
-                <TD muted>{rel ? <span style={{ color: T.blue }}>{rel.name}</span> : '?'}</TD>
+                <TD muted>{rel ? <TalentLink accountId={rel.account_number} name={rel.name} /> : '?'}</TD>
                 <TD muted style={{ color: od ? T.red : undefined }}>
                   {tk.due || '?'}
                   {od && (

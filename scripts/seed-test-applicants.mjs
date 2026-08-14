@@ -751,7 +751,10 @@ applicants.push({
 
 async function main() {
   const key = getServiceRoleKey()
-  const talents = [...pipelineTalents, ...applicants.map((a) => a.talent)]
+  const talents = [...pipelineTalents, ...applicants.map((a) => a.talent)].map((t, i) => ({
+    ...t,
+    account_number: t.account_number || `NZG-${String(100001 + i).padStart(6, '0')}`,
+  }))
   const applications = applicants.map((a) => a.app)
 
   console.log(`Upserting ${talents.length} talents…`)

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppData } from '@/context/AppDataContext'
@@ -37,7 +37,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   if (!user) return null
 
-  const pageTitle = AGENCY_PAGE_TITLES[view] || view
+  const pageTitle = view.startsWith('talent/') ? 'Talent Account' : AGENCY_PAGE_TITLES[view] || view
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/talent/')) setSelectedTalent(null)
+  }, [location.pathname, setSelectedTalent])
 
   function nav(path: string) {
     if (path.includes('?')) {
@@ -90,7 +94,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         </div>
       )}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar view={view} onNav={nav} />
+        <Sidebar view={view} onNav={nav} userRole={user.role} />
         <div key={view} className="flex flex-1 flex-col overflow-hidden animate-fade-in">
           {children ?? <Outlet />}
         </div>

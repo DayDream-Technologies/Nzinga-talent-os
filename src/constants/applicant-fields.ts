@@ -3,6 +3,14 @@
  * Source: Replacement Dictionary Converting (Nzinga Management Agency).
  */
 
+export const WORK_AREAS = [
+  'Acting',
+  'Modeling',
+  'Voiceover',
+  'Influencer',
+  'Commercial',
+] as const
+
 export const ROSTER_DIVISIONS = [
   'High Fashion',
   'Commercial',

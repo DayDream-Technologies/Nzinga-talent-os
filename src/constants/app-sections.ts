@@ -343,7 +343,7 @@ export function isAppComplete(app: Application | null | undefined): boolean {
   return true
 }
 
-export function talentFromApp(app: Application): Talent {
+export function talentFromApp(app: Application, accountNumber = ''): Talent {
   const d = app.data || {}
   const niches = d.niches
     ? String(d.niches)
@@ -367,6 +367,7 @@ export function talentFromApp(app: Application): Talent {
 
   return {
     id: 't_app_' + app.id,
+    account_number: accountNumber,
     name: [d.legal_first, d.legal_last].filter(Boolean).join(' ') || app.talent_name,
     first_name: String(d.legal_first || ''),
     last_name: String(d.legal_last || ''),

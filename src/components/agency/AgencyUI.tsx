@@ -135,30 +135,47 @@ export function Badge({
 export function Table({
   headers,
   rows,
+  sortIndex,
+  sortDir,
+  onSort,
 }: {
   headers: string[]
   rows: ReactNode[][]
+  sortIndex?: number
+  sortDir?: 'asc' | 'desc'
+  onSort?: (index: number) => void
 }) {
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr>
-            {headers.map((h) => (
-              <th
-                key={h}
-                style={{
-                  textAlign: 'left',
-                  padding: '8px 10px',
-                  borderBottom: '1px solid #e5e7eb',
-                  color: T.t3,
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {h}
-              </th>
-            ))}
+            {headers.map((h, i) => {
+              const sortable = Boolean(onSort && h)
+              const active = sortable && sortIndex === i
+              return (
+                <th
+                  key={`${h}-${i}`}
+                  onClick={sortable ? () => onSort?.(i) : undefined}
+                  title={sortable ? `Sort by ${h}` : undefined}
+                  style={{
+                    textAlign: 'left',
+                    padding: '8px 10px',
+                    borderBottom: '1px solid #e5e7eb',
+                    color: active ? T.blue : T.t3,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    cursor: sortable ? 'pointer' : 'default',
+                    userSelect: sortable ? 'none' : undefined,
+                  }}
+                >
+                  {h}
+                  {active && (
+                    <span style={{ marginLeft: 4, fontSize: 10 }}>{sortDir === 'desc' ? '▼' : '▲'}</span>
+                  )}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>
@@ -214,6 +231,137 @@ export function Field({
   )
 }
 
+/** Checkbox multi-select for clients, agents, talent, etc. */
+export function MultiCheck({
+  label,
+  options,
+  selected,
+  onChange,
+}: {
+  label: string
+  options: string[]
+  selected: string[]
+  onChange: (next: string[]) => void
+}) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 6 }}>{label}</div>
+      <div
+        style={{
+          border: '1px solid #e5e7eb',
+          borderRadius: 8,
+          padding: '8px 10px',
+          maxHeight: 120,
+          overflow: 'auto',
+          background: '#fafafa',
+          display: 'grid',
+          gap: 6,
+        }}
+      >
+        {options.length === 0 && (
+          <div style={{ fontSize: 12, color: T.t4 }}>No options available.</div>
+        )}
+        {options.map((opt) => {
+          const checked = selected.includes(opt)
+          return (
+            <label
+              key={opt}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: T.t1, cursor: 'pointer' }}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) =>
+                  onChange(e.target.checked ? [...selected, opt] : selected.filter((x) => x !== opt))
+                }
+              />
+              {opt}
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export function ModalShell({
+  title,
+  onClose,
+  children,
+  width = 520,
+}: {
+  title: string
+  onClose: () => void
+  children: ReactNode
+  width?: number
+}) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0,0,0,0.4)',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: 12,
+          padding: '24px 28px',
+          width,
+          maxWidth: '92vw',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: T.t1, margin: 0, fontFamily: 'Georgia, serif' }}>
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              fontSize: 20,
+              color: T.t3,
+              cursor: 'pointer',
+              lineHeight: 1,
+              padding: 4,
+            }}
+          >
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+export function toLocalDateTimeInput(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+export function fromLocalDateTimeInput(local: string): string {
+  if (!local) return new Date().toISOString()
+  const d = new Date(local)
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
+}
+
 export const inputStyle: CSSProperties = {
   width: '100%',
   padding: '8px 10px',
@@ -231,6 +379,7 @@ export function StatusColor(status: string): string {
   const map: Record<string, string> = {
     open: T.amber,
     in_progress: T.blue,
+    closed: T.green,
     resolved: T.green,
     done: T.green,
     sent: T.blue,
@@ -250,4 +399,15 @@ export function StatusColor(status: string): string {
     new: T.cyan,
   }
   return map[status] || T.t3
+}
+
+export function TicketTypeColor(type: string): string {
+  const map: Record<string, string> = {
+    availability: T.cyan,
+    scheduling: T.blue,
+    contract: T.purple,
+    billing: T.amber,
+    general: T.t3,
+  }
+  return map[type] || T.t3
 }

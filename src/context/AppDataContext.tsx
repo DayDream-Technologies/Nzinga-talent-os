@@ -11,6 +11,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Application, ApplicationsMap, HistoryEntry, Talent, Task } from '@/types'
 import { isAppComplete, talentFromApp } from '@/constants/app-sections'
+import { assignAccountNumber, nextAccountNumber } from '@/lib/account-number'
 import { fetchTalents, updateTalents, upsertTalent } from '@/services/talent.service'
 import { fetchApplications, saveApplication } from '@/services/application.service'
 import { fetchTasks, saveTasks } from '@/services/task.service'
@@ -39,6 +40,13 @@ interface AppDataContextValue {
 }
 
 const AppDataContext = createContext<AppDataContextValue | null>(null)
+
+function withAccountNumber(talent: Talent, existing: Talent[]): Talent {
+  return assignAccountNumber(
+    talent,
+    existing.map((t) => t.account_number),
+  )
+}
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
@@ -101,6 +109,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ) {
           const stub: Talent = {
             id: 't_stub_' + app.id,
+            account_number: nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
             name: app.talent_name,
             stage: 'holding_entry',
             niches: [],
@@ -161,7 +170,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (app.status === 'submitted' && isAppComplete(app)) {
           const existingFull = talentsRef.current.find((t) => t.application_id === app.id)
           if (existingFull) {
-            const fullTalent = talentFromApp({ ...app, id: app.id })
+            const fullTalent = talentFromApp(
+              { ...app, id: app.id },
+              existingFull.account_number,
+            )
             const upgraded: Talent = {
               ...existingFull,
               ...fullTalent,
@@ -188,7 +200,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             setLocalHistory(newHist)
             await saveHistory(newHist)
           } else {
-            const newTalent = talentFromApp(app)
+            const newTalent = talentFromApp(
+              app,
+              nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
+            )
             await persistTalents([...talentsRef.current, newTalent])
             await saveApplication({ ...app, talent_id: newTalent.id })
             const hist: HistoryEntry = {
@@ -238,13 +253,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       void (async () => {
         const existing = talentsRef.current.find((t) => t.application_id === app.id)
         if (existing) {
-          const upgraded = { ...existing, ...talentFromApp(app), id: existing.id }
+          const upgraded = {
+            ...existing,
+            ...talentFromApp(app, existing.account_number),
+            id: existing.id,
+            account_number: existing.account_number,
+          }
           await upsertTalent(upgraded)
           await persistTalents(
             talentsRef.current.map((t) => (t.id === existing.id ? upgraded : t)),
           )
         } else {
-          const newTalent = talentFromApp(app)
+          const newTalent = talentFromApp(
+            app,
+            nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
+          )
           await persistTalents([...talentsRef.current, newTalent])
           await saveApplication({ ...app, talent_id: newTalent.id })
         }
@@ -256,7 +279,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const handleNewTalent = useCallback(
     (t: Talent) => {
-      void persistTalents([...talentsRef.current, t])
+      void persistTalents([...talentsRef.current, withAccountNumber(t, talentsRef.current)])
     },
     [persistTalents],
   )

@@ -3,15 +3,16 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, isTalentVisibleToRole } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { CompanyLogo } from "@/components/branding";
-import { AGENCY_NAV, AGENCY_SIDEBAR } from "@/constants/agency-nav";
+import { AGENCY_SIDEBAR, filterAgencyNav, filterAgencySidebar, canAccessAgencyPath } from "@/constants/agency-nav";
+import { useTalentDirectory } from "@/hooks/useTalentDirectory";
+import { talentAccountPath } from "@/lib/talent-account";
 
 function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectTalent, tasks }) {
   const [profileOpen,setProfileOpen]=useState(false);
   const [q,setQ]=useState(""); const [qOpen,setQOpen]=useState(false);
   const ref=useRef();
-  const accessible=ROLE_STAGE_ACCESS[user.role]||[];
-  const visibleTalents=talents.filter(t=>isTalentVisibleToRole(t,user.role,user.id));
-  const results=q.length>1?visibleTalents.filter(t=>t.name.toLowerCase().includes(q.toLowerCase())||t.social_handle.toLowerCase().includes(q.toLowerCase())).slice(0,6):[];
+  const directory=useTalentDirectory();
+  const results=q.length>1?directory.list.filter(t=>t.name.toLowerCase().includes(q.toLowerCase())||t.accountId.toLowerCase().includes(q.toLowerCase())||(t.socialHandle||"").toLowerCase().includes(q.toLowerCase())).slice(0,8):[];
   const urgentTasks=tasks.filter(t=>t.assigned_to===user.id&&t.status==="open"&&t.priority==="urgent").length;
   const openTasks=tasks.filter(t=>t.assigned_to===user.id&&t.status==="open").length;
   useEffect(()=>{function h(e){if(ref.current&&!ref.current.contains(e.target)){setProfileOpen(false);setQOpen(false);}}document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
@@ -21,7 +22,15 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
         <CompanyLogo variant="company" companyCode={companyCode} size="sm" theme="dark" showWordmark />
       </div>
       <div style={{ display:"flex",gap:1,marginRight:6 }}>
-        {[["☰","Menu",onMenu],["📄","Roster",()=>onNav("active-roster")],["★","Workspace",()=>onNav("workspace")]].map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} className="transition-fast" style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="#94a3b8"}>{icon}</button>)}
+        {[
+          ["☰","Menu",onMenu],
+          canAccessAgencyPath(user.role, "active-roster")
+            ? ["📄","Roster",()=>onNav("active-roster")]
+            : canAccessAgencyPath(user.role, "roster")
+              ? ["📄","Roster",()=>onNav("roster")]
+              : null,
+          ["★","Workspace",()=>onNav("workspace")],
+        ].filter(Boolean).map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} className="transition-fast" style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="#94a3b8"}>{icon}</button>)}
       </div>
       <div style={{ flex:1,maxWidth:420,position:"relative" }}>
         <div style={{ display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:6,padding:"4px 10px" }}>
@@ -30,12 +39,12 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
           {q&&<span onClick={()=>{setQ("");setQOpen(false);}} style={{ color:"rgba(255,255,255,0.4)",cursor:"pointer" }}>✕</span>}
         </div>
         {qOpen&&results.length>0&&<div style={{ position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"#fff",border:"1px solid #e5e7eb",borderRadius:7,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200 }}>
-          {results.map(t=><div key={t.id} onClick={()=>{onSelectTalent(t);setQ("");setQOpen(false);}} style={{ padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f5f5f5",display:"flex",alignItems:"center",justifyContent:"space-between" }}><div><span style={{ color:T.purple,fontWeight:600,fontSize:12 }}>{t.name}</span><span style={{ color:T.t4,fontSize:11,marginLeft:6 }}>{t.social_handle}</span></div><StageBadge stage={t.stage}/></div>)}
+          {results.map(t=><div key={t.accountId} onClick={()=>{onNav(talentAccountPath(t.accountId).replace(/^\//,""));setQ("");setQOpen(false);}} style={{ padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f5f5f5",display:"flex",alignItems:"center",justifyContent:"space-between" }}><div><span style={{ color:T.purple,fontWeight:600,fontSize:12 }}>{t.name}</span><span style={{ color:T.t4,fontSize:11,marginLeft:6 }}>{t.accountId}</span></div><span style={{ fontSize:10,color:T.t3 }}>{t.statusLabel}</span></div>)}
         </div>}
       </div>
       <div style={{ flex:1 }}/>
       <div style={{ textAlign:"right",marginRight:4 }}><div style={{ fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em" }}>Company</div><div style={{ fontSize:12,color:"#fff",fontWeight:600 }}>{companyCode}</div></div>
-      {openTasks>0&&<div onClick={()=>onNav("agency-tasks")} style={{ background:urgentTasks>0?"#dc2626":"rgba(255,255,255,0.08)",borderRadius:6,padding:"3px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><span style={{ fontSize:13 }}>🔔</span>{urgentTasks>0&&<span style={{ fontSize:11,fontWeight:700,color:"#fff" }}>{urgentTasks}</span>}</div>}
+      {openTasks>0&&canAccessAgencyPath(user.role,"agency-tasks")&&<div onClick={()=>onNav("agency-tasks")} style={{ background:urgentTasks>0?"#dc2626":"rgba(255,255,255,0.08)",borderRadius:6,padding:"3px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><span style={{ fontSize:13 }}>🔔</span>{urgentTasks>0&&<span style={{ fontSize:11,fontWeight:700,color:"#fff" }}>{urgentTasks}</span>}</div>}
       <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"2px 8px" }}>
         <div style={{ fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.06em" }}>Role</div>
         <select value={user.role} onChange={e=>{const u=USERS.find(u=>u.role===e.target.value);if(u)onLogout(u);}} style={{ background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>
@@ -115,8 +124,9 @@ function Scoreboard({ agencyStats }) {
 }
 
 function FullMenu({ onClose, onNav, userRole, companyCode }) {
-  const [cat, setCat] = useState(AGENCY_NAV[0]?.id || "talent");
-  const current = AGENCY_NAV.find((c) => c.id === cat) || AGENCY_NAV[0];
+  const navCats = filterAgencyNav(userRole);
+  const [cat, setCat] = useState(navCats[0]?.id || "talent");
+  const current = navCats.find((c) => c.id === cat) || navCats[0];
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "flex-start" }}>
       <div className="animate-backdrop" onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} />
@@ -147,7 +157,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
         </div>
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <div style={{ width: 160, background: "#f8f9fb", borderRight: "1px solid #e5e7eb", padding: "8px 0", flexShrink: 0 }}>
-            {AGENCY_NAV.map((c, i) => (
+            {navCats.map((c, i) => (
               <div
                 key={c.id}
                 className={`animate-fade-in-up stagger-${Math.min(i + 1, 8)} transition-all`}
@@ -191,10 +201,11 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
   );
 }
 
-function Sidebar({ view, onNav }) {
+function Sidebar({ view, onNav, userRole }) {
+  const sections = filterAgencySidebar(userRole || "scout", AGENCY_SIDEBAR);
   return (
     <div style={{ width: 186, background: T.navBg, borderRight: `1px solid ${T.navBorder}`, display: "flex", flexDirection: "column", flexShrink: 0, overflowY: "auto" }}>
-      {AGENCY_SIDEBAR.map((sec, si) => (
+      {sections.map((sec, si) => (
         <div key={si} className={`animate-fade-in-up stagger-${Math.min(si + 1, 8)}`}>
           <div style={{ padding: "9px 0 2px 11px", fontSize: 9, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>{sec.label}</div>
           {sec.items.map((item) => {

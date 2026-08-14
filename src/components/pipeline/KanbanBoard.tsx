@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   USERS,
   ROLE_LABELS,
@@ -11,7 +11,7 @@ import {
 import { T } from '@/components/ui-compat'
 import type { Role, Talent, TalentStage, User } from '@/types'
 
-const DND_TYPE = 'application/x-nzinga-talent-id'
+const DRAG_THRESHOLD_PX = 6
 
 function formatSpecs(t: Talent): string {
   const height = t.height?.trim()
@@ -52,37 +52,46 @@ function scoutName(scoutId: string | null | undefined): string {
   return USERS.find((u) => u.id === scoutId)?.name || '—'
 }
 
+type DragState = {
+  talentId: string
+  originStage: TalentStage
+  startX: number
+  startY: number
+  x: number
+  y: number
+  width: number
+  height: number
+  active: boolean
+  pointerId: number
+}
+
 type KanbanCardProps = {
   talent: Talent
   canDrag: boolean
   locked: boolean
-  onSelect: (t: Talent) => void
-  onDragStart: (e: DragEvent, talentId: string) => void
-  onDragEnd: () => void
   isDragging: boolean
+  onSelect: (t: Talent) => void
+  onPointerDown: (e: ReactPointerEvent<HTMLDivElement>, talent: Talent) => void
 }
 
 function KanbanCard({
   talent,
   canDrag,
   locked,
-  onSelect,
-  onDragStart,
-  onDragEnd,
   isDragging,
+  onSelect,
+  onPointerDown,
 }: KanbanCardProps) {
   return (
     <div
-      draggable={canDrag}
-      onDragStart={(e) => {
-        if (!canDrag) {
-          e.preventDefault()
-          return
-        }
-        onDragStart(e, talent.id)
+      data-kanban-card={talent.id}
+      onPointerDown={(e) => {
+        if (!canDrag || e.button !== 0) return
+        onPointerDown(e, talent)
       }}
-      onDragEnd={onDragEnd}
-      onClick={() => onSelect(talent)}
+      onClick={() => {
+        if (!isDragging) onSelect(talent)
+      }}
       style={{
         background: '#fff',
         border: `1px solid ${locked ? '#e5e7eb' : '#dbe1ea'}`,
@@ -90,16 +99,11 @@ function KanbanCard({
         padding: '10px 11px',
         marginBottom: 8,
         cursor: canDrag ? 'grab' : 'pointer',
-        opacity: isDragging ? 0.45 : locked ? 0.78 : 1,
+        opacity: isDragging ? 0.35 : locked ? 0.78 : 1,
         boxShadow: locked ? 'none' : '0 1px 3px rgba(15,23,42,0.06)',
-        transition: 'box-shadow 0.15s, opacity 0.15s, border-color 0.15s',
+        transition: isDragging ? 'none' : 'box-shadow 0.15s, opacity 0.15s',
         userSelect: 'none',
-      }}
-      onMouseEnter={(e) => {
-        if (!locked) e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,23,42,0.1)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = locked ? 'none' : '0 1px 3px rgba(15,23,42,0.06)'
+        touchAction: canDrag ? 'none' : 'auto',
       }}
     >
       <div
@@ -114,6 +118,7 @@ function KanbanCard({
       >
         {talent.name.toUpperCase()}
       </div>
+      <CardLine label="Account ID" value={talent.account_number || '—'} />
       <CardLine label="Division" value={formatDivision(talent)} />
       <CardLine label="Specs" value={formatSpecs(talent)} />
       <CardLine label="Base" value={talent.location?.trim() || '—'} />
@@ -178,11 +183,7 @@ type ColumnProps = {
   userRole: Role
   userId: string
   onSelectTalent: (t: Talent) => void
-  onDragStart: (e: DragEvent, talentId: string) => void
-  onDragEnd: () => void
-  onDragOver: (e: DragEvent, stage: TalentStage) => void
-  onDragLeave: (stage: TalentStage) => void
-  onDrop: (e: DragEvent, stage: TalentStage) => void
+  onCardPointerDown: (e: ReactPointerEvent<HTMLDivElement>, talent: Talent) => void
   columnRef: (el: HTMLDivElement | null) => void
 }
 
@@ -195,20 +196,14 @@ function KanbanColumn({
   userRole,
   userId,
   onSelectTalent,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDragLeave,
-  onDrop,
+  onCardPointerDown,
   columnRef,
 }: ColumnProps) {
   const color = STAGE_COLORS[stage]
   return (
     <div
       ref={columnRef}
-      onDragOver={(e) => onDragOver(e, stage)}
-      onDragLeave={() => onDragLeave(stage)}
-      onDrop={(e) => onDrop(e, stage)}
+      data-kanban-stage={stage}
       style={{
         width: 280,
         minWidth: 280,
@@ -331,10 +326,9 @@ function KanbanColumn({
               talent={t}
               canDrag={canRoleMoveTalent(userRole, t, userId)}
               locked={locked}
-              onSelect={onSelectTalent}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
               isDragging={draggingId === t.id}
+              onSelect={onSelectTalent}
+              onPointerDown={onCardPointerDown}
             />
           ))
         )}
@@ -360,10 +354,12 @@ export function KanbanBoard({
   currentUser,
   focusStage,
 }: KanbanBoardProps) {
-  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [drag, setDrag] = useState<DragState | null>(null)
   const [dropTarget, setDropTarget] = useState<TalentStage | null>(null)
-  const draggingIdRef = useRef<string | null>(null)
+  const dragRef = useRef<DragState | null>(null)
+  const skipClickRef = useRef(false)
   const columnRefs = useRef<Partial<Record<TalentStage, HTMLDivElement | null>>>({})
+  const boardRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!focusStage) return
@@ -371,53 +367,103 @@ export function KanbanBoard({
     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
   }, [focusStage])
 
-  function handleDragStart(e: DragEvent, talentId: string) {
-    e.dataTransfer.setData(DND_TYPE, talentId)
-    e.dataTransfer.setData('text/plain', talentId)
-    e.dataTransfer.effectAllowed = 'move'
-    draggingIdRef.current = talentId
-    setDraggingId(talentId)
-  }
-
-  function handleDragEnd() {
-    draggingIdRef.current = null
-    setDraggingId(null)
-    setDropTarget(null)
-  }
-
-  function handleDragOver(e: DragEvent, stage: TalentStage) {
-    const talent = talents.find((t) => t.id === draggingIdRef.current)
-    if (!talent || !canRoleMoveTalent(userRole, talent, currentUser.id, stage)) {
-      e.dataTransfer.dropEffect = 'none'
-      return
+  function stageAtPoint(x: number, y: number): TalentStage | null {
+    const els = document.elementsFromPoint(x, y)
+    for (const el of els) {
+      if (!(el instanceof HTMLElement)) continue
+      const stage = el.closest('[data-kanban-stage]')?.getAttribute('data-kanban-stage')
+      if (stage && STAGES.includes(stage as TalentStage)) return stage as TalentStage
     }
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDropTarget(stage)
+    return null
   }
 
-  function handleDragLeave(stage: TalentStage) {
-    setDropTarget((cur) => (cur === stage ? null : cur))
+  function handleCardPointerDown(e: ReactPointerEvent<HTMLDivElement>, talent: Talent) {
+    if (!canRoleMoveTalent(userRole, talent, currentUser.id)) return
+    if (e.button !== 0) return
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const next: DragState = {
+      talentId: talent.id,
+      originStage: talent.stage,
+      startX: e.clientX,
+      startY: e.clientY,
+      x: e.clientX,
+      y: e.clientY,
+      width: rect.width,
+      height: rect.height,
+      active: false,
+      pointerId: e.pointerId,
+    }
+    dragRef.current = next
+    setDrag(next)
+
+    const onMove = (ev: PointerEvent) => {
+      const cur = dragRef.current
+      if (!cur || cur.pointerId !== ev.pointerId) return
+      ev.preventDefault()
+
+      const dx = ev.clientX - cur.startX
+      const dy = ev.clientY - cur.startY
+      const distance = Math.hypot(dx, dy)
+      const active = cur.active || distance >= DRAG_THRESHOLD_PX
+      const updated: DragState = {
+        ...cur,
+        x: ev.clientX,
+        y: ev.clientY,
+        active,
+      }
+      dragRef.current = updated
+      setDrag(updated)
+
+      if (!active) return
+      const t = talents.find((x) => x.id === cur.talentId)
+      if (!t) return
+      const stage = stageAtPoint(ev.clientX, ev.clientY)
+      if (stage && canRoleMoveTalent(userRole, t, currentUser.id, stage)) {
+        setDropTarget(stage)
+      } else {
+        setDropTarget(null)
+      }
+    }
+
+    const onUp = (ev: PointerEvent) => {
+      const cur = dragRef.current
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      document.removeEventListener('pointercancel', onUp)
+      if (!cur || cur.pointerId !== ev.pointerId) return
+
+      const t = talents.find((x) => x.id === cur.talentId)
+      const stage = cur.active ? stageAtPoint(ev.clientX, ev.clientY) : null
+
+      if (cur.active) {
+        skipClickRef.current = true
+        window.setTimeout(() => {
+          skipClickRef.current = false
+        }, 0)
+      }
+
+      dragRef.current = null
+      setDrag(null)
+      setDropTarget(null)
+
+      if (!t || !stage || stage === t.stage) return
+      if (!canRoleMoveTalent(userRole, t, currentUser.id, stage)) return
+      onMoveTalent(t, stage)
+    }
+
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onUp)
+    document.addEventListener('pointercancel', onUp)
   }
 
-  function handleDrop(e: DragEvent, stage: TalentStage) {
-    e.preventDefault()
-    const id =
-      e.dataTransfer.getData(DND_TYPE) ||
-      e.dataTransfer.getData('text/plain') ||
-      draggingIdRef.current ||
-      ''
-    draggingIdRef.current = null
-    setDropTarget(null)
-    setDraggingId(null)
-    const talent = talents.find((t) => t.id === id)
-    if (!talent || talent.stage === stage) return
-    if (!canRoleMoveTalent(userRole, talent, currentUser.id, stage)) return
-    onMoveTalent(talent, stage)
-  }
+  const draggingTalent = drag?.active ? talents.find((t) => t.id === drag.talentId) : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <div
+      ref={boardRef}
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, position: 'relative' }}
+    >
       <div
         style={{
           padding: '12px 18px 8px',
@@ -475,15 +521,14 @@ export function KanbanBoard({
               talents={group}
               locked={locked}
               dropActive={dropTarget === stage && !locked}
-              draggingId={draggingId}
+              draggingId={drag?.active ? drag.talentId : null}
               userRole={userRole}
               userId={currentUser.id}
-              onSelectTalent={onSelectTalent}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
+              onSelectTalent={(t) => {
+                if (skipClickRef.current) return
+                onSelectTalent(t)
+              }}
+              onCardPointerDown={handleCardPointerDown}
               columnRef={(el) => {
                 columnRefs.current[stage] = el
               }}
@@ -491,6 +536,40 @@ export function KanbanBoard({
           )
         })}
       </div>
+
+      {draggingTalent && drag?.active && (
+        <div
+          aria-hidden
+          style={{
+            position: 'fixed',
+            left: drag.x - drag.width / 2,
+            top: drag.y - 24,
+            width: drag.width,
+            zIndex: 9999,
+            pointerEvents: 'none',
+            opacity: 0.95,
+            transform: 'rotate(2deg)',
+            boxShadow: '0 12px 28px rgba(15,23,42,0.22)',
+            borderRadius: 8,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #dbe1ea',
+              borderRadius: 8,
+              padding: '10px 11px',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.t1, marginBottom: 4 }}>
+              {draggingTalent.name.toUpperCase()}
+            </div>
+            <div style={{ fontSize: 11, color: T.t3 }}>
+              Division: {formatDivision(draggingTalent)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

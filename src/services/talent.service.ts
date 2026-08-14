@@ -1,6 +1,7 @@
 import type { Talent, TalentStage } from '@/types'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { demoStore } from './demo-store'
+import { nextAccountNumber } from '@/lib/account-number'
 
 export async function fetchTalents(): Promise<Talent[]> {
   if (!supabaseConfigured || !supabase) {
@@ -34,7 +35,8 @@ export async function searchTalents(
     return all.filter((t) => {
       const matchesQuery =
         t.name.toLowerCase().includes(q) ||
-        t.social_handle.toLowerCase().includes(q)
+        t.social_handle.toLowerCase().includes(q) ||
+        (t.account_number || '').toLowerCase().includes(q)
       const matchesStage = !stages || stages.includes(t.stage)
       return matchesQuery && matchesStage
     })
@@ -42,7 +44,7 @@ export async function searchTalents(
   let qb = supabase
     .from('talents')
     .select('*')
-    .or(`name.ilike.%${query}%,social_handle.ilike.%${query}%`)
+    .or(`name.ilike.%${query}%,social_handle.ilike.%${query}%,account_number.ilike.%${query}%`)
   if (stages && stages.length > 0) {
     qb = qb.in('stage', stages)
   }
@@ -52,15 +54,21 @@ export async function searchTalents(
 }
 
 export async function upsertTalent(talent: Talent): Promise<Talent> {
+  const ensured: Talent = talent.account_number?.trim()
+    ? talent
+    : {
+        ...talent,
+        account_number: nextAccountNumber(demoStore.getTalents().map((t) => t.account_number)),
+      }
   if (!supabaseConfigured || !supabase) {
     const list = demoStore.getTalents()
-    const idx = list.findIndex((t) => t.id === talent.id)
-    if (idx >= 0) list[idx] = talent
-    else list.push(talent)
+    const idx = list.findIndex((t) => t.id === ensured.id)
+    if (idx >= 0) list[idx] = ensured
+    else list.push(ensured)
     demoStore.setTalents([...list])
-    return talent
+    return ensured
   }
-  const { data, error } = await supabase.from('talents').upsert(talent).select().single()
+  const { data, error } = await supabase.from('talents').upsert(ensured).select().single()
   if (error) throw error
   return data as Talent
 }

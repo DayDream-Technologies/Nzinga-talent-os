@@ -1,5 +1,7 @@
 /** Full-menu + sidebar information architecture for agency operations. */
 
+import type { Role } from '@/types'
+
 export interface AgencyNavItem {
   id: string
   label: string
@@ -26,8 +28,10 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
         label: 'Talent Info',
         items: [
           { id: 'prospects', label: 'Prospects', path: 'prospects' },
+          { id: 'applications', label: 'Applications', path: 'applications' },
           { id: 'renewal-offers', label: 'Create Renewal Offers', path: 'renewal-offers' },
           { id: 'active-roster', label: 'Active Roster', path: 'active-roster' },
+          { id: 'talent-roster', label: 'Talent Roster', path: 'roster' },
           { id: 'prospect-tracking', label: 'Prospect Tracking Board', path: 'prospect-tracking' },
         ],
       },
@@ -125,11 +129,92 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
   },
 ]
 
+/** Agent (scout / team leads): talent ops + roster/applicant reports */
+const AGENT_PATHS = [
+  'prospects',
+  'applications',
+  'renewal-offers',
+  'active-roster',
+  'roster',
+  'pipeline',
+  'prospect-tracking',
+  'send-email',
+  'messaging',
+  'support-tickets',
+  'agency-tasks',
+  'appointments',
+  'new-ticket',
+  'calendar',
+  'report-roster-scorecard',
+  'report-applicant-pool',
+  'report-onboarding',
+  'report-roster-openings',
+  'reports',
+] as const
+
+/** Account manager (ops): finance modules + AR/AP/escrow reports */
+const ACCOUNT_MANAGER_PATHS = [
+  'escrow-deposit',
+  'client-invoices',
+  'post-retainers',
+  'overdue-interest',
+  'batch-receipts',
+  'retainer-plans',
+  'log-expense',
+  'vendors',
+  'disbursements',
+  'issue-payouts',
+  'report-escrow-balances',
+  'report-gross-bookings',
+  'report-ar-aging',
+  'report-overdue-accounts',
+  'report-pending-payouts',
+  'reports',
+] as const
+
+const ALL_MODULE_PATHS = [
+  ...new Set([...AGENT_PATHS, ...ACCOUNT_MANAGER_PATHS]),
+]
+
+/** Allowed agency paths per role. `workspace` is always allowed separately. */
+export const AGENCY_MODULE_ACCESS: Record<Role, readonly string[]> = {
+  scout: AGENT_PATHS,
+  team1_lead: AGENT_PATHS,
+  team2_lead: AGENT_PATHS,
+  ops_specialist: ACCOUNT_MANAGER_PATHS,
+  success_manager: ALL_MODULE_PATHS,
+  director: ALL_MODULE_PATHS,
+}
+
+export function canAccessAgencyPath(role: Role, path: string): boolean {
+  const normalized = path.replace(/^\//, '').split('?')[0]
+  if (!normalized || normalized === 'workspace') return true
+  if (normalized === 'talent' || normalized.startsWith('talent/')) return true
+  // Nested admin routes remain director-only (handled elsewhere); deny here for agency gate
+  if (normalized.startsWith('admin')) return role === 'director'
+  return (AGENCY_MODULE_ACCESS[role] || []).includes(normalized)
+}
+
+export function filterAgencyNav(role: Role): AgencyNavCategory[] {
+  return AGENCY_NAV.map((cat) => ({
+    ...cat,
+    groups: cat.groups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((item) => canAccessAgencyPath(role, item.path)),
+      }))
+      .filter((g) => g.items.length > 0),
+  })).filter((cat) => cat.groups.length > 0)
+}
+
 /** Flat lookup: path → title */
 export const AGENCY_PAGE_TITLES: Record<string, string> = Object.fromEntries(
   AGENCY_NAV.flatMap((cat) =>
     cat.groups.flatMap((g) => g.items.map((i) => [i.path, i.label] as const)),
-  ).concat([['workspace', 'My Workspace']]),
+  ).concat([
+    ['workspace', 'My Workspace'],
+    ['reports', 'My Reports'],
+  ]),
 )
 
 /** Sidebar quick links (primary daily ops). */
@@ -142,7 +227,9 @@ export const AGENCY_SIDEBAR: { label: string; items: AgencyNavItem[] }[] = [
     label: 'TALENT INFO',
     items: [
       { id: 'prospects', label: 'Prospects', path: 'prospects' },
+      { id: 'applications', label: 'Applications', path: 'applications' },
       { id: 'active-roster', label: 'Active Roster', path: 'active-roster' },
+      { id: 'talent-roster', label: 'Talent Roster', path: 'roster' },
       { id: 'prospect-tracking', label: 'Tracking Board', path: 'prospect-tracking' },
     ],
   },
@@ -166,9 +253,22 @@ export const AGENCY_SIDEBAR: { label: string; items: AgencyNavItem[] }[] = [
   {
     label: 'REPORTS',
     items: [
+      { id: 'reports', label: 'My Reports', path: 'reports' },
       { id: 'report-roster-scorecard', label: 'Roster Scorecard', path: 'report-roster-scorecard' },
       { id: 'report-gross-bookings', label: 'Gross Bookings', path: 'report-gross-bookings' },
       { id: 'report-pending-payouts', label: 'Pending Payouts', path: 'report-pending-payouts' },
     ],
   },
 ]
+
+export function filterAgencySidebar(
+  role: Role,
+  sections: { label: string; items: AgencyNavItem[] }[] = AGENCY_SIDEBAR,
+): { label: string; items: AgencyNavItem[] }[] {
+  return sections
+    .map((sec) => ({
+      ...sec,
+      items: sec.items.filter((item) => canAccessAgencyPath(role, item.path)),
+    }))
+    .filter((sec) => sec.items.length > 0)
+}

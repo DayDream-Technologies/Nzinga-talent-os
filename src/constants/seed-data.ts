@@ -1,4 +1,5 @@
 import type { ApplicationsMap, HistoryEntry, Talent, Task, User } from '@/types'
+import { ACCOUNT_NUMBER_START, formatAccountNumber } from '@/lib/account-number'
 
 export const USERS: User[] = [
   {
@@ -1046,7 +1047,10 @@ const talentsRaw = [
   },
 ] as Talent[]
 
-export const TALENTS_SEED: Talent[] = talentsRaw
+export const TALENTS_SEED: Talent[] = talentsRaw.map((t, i) => ({
+  ...t,
+  account_number: formatAccountNumber(ACCOUNT_NUMBER_START + i),
+}))
 
 /** Minimal placeholder PDF used for complete submitted apps in seed/demo data. */
 const SEED_DOC = 'data:application/pdf;base64,JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoK'

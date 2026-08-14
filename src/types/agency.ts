@@ -1,9 +1,11 @@
-export type TicketStatus = 'open' | 'in_progress' | 'resolved'
+export type TicketStatus = 'open' | 'in_progress' | 'closed' | 'resolved'
+export type TicketType = 'availability' | 'scheduling' | 'contract' | 'billing' | 'general'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'partial'
 export type PayoutStatus = 'pending' | 'issued' | 'completed'
 export type EscrowStatus = 'pending' | 'cleared' | 'disbursed'
 export type TaskStatus = 'open' | 'done'
 export type ProspectStage = 'new' | 'screening' | 'interview' | 'offer' | 'signed' | 'declined'
+export type WorkArea = 'Acting' | 'Modeling' | 'Voiceover' | 'Influencer' | 'Commercial'
 
 export interface AgencyClient {
   id: string
@@ -15,9 +17,11 @@ export interface AgencyClient {
 
 export interface AgencyTalent {
   id: string
+  accountId: string
   name: string
   role: string
   status: 'active' | 'prospect' | 'offboarding'
+  workArea: WorkArea
   niches: string[]
   bankReady: boolean
   taxFormsReady: boolean
@@ -27,12 +31,18 @@ export interface AgencyTalent {
 
 export interface AgencyProspect {
   id: string
+  accountId: string
   name: string
   email: string
+  workArea: WorkArea
   stage: ProspectStage
   source: string
   submittedAt: string
   notes: string
+  /** ISO date (YYYY-MM-DD). Empty when no representation contract exists yet. */
+  contractStart?: string | null
+  /** ISO date (YYYY-MM-DD). Empty/null means open-ended / still live. */
+  contractEnd?: string | null
 }
 
 export interface SupportTicket {
@@ -42,8 +52,11 @@ export interface SupportTicket {
   clientName: string
   talentName?: string
   status: TicketStatus
+  type: TicketType
   priority: 'low' | 'medium' | 'high'
   createdAt: string
+  /** ISO date (YYYY-MM-DD) */
+  dueDate: string
   body: string
   assignee: string
 }
@@ -55,12 +68,24 @@ export interface AgencyTask {
   due: string
   status: TaskStatus
   relatedClient?: string
+  completedBy?: string
+  completedAt?: string
+}
+
+export interface ChecklistItem {
+  id: string
+  title: string
+  done: boolean
 }
 
 export interface Appointment {
   id: string
   title: string
+  /** Display / legacy single-party label (often clients joined). */
   withWhom: string
+  clientNames: string[]
+  agentNames: string[]
+  talentNames: string[]
   startsAt: string
   endsAt: string
   location: string
@@ -76,12 +101,19 @@ export interface CalendarEvent {
   type: 'booking' | 'meeting' | 'block'
 }
 
+export interface InvoiceDocument {
+  name: string
+  data: string
+  type: string
+}
+
 export interface ClientInvoice {
   id: string
   clientId: string
   clientName: string
   talentName: string
   project: string
+  /** Line / subtotal amount before tax */
   amount: number
   commissionPct: number
   status: InvoiceStatus
@@ -89,6 +121,18 @@ export interface ClientInvoice {
   dueAt: string
   paidAt?: string
   interestApplied: number
+  /** Client or agency tax ID / EIN */
+  taxId: string
+  /** Sales tax / VAT rate percent */
+  taxRatePct: number
+  /** Computed tax on amount (stored for display) */
+  taxAmount: number
+  invoiceNumber?: string
+  poNumber?: string
+  paymentTerms?: string
+  billingAddress?: string
+  notes?: string
+  document?: InvoiceDocument | null
 }
 
 export interface RetainerPlan {

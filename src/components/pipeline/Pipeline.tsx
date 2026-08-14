@@ -12,6 +12,7 @@ import {
   TD,
 } from '@/components/ui-compat'
 import { KanbanBoard } from '@/components/pipeline/KanbanBoard'
+import { TalentLink } from '@/components/talent/TalentLink'
 import type { Role, Talent, TalentStage, User } from '@/types'
 
 function Pipeline({
@@ -51,7 +52,8 @@ function Roster({ talents, onSelectTalent, userRole, currentUserId }) {
     if (
       search &&
       !t.name.toLowerCase().includes(search.toLowerCase()) &&
-      !t.social_handle.toLowerCase().includes(search.toLowerCase())
+      !t.social_handle.toLowerCase().includes(search.toLowerCase()) &&
+      !(t.account_number || '').toLowerCase().includes(search.toLowerCase())
     )
       return false
     if (sf !== 'all' && t.stage !== sf) return false
@@ -112,6 +114,7 @@ function Roster({ talents, onSelectTalent, userRole, currentUserId }) {
       >
         <thead>
           <tr>
+            <TH>Account ID</TH>
             <TH>Name</TH>
             <TH>Stage</TH>
             <TH>Niche</TH>
@@ -131,12 +134,12 @@ function Roster({ talents, onSelectTalent, userRole, currentUserId }) {
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               <TD>
-                <span
-                  style={{ color: T.blue, fontWeight: 600, cursor: 'pointer' }}
-                  onClick={() => onSelectTalent(t)}
-                >
-                  {t.name}
+                <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, fontSize: 12 }}>
+                  {t.account_number || '—'}
                 </span>
+              </TD>
+              <TD>
+                <TalentLink accountId={t.account_number} name={t.name} />
               </TD>
               <TD>
                 <StageBadge stage={t.stage} />

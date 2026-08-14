@@ -1,8 +1,31 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
-import { AGENCY_STAFF } from '@/constants/agency-seed'
+import { useAuth } from '@/hooks/useAuth'
+import { AGENCY_STAFF, AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
+import { filterAgencyNav, type AgencyNavGroup } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
+import type { AgencyProspect, SupportTicket, TicketType } from '@/types/agency'
+import { TalentLink } from '@/components/talent/TalentLink'
+import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
+import { AppointmentFormModal } from '@/components/agency/AppointmentFormModal'
+import {
+  DisbursementFormModal,
+  EscrowFormModal,
+  ExpenseFormModal,
+  InvoiceFormModal,
+  RetainerFormModal,
+  VendorFormModal,
+  invoiceTotal,
+} from '@/components/agency/FinanceFormModals'
+import { DocViewer } from '@/components/ui/DocViewer'
+import type { UploadedDoc } from '@/types'
+import {
+  formatContractEnd,
+  formatContractStart,
+  hasContract,
+  isContractLive,
+} from '@/lib/contract-dates'
 import {
   Badge,
   Btn,
@@ -12,101 +35,267 @@ import {
   Panel,
   StatusColor,
   Table,
+  TicketTypeColor,
   inputStyle,
 } from './AgencyUI'
 
+const WS = {
+  pageBg: '#e8eef5',
+  pagePattern:
+    'radial-gradient(circle at 15% 85%, rgba(59,130,246,0.06) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(0,45,86,0.04) 0%, transparent 40%)',
+  cardBorder: '#dce4ed',
+  headerBorder: '#e5e7eb',
+  accent: '#2563eb',
+  iconBgs: ['#dbeafe', '#bfdbfe', '#93c5fd', '#3b82f6', '#ede9fe', '#cffafe'],
+}
+
+const FAVORITE_ICONS: Record<string, string> = {
+  'Talent Info': '🏠',
+  Communication: '💬',
+  'Client Services': '⚙',
+  Accounting: '💰',
+  Receivables: '📄',
+  Payables: '🏦',
+}
+
+const REPORT_ICONS: Record<string, string> = {
+  'Roster & Booking Reports': '📊',
+  'Receivables & Commissions': '💵',
+  'Payables & Talent Disbursals': '📤',
+}
+
+function workspaceCardStyle(extra: CSSProperties = {}): CSSProperties {
+  return {
+    background: '#fff',
+    border: `1px solid ${WS.cardBorder}`,
+    borderRadius: 10,
+    boxShadow: '0 2px 10px rgba(0,45,86,0.07)',
+    overflow: 'hidden',
+    ...extra,
+  }
+}
+
+function WorkspaceNavGroup({
+  group,
+  icon,
+  iconBg,
+  onNav,
+}: {
+  group: AgencyNavGroup
+  icon: string
+  iconBg: string
+  onNav: (path: string) => void
+}) {
+  return (
+    <div
+      style={{
+        border: `1px solid ${WS.headerBorder}`,
+        borderRadius: 8,
+        padding: '10px 12px',
+        background: '#fff',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+        <div
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: 7,
+            background: iconBg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+          }}
+        >
+          {icon}
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: T.t1 }}>{group.label}</span>
+      </div>
+      {group.items.map((item) => (
+        <div
+          key={item.id}
+          onClick={() => onNav(item.path)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && onNav(item.path)}
+          style={{
+            fontSize: 12,
+            color: WS.accent,
+            cursor: 'pointer',
+            padding: '2px 0',
+            paddingLeft: 33,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.textDecoration = 'underline'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.textDecoration = 'none'
+          }}
+        >
+          {item.label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function AgencyWorkspace() {
   const nav = useNavigate()
-  const { tickets, tasks, appointments, invoices, escrow, expenseLogs, scenario, talent } = useAgencyData()
-  const openTickets = tickets.filter((t) => t.status !== 'resolved').length
-  const openTasks = tasks.filter((t) => t.status === 'open').length
-  const pendingPayouts = expenseLogs.filter((e) => e.status === 'pending').length
-  const openAR = invoices.filter((i) => i.status === 'sent' || i.status === 'overdue').length
+  const { user } = useAuth()
+  const firstName = (user?.name || AGENCY_STAFF.name).split(' ')[0]
+  const role = user?.role || 'scout'
 
-  const tiles = [
-    { label: 'Open support tickets', value: openTickets, path: '/support-tickets', color: T.amber },
-    { label: 'Agency tasks', value: openTasks, path: '/agency-tasks', color: T.blue },
-    { label: 'Open client invoices', value: openAR, path: '/client-invoices', color: T.purple },
-    { label: 'Escrow balances', value: escrow.filter((e) => e.status === 'cleared').length, path: '/escrow-deposit', color: T.cyan },
-    { label: 'Pending talent payouts', value: pendingPayouts, path: '/issue-payouts', color: T.green },
-    { label: 'Active roster', value: talent.filter((t) => t.status === 'active').length, path: '/active-roster', color: T.cyan },
-  ]
+  const filteredNav = filterAgencyNav(role)
+  const favoriteGroups = filteredNav.filter((c) => c.id !== 'reports').flatMap((c) => c.groups)
+  const reportGroups = filteredNav.find((c) => c.id === 'reports')?.groups ?? []
+
+  function go(path: string) {
+    nav(`/${path}`)
+  }
 
   return (
-    <Panel
-      title={`Good morning, ${AGENCY_STAFF.name.split(' ')[0]}`}
-      subtitle={`${AGENCY_STAFF.title} · Today’s ops for ${scenario.client} × ${scenario.talent} · ${scenario.name}`}
+    <div
+      style={{
+        padding: '22px 26px',
+        flex: 1,
+        overflowY: 'auto',
+        minHeight: '100%',
+        background: WS.pageBg,
+        backgroundImage: WS.pagePattern,
+      }}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 18 }}>
-        {tiles.map((t, i) => (
-          <Card
-            key={t.label}
-            className={`workspace-tile animate-scale-in stagger-${Math.min(i + 1, 8)}`}
-            style={{ cursor: 'pointer', borderLeft: `3px solid ${t.color}` }}
-            hover={false}
-          >
-            <div onClick={() => nav(t.path)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && nav(t.path)}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: t.color }}>{t.value}</div>
-              <div style={{ fontSize: 11, color: T.t3, marginTop: 4 }}>{t.label}</div>
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <div
+          style={{
+            fontSize: 26,
+            fontWeight: 700,
+            color: T.t1,
+            fontFamily: 'Georgia, serif',
+          }}
+        >
+          Welcome, {firstName}
+        </div>
+        <div style={{ fontSize: 13, color: T.t3, marginTop: 3 }}>Let&apos;s get to work.</div>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: favoriteGroups.length && reportGroups.length ? '1fr 1fr' : '1fr',
+          gap: 18,
+        }}
+      >
+        {favoriteGroups.length > 0 && (
+          <div style={workspaceCardStyle()}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                padding: '11px 14px',
+                background: '#fff',
+                borderBottom: `2px solid ${WS.accent}`,
+              }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>My Favorites</span>
             </div>
-          </Card>
-        ))}
+            <div
+              style={{
+                padding: '12px 14px',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 14,
+              }}
+            >
+              {favoriteGroups.map((group, idx) => (
+                <WorkspaceNavGroup
+                  key={group.label}
+                  group={group}
+                  icon={FAVORITE_ICONS[group.label] || '📁'}
+                  iconBg={WS.iconBgs[idx % WS.iconBgs.length]}
+                  onNav={go}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {reportGroups.length > 0 && (
+          <div style={workspaceCardStyle()}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '11px 14px',
+                background: '#fff',
+                borderBottom: `2px solid ${WS.accent}`,
+              }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>My Reports</span>
+              <span
+                onClick={() => go('reports')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && go('reports')}
+                style={{ fontSize: 12, color: WS.accent, cursor: 'pointer' }}
+              >
+                View all
+              </span>
+            </div>
+            <div
+              style={{
+                padding: '12px 14px',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 14,
+              }}
+            >
+              {reportGroups.map((group, idx) => (
+                <WorkspaceNavGroup
+                  key={group.label}
+                  group={group}
+                  icon={REPORT_ICONS[group.label] || '📊'}
+                  iconBg={WS.iconBgs[idx % WS.iconBgs.length]}
+                  onNav={go}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <Card className="animate-slide-left stagger-3">
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Morning checklist</div>
-          <ol style={{ margin: 0, paddingLeft: 18, color: T.t2, fontSize: 13, lineHeight: 1.7 }}>
-            <li>Review Nike support ticket — confirm Maya availability</li>
-            <li>Check Appointments for Nike briefing call</li>
-            <li>Create Agency Task: send contract to Nike</li>
-            <li>Block Maya on Shared Calendar for shoot dates</li>
-          </ol>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Btn onClick={() => nav('/support-tickets')}>Support Tickets</Btn>
-            <Btn variant="secondary" onClick={() => nav('/appointments')}>Appointments</Btn>
-            <Btn variant="secondary" onClick={() => nav('/calendar')}>Calendar</Btn>
-          </div>
-        </Card>
-        <Card className="animate-slide-right stagger-4">
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Scenario snapshot</div>
-          <div style={{ fontSize: 13, color: T.t2, lineHeight: 1.6 }}>
-            <div><strong>Client:</strong> {scenario.client}</div>
-            <div><strong>Talent:</strong> {scenario.talent}</div>
-            <div><strong>Project:</strong> {scenario.name}</div>
-            <div><strong>Gross:</strong> <Money value={scenario.gross} /></div>
-            <div><strong>Agency (20%):</strong> <Money value={scenario.agencyShare} /></div>
-            <div><strong>Talent (80%):</strong> <Money value={scenario.talentShare} /></div>
-          </div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Btn onClick={() => nav('/client-invoices')}>Client Invoices</Btn>
-            <Btn variant="secondary" onClick={() => nav('/escrow-deposit')}>Record Escrow</Btn>
-            <Btn variant="success" onClick={() => nav('/issue-payouts')}>Issue Payouts</Btn>
-          </div>
-        </Card>
-      </div>
+      {favoriteGroups.length === 0 && reportGroups.length === 0 && (
+        <div style={{ ...workspaceCardStyle(), padding: 28, textAlign: 'center', color: T.t3, fontSize: 13 }}>
+          No modules are assigned to your role yet.
+        </div>
+      )}
 
-      <div style={{ marginTop: 14 }}>
-        <Card className="animate-fade-in-up stagger-5">
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Next up</div>
-          <Table
-            headers={['When', 'Item', 'Type']}
-            rows={[
-              ...appointments.slice(0, 2).map((a) => [
-                new Date(a.startsAt).toLocaleString(),
-                a.title,
-                <Badge key={a.id} color={T.blue}>Meeting</Badge>,
-              ]),
-              ...tasks.filter((t) => t.status === 'open').slice(0, 2).map((t) => [
-                t.due,
-                t.title,
-                <Badge key={t.id} color={T.amber}>Task</Badge>,
-              ]),
-            ]}
-          />
-        </Card>
+      <div
+        style={{
+          ...workspaceCardStyle(),
+          marginTop: 14,
+          padding: '9px 14px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontSize: 12, color: T.t3 }}>
+          📢 <strong style={{ color: T.t1 }}>Announcements</strong> — No new announcements
+        </span>
+        <span
+          onClick={() => go('training')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Enter' && go('training')}
+          style={{ fontSize: 12, color: WS.accent, cursor: 'pointer' }}
+        >
+          🎓 My Training
+        </span>
       </div>
-    </Panel>
+    </div>
   )
 }
 
@@ -181,15 +370,104 @@ export function AgencyModule({ moduleId }: { moduleId: string }) {
   }
 }
 
+type ProspectSortKey =
+  | 'accountId'
+  | 'name'
+  | 'workArea'
+  | 'contractStart'
+  | 'contractEnd'
+  | 'email'
+  | 'stage'
+  | 'source'
+  | 'submittedAt'
+
+const PROSPECT_COLUMNS: Array<{ header: string; key: ProspectSortKey | null }> = [
+  { header: 'Account ID', key: 'accountId' },
+  { header: 'Name', key: 'name' },
+  { header: 'Work Area', key: 'workArea' },
+  { header: 'Contract Start', key: 'contractStart' },
+  { header: 'Contract End', key: 'contractEnd' },
+  { header: 'Email', key: 'email' },
+  { header: 'Stage', key: 'stage' },
+  { header: 'Source', key: 'source' },
+  { header: 'Submitted', key: 'submittedAt' },
+  { header: '', key: null },
+]
+
+function prospectSortValue(p: AgencyProspect, key: ProspectSortKey): string {
+  switch (key) {
+    case 'accountId':
+      return p.accountId || ''
+    case 'name':
+      return p.name || ''
+    case 'workArea':
+      return p.workArea || ''
+    case 'contractStart':
+      return hasContract(p.contractStart) ? p.contractStart || '' : 'pending'
+    case 'contractEnd':
+      if (!hasContract(p.contractStart)) return ''
+      if (isContractLive(p.contractStart, p.contractEnd)) return 'current'
+      return p.contractEnd || ''
+    case 'email':
+      return p.email || ''
+    case 'stage':
+      return p.stage || ''
+    case 'source':
+      return p.source || ''
+    case 'submittedAt':
+      return p.submittedAt || ''
+  }
+}
+
 function ProspectsModule() {
   const { prospects, advanceProspect } = useAgencyData()
+  const [sortIndex, setSortIndex] = useState(1)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const sorted = useMemo(() => {
+    const col = PROSPECT_COLUMNS[sortIndex]
+    if (!col?.key) return prospects
+    const dir = sortDir === 'asc' ? 1 : -1
+    return [...prospects].sort((a, b) => {
+      const cmp = prospectSortValue(a, col.key!).localeCompare(
+        prospectSortValue(b, col.key!),
+        undefined,
+        { numeric: true, sensitivity: 'base' },
+      )
+      return cmp * dir
+    })
+  }, [prospects, sortIndex, sortDir])
+
+  function handleSort(index: number) {
+    if (!PROSPECT_COLUMNS[index]?.key) return
+    if (sortIndex === index) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortIndex(index)
+    setSortDir('asc')
+  }
+
   return (
-    <Panel title="Prospects" subtitle="Inbound talent applicants waiting for agent screening.">
+    <Panel title="Prospects" subtitle="Inbound talent applicants waiting for agent screening. Click a column header to sort.">
       <Card>
         <Table
-          headers={['Name', 'Email', 'Stage', 'Source', 'Submitted', '']}
-          rows={prospects.map((p) => [
-            p.name,
+          headers={PROSPECT_COLUMNS.map((c) => c.header)}
+          sortIndex={sortIndex}
+          sortDir={sortDir}
+          onSort={handleSort}
+          rows={sorted.map((p) => [
+            <TalentLink key={`id-${p.id}`} accountId={p.accountId} name={p.name}>
+              <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, letterSpacing: '0.02em' }}>{p.accountId}</span>
+            </TalentLink>,
+            <TalentLink key={`n-${p.id}`} accountId={p.accountId} name={p.name} />,
+            <Badge key={`w-${p.id}`} color={T.purple}>{p.workArea}</Badge>,
+            hasContract(p.contractStart)
+              ? formatContractStart(p.contractStart)
+              : <Badge key={`ps-${p.id}`} color={T.amber}>Pending</Badge>,
+            isContractLive(p.contractStart, p.contractEnd)
+              ? <Badge key={`c-${p.id}`} color={T.green}>Current</Badge>
+              : formatContractEnd(p.contractStart, p.contractEnd),
             p.email,
             <Badge key={p.id} color={StatusColor(p.stage)}>{p.stage}</Badge>,
             p.source,
@@ -211,7 +489,7 @@ function RenewalOffersModule() {
         <Table
           headers={['Talent', 'Role', 'Status', '']}
           rows={talent.map((t) => [
-            t.name,
+            <TalentLink key={t.id} accountId={t.accountId} name={t.name} />,
             t.role,
             <Badge key={t.id} color={StatusColor(t.status)}>{t.status}</Badge>,
             <Btn
@@ -234,11 +512,14 @@ function ActiveRosterModule() {
     <Panel title="Active Roster" subtitle="Signed talent available for booking.">
       <Card>
         <Table
-          headers={['Name', 'Role', 'Niches', 'Availability', 'Bank', 'Tax forms']}
+          headers={['Account ID', 'Name', 'Role', 'Niches', 'Availability', 'Bank', 'Tax forms']}
           rows={talent
             .filter((t) => t.status === 'active')
             .map((t) => [
-              t.name,
+              <TalentLink key={`id-${t.id}`} accountId={t.accountId} name={t.name}>
+                <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>{t.accountId}</span>
+              </TalentLink>,
+              <TalentLink key={`n-${t.id}`} accountId={t.accountId} name={t.name} />,
               t.role,
               t.niches.join(', '),
               t.available ? <Badge color={T.green}>Available</Badge> : <Badge color={T.amber}>Booked</Badge>,
@@ -276,8 +557,9 @@ function ProspectTrackingModule() {
                     fontSize: 12,
                   }}
                 >
-                  <div style={{ fontWeight: 600 }}>{p.name}</div>
-                  <div style={{ color: T.t3, marginTop: 2 }}>{p.source}</div>
+                  <div style={{ fontWeight: 600 }}><TalentLink accountId={p.accountId} name={p.name} /></div>
+                  <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, fontWeight: 700, color: T.t1, marginTop: 3 }}>{p.accountId}</div>
+                  <div style={{ color: T.t3, marginTop: 2 }}>{p.workArea} · {p.source}</div>
                 </div>
               ))}
           </Card>
@@ -372,45 +654,156 @@ function MessagingModule() {
 
 function SupportTicketsModule() {
   const { tickets, updateTicket } = useAgencyData()
+  const { user } = useAuth()
   const nav = useNavigate()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [sortIndex, setSortIndex] = useState(5) // due by default
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const selected = tickets.find((t) => t.id === selectedId) || null
+  const isDirector = user?.role === 'director'
+  const today = new Date().toISOString().slice(0, 10)
+
+  const TICKET_COLUMNS: { label: string; key?: keyof SupportTicket | 'actions' }[] = [
+    { label: 'Subject', key: 'subject' },
+    { label: 'Type', key: 'type' },
+    { label: 'Client', key: 'clientName' },
+    { label: 'Talent', key: 'talentName' },
+    { label: 'Assignee', key: 'assignee' },
+    { label: 'Due', key: 'dueDate' },
+    { label: 'Priority', key: 'priority' },
+    { label: 'Status', key: 'status' },
+    { label: '' },
+  ]
+
+  const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 }
+  const STATUS_RANK: Record<string, number> = {
+    open: 0,
+    in_progress: 1,
+    closed: 2,
+    resolved: 3,
+  }
+
+  function ticketSortValue(t: SupportTicket, key: keyof SupportTicket): string {
+    const raw = t[key]
+    if (key === 'priority') return String(PRIORITY_RANK[t.priority] ?? 9)
+    if (key === 'status') return String(STATUS_RANK[t.status] ?? 9)
+    if (raw == null) return ''
+    return String(raw)
+  }
+
+  const sorted = useMemo(() => {
+    const col = TICKET_COLUMNS[sortIndex]
+    if (!col?.key || col.key === 'actions') return tickets
+    const dir = sortDir === 'asc' ? 1 : -1
+    return [...tickets].sort((a, b) => {
+      const cmp = ticketSortValue(a, col.key as keyof SupportTicket).localeCompare(
+        ticketSortValue(b, col.key as keyof SupportTicket),
+        undefined,
+        { numeric: true, sensitivity: 'base' },
+      )
+      return cmp * dir
+    })
+  }, [tickets, sortIndex, sortDir])
+
+  function handleSort(index: number) {
+    if (!TICKET_COLUMNS[index]?.key) return
+    if (sortIndex === index) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortIndex(index)
+    setSortDir('asc')
+  }
+
+  function truncateBody(text: string, max = 72) {
+    const oneLine = text.replace(/\s+/g, ' ').trim()
+    if (oneLine.length <= max) return oneLine
+    return `${oneLine.slice(0, max)}…`
+  }
+
+  function formatDue(dueDate: string, status: SupportTicket['status']) {
+    if (!dueDate) return '—'
+    const label = new Date(dueDate + 'T12:00:00').toLocaleDateString()
+    const closed = status === 'closed' || status === 'resolved'
+    const overdue = !closed && dueDate < today
+    return (
+      <span style={{ color: overdue ? T.red : T.t1, fontWeight: overdue ? 600 : 400 }}>
+        {label}
+      </span>
+    )
+  }
+
   return (
     <Panel
       title="Support Tickets"
-      subtitle="Client requests and availability confirmations."
+      subtitle="Client requests and availability confirmations. Click a column header to sort."
       actions={<Btn onClick={() => nav('/new-ticket')}>+ New ticket</Btn>}
     >
       <Card>
         <Table
-          headers={['Subject', 'Client', 'Talent', 'Priority', 'Status', '']}
-          rows={tickets.map((t) => [
-            <div key={`s-${t.id}`}>
-              <div style={{ fontWeight: 600 }}>{t.subject}</div>
-              <div style={{ color: T.t3, fontSize: 11, marginTop: 2 }}>{t.body}</div>
-            </div>,
+          headers={TICKET_COLUMNS.map((c) => c.label)}
+          sortIndex={sortIndex}
+          sortDir={sortDir}
+          onSort={handleSort}
+          rows={sorted.map((t) => [
+            <button
+              key={`s-${t.id}`}
+              type="button"
+              onClick={() => setSelectedId(t.id)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <div style={{ fontWeight: 600, color: T.blue }}>{t.subject}</div>
+              <div style={{ color: T.t3, fontSize: 11, marginTop: 2 }}>{truncateBody(t.body)}</div>
+            </button>,
+            <Badge key={`ty-${t.id}`} color={TicketTypeColor(t.type)}>
+              {t.type}
+            </Badge>,
             t.clientName,
-            t.talentName || '—',
-            <Badge key={`p-${t.id}`} color={t.priority === 'high' ? T.red : T.amber}>{t.priority}</Badge>,
-            <Badge key={`st-${t.id}`} color={StatusColor(t.status)}>{t.status}</Badge>,
-            <div key={`a-${t.id}`} style={{ display: 'flex', gap: 6 }}>
-              {t.status !== 'resolved' && (
-                <Btn onClick={() => updateTicket(t.id, { status: 'in_progress' })}>Start</Btn>
-              )}
-              {t.status !== 'resolved' && (
-                <Btn variant="success" onClick={() => updateTicket(t.id, { status: 'resolved' })}>Resolve</Btn>
-              )}
-            </div>,
+            t.talentName ? <TalentLink key={`tn-${t.id}`} name={t.talentName} /> : '—',
+            t.assignee || '—',
+            <span key={`d-${t.id}`}>{formatDue(t.dueDate, t.status)}</span>,
+            <Badge key={`p-${t.id}`} color={t.priority === 'high' ? T.red : t.priority === 'medium' ? T.amber : T.t3}>
+              {t.priority}
+            </Badge>,
+            <Badge key={`st-${t.id}`} color={StatusColor(t.status)}>
+              {t.status}
+            </Badge>,
+            <Btn key={`a-${t.id}`} variant="secondary" onClick={() => setSelectedId(t.id)}>
+              View
+            </Btn>,
           ])}
         />
       </Card>
+      {selected && (
+        <TicketDetailModal
+          ticket={selected}
+          onClose={() => setSelectedId(null)}
+          updateTicket={updateTicket}
+          isDirector={isDirector}
+          agents={AGENCY_TICKET_AGENTS}
+        />
+      )}
     </Panel>
   )
 }
 
 function AgencyTasksModule() {
   const { tasks, addTask, completeTask } = useAgencyData()
+  const { user } = useAuth()
   const [title, setTitle] = useState('')
+  const actor = user?.name || AGENCY_STAFF.name
+  const openTasks = tasks.filter((t) => t.status === 'open')
+  const archived = tasks.filter((t) => t.status === 'done')
+
   return (
-    <Panel title="Agency Tasks" subtitle="Internal to-dos for booking agents and ops.">
+    <Panel title="Agency Tasks" subtitle="Internal to-dos for booking agents and ops. Completed work moves to Archive.">
       <Card style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
@@ -418,13 +811,24 @@ function AgencyTasksModule() {
             placeholder='e.g. Send contract agreement to Nike production team'
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || !title.trim()) return
+              addTask({
+                title: title.trim(),
+                assignee: actor,
+                due: new Date().toISOString().slice(0, 10),
+                status: 'open',
+                relatedClient: 'Nike',
+              })
+              setTitle('')
+            }}
           />
           <Btn
             onClick={() => {
               if (!title.trim()) return
               addTask({
                 title: title.trim(),
-                assignee: AGENCY_STAFF.name,
+                assignee: actor,
                 due: new Date().toISOString().slice(0, 10),
                 status: 'open',
                 relatedClient: 'Nike',
@@ -436,19 +840,32 @@ function AgencyTasksModule() {
           </Btn>
         </div>
       </Card>
-      <Card>
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Open tasks</div>
         <Table
           headers={['Task', 'Assignee', 'Due', 'Status', '']}
-          rows={tasks.map((t) => [
+          rows={openTasks.map((t) => [
             t.title,
             t.assignee,
             t.due,
             <Badge key={t.id} color={StatusColor(t.status)}>{t.status}</Badge>,
-            t.status === 'open' ? (
-              <Btn key={`c-${t.id}`} variant="success" onClick={() => completeTask(t.id)}>Complete</Btn>
-            ) : (
-              '—'
-            ),
+            <Btn key={`c-${t.id}`} variant="success" onClick={() => completeTask(t.id, actor)}>Complete</Btn>,
+          ])}
+        />
+      </Card>
+      <Card>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+          <div style={{ fontWeight: 700 }}>Archive</div>
+          <div style={{ fontSize: 11, color: T.t3 }}>{archived.length} completed</div>
+        </div>
+        <Table
+          headers={['Task', 'Assignee', 'Due', 'Completed by', 'Completed']}
+          rows={archived.map((t) => [
+            t.title,
+            t.assignee,
+            t.due,
+            t.completedBy || '—',
+            t.completedAt ? new Date(t.completedAt).toLocaleString() : '—',
           ])}
         />
       </Card>
@@ -457,56 +874,104 @@ function AgencyTasksModule() {
 }
 
 function AppointmentsModule() {
-  const { appointments, addAppointment } = useAgencyData()
-  const [title, setTitle] = useState('Nike follow-up call')
+  const { appointments, addAppointment, updateAppointment, deleteAppointment, clients, talent } =
+    useAgencyData()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = appointments.find((a) => a.id === selectedId) || null
+  const clientOptions = clients.map((c) => c.name)
+  const talentOptions = talent.map((t) => t.name)
+
   return (
-    <Panel title="Appointments & Meetings" subtitle="Briefings, castings, and client calls.">
-      <Card style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <div style={{ flex: 1 }}>
-            <Field label="New appointment">
-              <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
-            </Field>
-          </div>
-          <Btn
-            onClick={() => {
-              const start = new Date()
-              start.setHours(start.getHours() + 2)
-              const end = new Date(start.getTime() + 30 * 60000)
-              addAppointment({
-                title,
-                withWhom: 'Nike Production',
-                startsAt: start.toISOString(),
-                endsAt: end.toISOString(),
-                location: 'Zoom',
-                notes: '',
-              })
-            }}
-          >
-            Schedule
-          </Btn>
-        </div>
-      </Card>
+    <Panel
+      title="Appointments & Meetings"
+      subtitle="Briefings, castings, and client calls. Add, edit, or delete appointments with full scheduling details."
+      actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New appointment</Btn>}
+    >
       <Card>
         <Table
-          headers={['Title', 'With', 'Starts', 'Location']}
+          headers={['Title', 'Clients', 'Agents', 'Talent', 'Starts', 'Ends', 'Location', '']}
           rows={appointments.map((a) => [
             a.title,
-            a.withWhom,
+            (a.clientNames?.length ? a.clientNames : [a.withWhom]).filter(Boolean).join(', ') || '—',
+            a.agentNames?.length ? a.agentNames.join(', ') : '—',
+            a.talentNames?.length
+              ? (
+                <span key={`tn-${a.id}`} style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {a.talentNames.map((n) => (
+                    <TalentLink key={`${a.id}-${n}`} name={n} />
+                  ))}
+                </span>
+              )
+              : '—',
             new Date(a.startsAt).toLocaleString(),
+            new Date(a.endsAt).toLocaleString(),
             a.location,
+            <Btn
+              key={`e-${a.id}`}
+              variant="secondary"
+              onClick={() => {
+                setSelectedId(a.id)
+                setModalMode('edit')
+              }}
+            >
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {modalMode === 'create' && (
+        <AppointmentFormModal
+          clientOptions={clientOptions}
+          talentOptions={talentOptions}
+          onClose={() => setModalMode(null)}
+          onSave={(values) => {
+            addAppointment(values)
+            setModalMode(null)
+          }}
+        />
+      )}
+      {modalMode === 'edit' && selected && (
+        <AppointmentFormModal
+          initial={selected}
+          clientOptions={clientOptions}
+          talentOptions={talentOptions}
+          onClose={() => {
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onSave={(values) => {
+            updateAppointment(selected.id, values)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteAppointment(selected.id)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function NewTicketModule() {
   const { addTicket, clients } = useAgencyData()
+  const { user } = useAuth()
   const nav = useNavigate()
+  const isDirector = user?.role === 'director'
+  const defaultAssignee = isDirector
+    ? AGENCY_STAFF.name
+    : user?.name || AGENCY_STAFF.name
+  const defaultDue = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10)
   const [subject, setSubject] = useState('Last-minute schedule change')
   const [body, setBody] = useState('')
+  const [assignee, setAssignee] = useState(defaultAssignee)
+  const [type, setType] = useState<TicketType>('scheduling')
+  const [dueDate, setDueDate] = useState(defaultDue)
+  const [priority, setPriority] = useState<SupportTicket['priority']>('high')
+
   return (
     <Panel title="New Tickets" subtitle="Quickly create a support record for an inbound client request.">
       <Card style={{ maxWidth: 520 }}>
@@ -516,9 +981,54 @@ function NewTicketModule() {
         <Field label="Subject">
           <input style={inputStyle} value={subject} onChange={(e) => setSubject(e.target.value)} />
         </Field>
+        <Field label="Type">
+          <select style={inputStyle} value={type} onChange={(e) => setType(e.target.value as TicketType)}>
+            <option value="availability">availability</option>
+            <option value="scheduling">scheduling</option>
+            <option value="contract">contract</option>
+            <option value="billing">billing</option>
+            <option value="general">general</option>
+          </select>
+        </Field>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Field label="Due date">
+            <input
+              type="date"
+              style={inputStyle}
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </Field>
+          <Field label="Priority">
+            <select
+              style={inputStyle}
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as SupportTicket['priority'])}
+            >
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </Field>
+        </div>
         <Field label="Details">
           <textarea style={{ ...inputStyle, minHeight: 100 }} value={body} onChange={(e) => setBody(e.target.value)} />
         </Field>
+        {isDirector ? (
+          <Field label="Assign to">
+            <select style={inputStyle} value={assignee} onChange={(e) => setAssignee(e.target.value)}>
+              {AGENCY_TICKET_AGENTS.map((a) => (
+                <option key={a.id} value={a.name}>
+                  {a.name} — {a.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : (
+          <Field label="Assignee">
+            <input style={inputStyle} value={assignee} readOnly />
+          </Field>
+        )}
         <Btn
           onClick={() => {
             addTicket({
@@ -527,9 +1037,11 @@ function NewTicketModule() {
               clientName: clients[0]?.name || 'Nike',
               talentName: 'Maya Rivera',
               status: 'open',
-              priority: 'high',
+              type,
+              priority,
+              dueDate: dueDate || defaultDue,
               body: body || 'Client called with a last-minute schedule change.',
-              assignee: AGENCY_STAFF.name,
+              assignee,
             })
             nav('/support-tickets')
           }}
@@ -571,7 +1083,7 @@ function CalendarModule() {
             .map((e) => [
               e.date,
               e.title,
-              e.talentName || '—',
+              e.talentName ? <TalentLink key={`tn-${e.id}`} name={e.talentName} /> : '—',
               e.clientName || '—',
               <Badge key={e.id} color={e.type === 'booking' ? T.purple : T.blue}>{e.type}</Badge>,
             ])}
@@ -582,57 +1094,114 @@ function CalendarModule() {
 }
 
 function InvoicesModule() {
-  const { invoices, createInvoice, scenario } = useAgencyData()
+  const { invoices, createInvoice, updateInvoice, deleteInvoice, clients, talent } = useAgencyData()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [viewDoc, setViewDoc] = useState<UploadedDoc | null>(null)
+  const selected = invoices.find((i) => i.id === selectedId) || null
+  const talentNames = talent.map((t) => t.name)
+
   return (
     <Panel
       title="Client Invoices"
-      subtitle="Create and send official client invoices after talent wraps a job."
-      actions={
-        <Btn
-          onClick={() =>
-            createInvoice({
-              clientId: 'client_nike',
-              clientName: scenario.client,
-              talentName: scenario.talent,
-              project: scenario.name,
-              amount: scenario.gross,
-              commissionPct: scenario.commissionPct,
-              status: 'sent',
-              issuedAt: new Date().toISOString().slice(0, 10),
-              dueAt: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-            })
-          }
-        >
-          Invoice Nike $10,000
-        </Btn>
-      }
+      subtitle="Create and manage invoices with tax ID, tax calculation, payment terms, and supporting documents."
+      actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New invoice</Btn>}
     >
       <Card>
         <Table
-          headers={['Invoice', 'Client', 'Talent', 'Project', 'Amount', 'Due', 'Status']}
+          headers={['Invoice #', 'Client', 'Tax ID', 'Talent', 'Project', 'Subtotal', 'Tax', 'Total', 'Due', 'Doc', 'Status', '']}
           rows={invoices.map((inv) => [
-            inv.id,
+            inv.invoiceNumber || inv.id,
             inv.clientName,
-            inv.talentName,
+            inv.taxId || '—',
+            <TalentLink key={`tn-${inv.id}`} name={inv.talentName} />,
             inv.project,
             <Money key={`m-${inv.id}`} value={inv.amount} />,
+            <span key={`tx-${inv.id}`}>
+              <Money value={inv.taxAmount || 0} />
+              {inv.taxRatePct ? (
+                <span style={{ color: T.t4, fontSize: 10, marginLeft: 4 }}>({inv.taxRatePct}%)</span>
+              ) : null}
+            </span>,
+            <Money key={`tot-${inv.id}`} value={invoiceTotal(inv)} />,
             inv.dueAt,
+            inv.document ? (
+              <Btn
+                key={`d-${inv.id}`}
+                variant="ghost"
+                onClick={() =>
+                  setViewDoc({
+                    name: inv.document!.name,
+                    data: inv.document!.data,
+                    type: inv.document!.type,
+                  })
+                }
+              >
+                View
+              </Btn>
+            ) : (
+              '—'
+            ),
             <Badge key={`s-${inv.id}`} color={StatusColor(inv.status)}>{inv.status}</Badge>,
+            <Btn
+              key={`e-${inv.id}`}
+              variant="secondary"
+              onClick={() => {
+                setSelectedId(inv.id)
+                setModalMode('edit')
+              }}
+            >
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {modalMode === 'create' && (
+        <InvoiceFormModal
+          clients={clients}
+          talentNames={talentNames}
+          onClose={() => setModalMode(null)}
+          onSave={(values) => {
+            createInvoice(values)
+            setModalMode(null)
+          }}
+        />
+      )}
+      {modalMode === 'edit' && selected && (
+        <InvoiceFormModal
+          initial={selected}
+          clients={clients}
+          talentNames={talentNames}
+          onClose={() => { setModalMode(null); setSelectedId(null) }}
+          onSave={(values) => {
+            updateInvoice(selected.id, values)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteInvoice(selected.id)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+        />
+      )}
+      <DocViewer doc={viewDoc} onClose={() => setViewDoc(null)} />
     </Panel>
   )
 }
 
 function OverdueInterestModule() {
-  const { invoices, applyOverdueInterest } = useAgencyData()
+  const { invoices, applyOverdueInterest, updateInvoice, deleteInvoice, clients, talent } = useAgencyData()
   const candidates = invoices.filter((i) => i.status === 'sent' || i.status === 'overdue')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = invoices.find((i) => i.id === selectedId) || null
+  const talentNames = talent.map((t) => t.name)
+
   return (
-    <Panel title="Post Overdue Interest" subtitle="Add late-fee penalties when 30-day terms are exceeded.">
+    <Panel title="Post Overdue Interest" subtitle="Add late-fee penalties when 30-day terms are exceeded. Edit or delete invoices as needed.">
       <Card>
         <Table
-          headers={['Client', 'Project', 'Amount', 'Interest applied', '']}
+          headers={['Client', 'Project', 'Amount', 'Interest applied', '', '']}
           rows={candidates.map((inv) => [
             inv.clientName,
             inv.project,
@@ -641,22 +1210,45 @@ function OverdueInterestModule() {
             <Btn key={`b-${inv.id}`} variant="danger" onClick={() => applyOverdueInterest(inv.id, 1.5)}>
               Post 1.5% interest
             </Btn>,
+            <Btn key={`e-${inv.id}`} variant="secondary" onClick={() => setSelectedId(inv.id)}>
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {selected && (
+        <InvoiceFormModal
+          initial={selected}
+          clients={clients}
+          talentNames={talentNames}
+          onClose={() => setSelectedId(null)}
+          onSave={(values) => {
+            updateInvoice(selected.id, values)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteInvoice(selected.id)
+            setSelectedId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function BatchReceiptsModule() {
-  const { invoices, batchReceipts } = useAgencyData()
+  const { invoices, batchReceipts, updateInvoice, deleteInvoice, clients, talent } = useAgencyData()
   const [selected, setSelected] = useState<string[]>([])
+  const [editId, setEditId] = useState<string | null>(null)
   const open = invoices.filter((i) => i.status === 'sent' || i.status === 'overdue' || i.status === 'partial')
+  const editing = invoices.find((i) => i.id === editId) || null
+  const talentNames = talent.map((t) => t.name)
+
   return (
-    <Panel title="Batch Client Receipts" subtitle="Apply one client payment across multiple open invoices.">
+    <Panel title="Batch Client Receipts" subtitle="Apply one client payment across multiple open invoices. Edit or delete individual invoices from this list.">
       <Card>
         <Table
-          headers={['', 'Client', 'Project', 'Amount', 'Status']}
+          headers={['', 'Client', 'Project', 'Amount', 'Status', '']}
           rows={open.map((inv) => [
             <input
               key={`c-${inv.id}`}
@@ -672,6 +1264,9 @@ function BatchReceiptsModule() {
             inv.project,
             <Money key={`m-${inv.id}`} value={inv.amount} />,
             <Badge key={`s-${inv.id}`} color={StatusColor(inv.status)}>{inv.status}</Badge>,
+            <Btn key={`e-${inv.id}`} variant="secondary" onClick={() => setEditId(inv.id)}>
+              Edit
+            </Btn>,
           ])}
         />
         <div style={{ marginTop: 12 }}>
@@ -687,55 +1282,100 @@ function BatchReceiptsModule() {
           </Btn>
         </div>
       </Card>
+      {editing && (
+        <InvoiceFormModal
+          initial={editing}
+          clients={clients}
+          talentNames={talentNames}
+          onClose={() => setEditId(null)}
+          onSave={(values) => {
+            updateInvoice(editing.id, values)
+            setEditId(null)
+          }}
+          onDelete={() => {
+            deleteInvoice(editing.id)
+            setEditId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function RetainerPlansModule() {
-  const { retainers, addRetainer, clients } = useAgencyData()
+  const { retainers, addRetainer, updateRetainer, deleteRetainer, clients } = useAgencyData()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = retainers.find((r) => r.id === selectedId) || null
+
   return (
     <Panel
       title="Manage Retainer Plans"
-      subtitle="Set up ongoing monthly client retainer contracts."
-      actions={
-        <Btn
-          onClick={() =>
-            addRetainer({
-              clientId: clients[0]?.id || 'client_nike',
-              clientName: clients[0]?.name || 'Nike',
-              monthlyAmount: 5000,
-              dayOfMonth: 1,
-              active: true,
-              description: 'Monthly model retainer — Nike',
-            })
-          }
-        >
-          Add Nike retainer
-        </Btn>
-      }
+      subtitle="Set up, edit, and remove ongoing monthly client retainer contracts."
+      actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New retainer</Btn>}
     >
       <Card>
         <Table
-          headers={['Client', 'Monthly', 'Bill day', 'Active', 'Description']}
+          headers={['Client', 'Monthly', 'Bill day', 'Active', 'Description', '']}
           rows={retainers.map((r) => [
             r.clientName,
             <Money key={`m-${r.id}`} value={r.monthlyAmount} />,
             String(r.dayOfMonth),
             r.active ? 'Yes' : 'No',
             r.description,
+            <Btn
+              key={`e-${r.id}`}
+              variant="secondary"
+              onClick={() => {
+                setSelectedId(r.id)
+                setModalMode('edit')
+              }}
+            >
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {modalMode === 'create' && (
+        <RetainerFormModal
+          clients={clients}
+          onClose={() => setModalMode(null)}
+          onSave={(values) => {
+            addRetainer(values)
+            setModalMode(null)
+          }}
+        />
+      )}
+      {modalMode === 'edit' && selected && (
+        <RetainerFormModal
+          initial={selected}
+          clients={clients}
+          onClose={() => { setModalMode(null); setSelectedId(null) }}
+          onSave={(values) => {
+            updateRetainer(selected.id, values)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteRetainer(selected.id)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function PostRetainersModule() {
-  const { retainers, postRetainers } = useAgencyData()
+  const { retainers, postRetainers, updateRetainer, deleteRetainer, clients } = useAgencyData()
   const [note, setNote] = useState('')
+  const [editId, setEditId] = useState<string | null>(null)
+  const editing = retainers.find((r) => r.id === editId) || null
+
   return (
-    <Panel title="Post Recurring Retainers" subtitle="Auto-bill active retainer plans (e.g. on the 1st).">
-      <Card>
+    <Panel title="Post Recurring Retainers" subtitle="Auto-bill active retainer plans. Manage plans below before posting.">
+      <Card style={{ marginBottom: 12 }}>
         <p style={{ fontSize: 13, color: T.t2, marginBottom: 12 }}>
           Active plans: <strong>{retainers.filter((r) => r.active).length}</strong>
         </p>
@@ -749,38 +1389,55 @@ function PostRetainersModule() {
         </Btn>
         {note && <div style={{ marginTop: 10, color: T.green }}>{note}</div>}
       </Card>
+      <Card>
+        <Table
+          headers={['Client', 'Monthly', 'Active', 'Description', '']}
+          rows={retainers.map((r) => [
+            r.clientName,
+            <Money key={`m-${r.id}`} value={r.monthlyAmount} />,
+            r.active ? 'Yes' : 'No',
+            r.description,
+            <Btn key={`e-${r.id}`} variant="secondary" onClick={() => setEditId(r.id)}>
+              Edit
+            </Btn>,
+          ])}
+        />
+      </Card>
+      {editing && (
+        <RetainerFormModal
+          initial={editing}
+          clients={clients}
+          onClose={() => setEditId(null)}
+          onSave={(values) => {
+            updateRetainer(editing.id, values)
+            setEditId(null)
+          }}
+          onDelete={() => {
+            deleteRetainer(editing.id)
+            setEditId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function EscrowModule() {
-  const { escrow, recordEscrow, invoices, scenario } = useAgencyData()
-  const paidOrSent = invoices[0]
+  const { escrow, recordEscrow, updateEscrow, deleteEscrow, clients } = useAgencyData()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = escrow.find((e) => e.id === selectedId) || null
+  const clientNames = clients.map((c) => c.name)
+
   return (
     <Panel
       title="Record Escrow / Deposit"
-      subtitle="Log client wire payments into the agency holding account before splitting funds."
-      actions={
-        <Btn
-          onClick={() =>
-            recordEscrow({
-              clientName: scenario.client,
-              project: scenario.name,
-              amount: scenario.gross,
-              receivedAt: new Date().toISOString().slice(0, 10),
-              status: 'cleared',
-              invoiceId: paidOrSent?.id,
-              notes: 'Wire received — funds cleared and ready to split.',
-            })
-          }
-        >
-          Record Nike $10,000 deposit
-        </Btn>
-      }
+      subtitle="Log, edit, and delete client wire payments in the agency holding account."
+      actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ Record deposit</Btn>}
     >
       <Card>
         <Table
-          headers={['Client', 'Project', 'Amount', 'Received', 'Status', 'Notes']}
+          headers={['Client', 'Project', 'Amount', 'Received', 'Status', 'Notes', '']}
           rows={escrow.map((e) => [
             e.clientName,
             e.project,
@@ -788,108 +1445,288 @@ function EscrowModule() {
             e.receivedAt,
             <Badge key={`s-${e.id}`} color={StatusColor(e.status)}>{e.status}</Badge>,
             e.notes,
+            <Btn
+              key={`ed-${e.id}`}
+              variant="secondary"
+              onClick={() => {
+                setSelectedId(e.id)
+                setModalMode('edit')
+              }}
+            >
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {modalMode === 'create' && (
+        <EscrowFormModal
+          clientNames={clientNames}
+          onClose={() => setModalMode(null)}
+          onSave={(values) => {
+            recordEscrow(values)
+            setModalMode(null)
+          }}
+        />
+      )}
+      {modalMode === 'edit' && selected && (
+        <EscrowFormModal
+          initial={selected}
+          clientNames={clientNames}
+          onClose={() => { setModalMode(null); setSelectedId(null) }}
+          onSave={(values) => {
+            updateEscrow(selected.id, values)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteEscrow(selected.id)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function LogExpenseModule() {
-  const { expenseLogs, logExpenseSplit, scenario } = useAgencyData()
+  const {
+    expenseLogs,
+    addExpenseLog,
+    updateExpenseLog,
+    deleteExpenseLog,
+    clients,
+    talent,
+  } = useAgencyData()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = expenseLogs.find((e) => e.id === selectedId) || null
+  const clientNames = clients.map((c) => c.name)
+  const talentNames = talent.map((t) => t.name)
+
   return (
     <Panel
       title="Log Expense / Payout"
-      subtitle="Split gross job proceeds into agency commission and talent payout."
-      actions={
-        <Btn
-          onClick={() =>
-            logExpenseSplit({
-              project: scenario.name,
-              clientName: scenario.client,
-              talentName: scenario.talent,
-              gross: scenario.gross,
-              commissionPct: scenario.commissionPct,
-            })
-          }
-        >
-          Log Nike / Maya split
-        </Btn>
-      }
+      subtitle="Split gross job proceeds into agency commission and talent payout. Add, edit, or delete logs."
+      actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ Log expense</Btn>}
     >
       <Card>
         <Table
-          headers={['Project', 'Client', 'Talent', 'Gross', 'Agency', 'Talent share', 'Status']}
+          headers={['Project', 'Client', 'Talent', 'Gross', 'Agency', 'Talent share', 'Status', '']}
           rows={expenseLogs.map((e) => [
             e.project,
             e.clientName,
-            e.talentName,
+            <TalentLink key={`tn-${e.id}`} name={e.talentName} />,
             <Money key={`g-${e.id}`} value={e.gross} />,
             <Money key={`a-${e.id}`} value={e.agencyCommission} />,
             <Money key={`t-${e.id}`} value={e.talentShare} />,
             <Badge key={`s-${e.id}`} color={StatusColor(e.status)}>{e.status}</Badge>,
+            <Btn
+              key={`ed-${e.id}`}
+              variant="secondary"
+              onClick={() => {
+                setSelectedId(e.id)
+                setModalMode('edit')
+              }}
+            >
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {modalMode === 'create' && (
+        <ExpenseFormModal
+          clientNames={clientNames}
+          talentNames={talentNames}
+          onClose={() => setModalMode(null)}
+          onSave={(values) => {
+            addExpenseLog(values)
+            setModalMode(null)
+          }}
+        />
+      )}
+      {modalMode === 'edit' && selected && (
+        <ExpenseFormModal
+          initial={selected}
+          clientNames={clientNames}
+          talentNames={talentNames}
+          onClose={() => { setModalMode(null); setSelectedId(null) }}
+          onSave={(values) => {
+            updateExpenseLog(selected.id, values)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteExpenseLog(selected.id)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function VendorsModule() {
-  const { vendors } = useAgencyData()
+  const { vendors, addVendor, updateVendor, deleteVendor } = useAgencyData()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = vendors.find((v) => v.id === selectedId) || null
+
   return (
-    <Panel title="Vendors & Service Providers" subtitle="Directory of talent banking details and service vendors.">
+    <Panel
+      title="Vendors & Service Providers"
+      subtitle="Directory of talent banking details and service vendors. Add, edit, or delete entries."
+      actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New vendor</Btn>}
+    >
       <Card>
         <Table
-          headers={['Name', 'Type', 'Bank last 4', 'Tax forms', 'Email']}
+          headers={['Name', 'Type', 'Bank last 4', 'Tax forms', 'Email', '']}
           rows={vendors.map((v) => [
-            v.name,
+            v.type === 'talent' ? <TalentLink key={v.id} name={v.name} /> : v.name,
             v.type,
             `•••• ${v.bankLast4}`,
             v.taxFormsReady ? <Badge color={T.green}>Ready</Badge> : <Badge color={T.red}>Missing</Badge>,
             v.email,
+            <Btn
+              key={`e-${v.id}`}
+              variant="secondary"
+              onClick={() => {
+                setSelectedId(v.id)
+                setModalMode('edit')
+              }}
+            >
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {modalMode === 'create' && (
+        <VendorFormModal
+          onClose={() => setModalMode(null)}
+          onSave={(values) => {
+            addVendor(values)
+            setModalMode(null)
+          }}
+        />
+      )}
+      {modalMode === 'edit' && selected && (
+        <VendorFormModal
+          initial={selected}
+          onClose={() => { setModalMode(null); setSelectedId(null) }}
+          onSave={(values) => {
+            updateVendor(selected.id, values)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteVendor(selected.id)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function DisbursementsModule() {
-  const { disbursements } = useAgencyData()
+  const { disbursements, addDisbursement, updateDisbursement, deleteDisbursement, talent, vendors } =
+    useAgencyData()
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = disbursements.find((d) => d.id === selectedId) || null
+  const payeeOptions = [...new Set([...talent.map((t) => t.name), ...vendors.map((v) => v.name)])]
+
   return (
-    <Panel title="Disbursements / Payouts" subtitle="Master log of completed talent and vendor payments.">
+    <Panel
+      title="Disbursements / Payouts"
+      subtitle="Master log of talent and vendor payments. Add, edit, or delete disbursements."
+      actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New disbursement</Btn>}
+    >
       <Card>
         <Table
-          headers={['Payee', 'Amount', 'Method', 'Project', 'Status', 'Paid at']}
+          headers={['Payee', 'Amount', 'Method', 'Project', 'Status', 'Paid at', '']}
           rows={disbursements.map((d) => [
-            d.payee,
+            <TalentLink key={`p-${d.id}`} name={d.payee} />,
             <Money key={`m-${d.id}`} value={d.amount} />,
             d.method,
             d.project,
             <Badge key={`s-${d.id}`} color={StatusColor(d.status)}>{d.status}</Badge>,
             d.paidAt ? new Date(d.paidAt).toLocaleString() : '—',
+            <Btn
+              key={`e-${d.id}`}
+              variant="secondary"
+              onClick={() => {
+                setSelectedId(d.id)
+                setModalMode('edit')
+              }}
+            >
+              Edit
+            </Btn>,
           ])}
         />
       </Card>
+      {modalMode === 'create' && (
+        <DisbursementFormModal
+          payeeOptions={payeeOptions}
+          onClose={() => setModalMode(null)}
+          onSave={(values) => {
+            addDisbursement(values)
+            setModalMode(null)
+          }}
+        />
+      )}
+      {modalMode === 'edit' && selected && (
+        <DisbursementFormModal
+          initial={selected}
+          payeeOptions={payeeOptions}
+          onClose={() => { setModalMode(null); setSelectedId(null) }}
+          onSave={(values) => {
+            updateDisbursement(selected.id, values)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+          onDelete={() => {
+            deleteDisbursement(selected.id)
+            setModalMode(null)
+            setSelectedId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
 
 function IssuePayoutsModule() {
-  const { expenseLogs, issuePayout } = useAgencyData()
+  const {
+    expenseLogs,
+    issuePayout,
+    updateExpenseLog,
+    deleteExpenseLog,
+    clients,
+    talent,
+  } = useAgencyData()
   const pending = expenseLogs.filter((e) => e.status === 'pending')
+  const [editId, setEditId] = useState<string | null>(null)
+  const editing = expenseLogs.find((e) => e.id === editId) || null
+  const clientNames = clients.map((c) => c.name)
+  const talentNames = talent.map((t) => t.name)
+
   return (
-    <Panel title="Issue Talent Payouts" subtitle="Execute payday direct deposits for pending talent shares.">
+    <Panel title="Issue Talent Payouts" subtitle="Execute payday deposits for pending talent shares. Edit or delete pending logs before payout.">
       <Card>
         <Table
-          headers={['Talent', 'Project', 'Amount', '']}
+          headers={['Talent', 'Project', 'Amount', '', '']}
           rows={pending.map((e) => [
-            e.talentName,
+            <TalentLink key={`tn-${e.id}`} name={e.talentName} />,
             e.project,
             <Money key={`m-${e.id}`} value={e.talentShare} />,
             <Btn key={`b-${e.id}`} variant="success" onClick={() => issuePayout(e.id)}>
               Execute payout
+            </Btn>,
+            <Btn key={`ed-${e.id}`} variant="secondary" onClick={() => setEditId(e.id)}>
+              Edit
             </Btn>,
           ])}
         />
@@ -899,6 +1736,22 @@ function IssuePayoutsModule() {
           </div>
         )}
       </Card>
+      {editing && (
+        <ExpenseFormModal
+          initial={editing}
+          clientNames={clientNames}
+          talentNames={talentNames}
+          onClose={() => setEditId(null)}
+          onSave={(values) => {
+            updateExpenseLog(editing.id, values)
+            setEditId(null)
+          }}
+          onDelete={() => {
+            deleteExpenseLog(editing.id)
+            setEditId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }
@@ -918,7 +1771,7 @@ function ReportRosterScorecard() {
         <Table
           headers={['Talent', 'Availability', 'Booked dates']}
           rows={talent.map((t) => [
-            t.name,
+            <TalentLink key={t.id} accountId={t.accountId} name={t.name} />,
             t.available ? 'Available' : 'Booked',
             t.bookedDates.join(', ') || '—',
           ])}
@@ -947,8 +1800,15 @@ function ReportApplicantPool() {
       </div>
       <Card>
         <Table
-          headers={['Name', 'Stage', 'Source', 'Notes']}
-          rows={prospects.map((p) => [p.name, p.stage, p.source, p.notes])}
+          headers={['Account ID', 'Name', 'Stage', 'Work Area', 'Source', 'Notes']}
+          rows={prospects.map((p) => [
+            <TalentLink key={`id-${p.id}`} accountId={p.accountId} name={p.name}>{p.accountId}</TalentLink>,
+            <TalentLink key={`n-${p.id}`} accountId={p.accountId} name={p.name} />,
+            p.stage,
+            p.workArea,
+            p.source,
+            p.notes,
+          ])}
         />
       </Card>
     </Panel>
@@ -989,14 +1849,14 @@ function ReportOnboarding() {
           rows={[
             ...prospects
               .filter((p) => p.stage === 'offer' || p.stage === 'signed')
-              .map((p) => [p.name, 'Onboarding prospect', p.stage]),
+              .map((p) => [<TalentLink key={p.id} accountId={p.accountId} name={p.name} />, 'Onboarding prospect', p.stage]),
             ...talent
               .filter((t) => t.status === 'offboarding')
-              .map((t) => [t.name, 'Offboarding', t.status]),
+              .map((t) => [<TalentLink key={t.id} accountId={t.accountId} name={t.name} />, 'Offboarding', t.status]),
             ...talent
               .filter((t) => t.status === 'active')
               .slice(0, 1)
-              .map((t) => [t.name, 'Recently signed', 'active']),
+              .map((t) => [<TalentLink key={`rs-${t.id}`} accountId={t.accountId} name={t.name} />, 'Recently signed', 'active']),
           ]}
         />
       </Card>
@@ -1012,7 +1872,7 @@ function ReportOpenings() {
         <Table
           headers={['Talent', 'Available', 'Niches']}
           rows={talent.map((t) => [
-            t.name,
+            <TalentLink key={t.id} accountId={t.accountId} name={t.name} />,
             t.available ? <Badge color={T.green}>Open</Badge> : <Badge color={T.amber}>Unavailable</Badge>,
             t.niches.join(', '),
           ])}
@@ -1104,7 +1964,7 @@ function ReportPendingPayouts() {
         <Table
           headers={['Talent', 'Project', 'Amount owed', 'Logged']}
           rows={pending.map((e) => [
-            e.talentName,
+            <TalentLink key={e.id} name={e.talentName} />,
             e.project,
             <Money key={e.id} value={e.talentShare} />,
             new Date(e.loggedAt).toLocaleString(),

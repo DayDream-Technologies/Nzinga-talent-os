@@ -67,6 +67,8 @@ export interface ApplicantProfile {
 
 export interface Talent extends ApplicantProfile {
   id: string
+  /** Unique sequential account ID, e.g. NZG-100001. */
+  account_number: string
   name: string
   stage: TalentStage
   niches: string[]
