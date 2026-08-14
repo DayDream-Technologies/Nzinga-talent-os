@@ -5,7 +5,21 @@ export type PayoutStatus = 'pending' | 'issued' | 'completed'
 export type EscrowStatus = 'pending' | 'cleared' | 'disbursed'
 export type TaskStatus = 'open' | 'done'
 export type ProspectStage = 'new' | 'screening' | 'interview' | 'offer' | 'signed' | 'declined'
-export type WorkArea = 'Acting' | 'Modeling' | 'Voiceover' | 'Influencer' | 'Commercial'
+/** Roster/talent niches (legacy + extended). */
+export type WorkArea =
+  | 'Acting'
+  | 'Modeling'
+  | 'Voiceover'
+  | 'Influencer'
+  | 'Influencing'
+  | 'Commercial'
+  | 'Sports'
+  | 'Music'
+/** Divisions selectable when creating a prospect. */
+export type ProspectDivision = 'Modeling' | 'Influencing' | 'Sports' | 'Music'
+export type PreferredContactMethod = 'call' | 'text' | 'email'
+export type RepresentationType = 'exclusive' | 'nonexclusive'
+export type TermLengthYears = 1 | 2
 
 export interface AgencyClient {
   id: string
@@ -34,11 +48,30 @@ export interface AgencyProspect {
   accountId: string
   name: string
   email: string
+  /** Tiered division (Modeling / Influencing / Sports / Music). Legacy seed may use other WorkArea values. */
   workArea: WorkArea
   stage: ProspectStage
   source: string
   submittedAt: string
   notes: string
+  /** Company code: NZG | NZINGA | TCG */
+  organization: string
+  dateOfBirth?: string
+  interestLevel?: number
+  preferredContact?: PreferredContactMethod
+  representationType?: RepresentationType
+  termLengthYears?: TermLengthYears
+  assignedAgentId?: string
+  assignedAgentName?: string
+  createdById?: string
+  createdByName?: string
+  /** True when DOB indicates under 18 */
+  isMinor?: boolean
+  parentName?: string
+  parentEmail?: string
+  parentPhone?: string
+  /** Emails that should receive account messages (prospect + parent if minor) */
+  messageEmails: string[]
   /** ISO date (YYYY-MM-DD). Empty when no representation contract exists yet. */
   contractStart?: string | null
   /** ISO date (YYYY-MM-DD). Empty/null means open-ended / still live. */

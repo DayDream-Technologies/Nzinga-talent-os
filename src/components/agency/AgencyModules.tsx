@@ -9,6 +9,7 @@ import type { AgencyProspect, SupportTicket, TicketType } from '@/types/agency'
 import { TalentLink } from '@/components/talent/TalentLink'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { AppointmentFormModal } from '@/components/agency/AppointmentFormModal'
+import { CreateProspectModal } from '@/components/agency/CreateProspectModal'
 import {
   DisbursementFormModal,
   EscrowFormModal,
@@ -380,11 +381,17 @@ type ProspectSortKey =
   | 'stage'
   | 'source'
   | 'submittedAt'
+  | 'organization'
+  | 'assignedAgentName'
+  | 'interestLevel'
 
 const PROSPECT_COLUMNS: Array<{ header: string; key: ProspectSortKey | null }> = [
   { header: 'Account ID', key: 'accountId' },
   { header: 'Name', key: 'name' },
-  { header: 'Work Area', key: 'workArea' },
+  { header: 'Org', key: 'organization' },
+  { header: 'Division', key: 'workArea' },
+  { header: 'Agent', key: 'assignedAgentName' },
+  { header: 'Interest', key: 'interestLevel' },
   { header: 'Contract Start', key: 'contractStart' },
   { header: 'Contract End', key: 'contractEnd' },
   { header: 'Email', key: 'email' },
@@ -402,6 +409,12 @@ function prospectSortValue(p: AgencyProspect, key: ProspectSortKey): string {
       return p.name || ''
     case 'workArea':
       return p.workArea || ''
+    case 'organization':
+      return p.organization || ''
+    case 'assignedAgentName':
+      return p.assignedAgentName || ''
+    case 'interestLevel':
+      return String(p.interestLevel ?? '')
     case 'contractStart':
       return hasContract(p.contractStart) ? p.contractStart || '' : 'pending'
     case 'contractEnd':
@@ -420,9 +433,11 @@ function prospectSortValue(p: AgencyProspect, key: ProspectSortKey): string {
 }
 
 function ProspectsModule() {
-  const { prospects, advanceProspect } = useAgencyData()
+  const { prospects, advanceProspect, createProspect } = useAgencyData()
+  const { user, companyCode } = useAuth()
   const [sortIndex, setSortIndex] = useState(1)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [showCreate, setShowCreate] = useState(false)
 
   const sorted = useMemo(() => {
     const col = PROSPECT_COLUMNS[sortIndex]
@@ -449,7 +464,11 @@ function ProspectsModule() {
   }
 
   return (
-    <Panel title="Prospects" subtitle="Inbound talent applicants waiting for agent screening. Click a column header to sort.">
+    <Panel
+      title="Prospects"
+      subtitle="Inbound talent applicants waiting for agent screening. Click a column header to sort."
+      actions={<Btn onClick={() => setShowCreate(true)}>+ Create prospect</Btn>}
+    >
       <Card>
         <Table
           headers={PROSPECT_COLUMNS.map((c) => c.header)}
@@ -460,15 +479,26 @@ function ProspectsModule() {
             <TalentLink key={`id-${p.id}`} accountId={p.accountId} name={p.name}>
               <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, letterSpacing: '0.02em' }}>{p.accountId}</span>
             </TalentLink>,
-            <TalentLink key={`n-${p.id}`} accountId={p.accountId} name={p.name} />,
+            <span key={`n-${p.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <TalentLink accountId={p.accountId} name={p.name} />
+              {p.isMinor ? <Badge color={T.amber}>Minor</Badge> : null}
+            </span>,
+            p.organization || '—',
             <Badge key={`w-${p.id}`} color={T.purple}>{p.workArea}</Badge>,
+            p.assignedAgentName || '—',
+            p.interestLevel != null ? String(p.interestLevel) : '—',
             hasContract(p.contractStart)
               ? formatContractStart(p.contractStart)
               : <Badge key={`ps-${p.id}`} color={T.amber}>Pending</Badge>,
             isContractLive(p.contractStart, p.contractEnd)
               ? <Badge key={`c-${p.id}`} color={T.green}>Current</Badge>
               : formatContractEnd(p.contractStart, p.contractEnd),
-            p.email,
+            <span key={`em-${p.id}`}>
+              {p.email}
+              {p.messageEmails?.length > 1 ? (
+                <div style={{ fontSize: 10, color: T.t4 }}>+{p.messageEmails.length - 1} msg recip.</div>
+              ) : null}
+            </span>,
             <Badge key={p.id} color={StatusColor(p.stage)}>{p.stage}</Badge>,
             p.source,
             new Date(p.submittedAt).toLocaleDateString(),
@@ -476,6 +506,17 @@ function ProspectsModule() {
           ])}
         />
       </Card>
+      {showCreate && user && (
+        <CreateProspectModal
+          defaultOrganization={(companyCode || user.company_code || 'NZG').toUpperCase()}
+          agent={{ id: user.id, name: user.name }}
+          onClose={() => setShowCreate(false)}
+          onCreate={(values) => {
+            createProspect(values)
+            setShowCreate(false)
+          }}
+        />
+      )}
     </Panel>
   )
 }

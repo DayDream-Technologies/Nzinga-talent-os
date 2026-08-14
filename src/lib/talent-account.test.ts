@@ -15,6 +15,8 @@ describe('talent account directory', () => {
       source: 'Portal',
       submittedAt: '2026-08-01T10:00:00Z',
       notes: '',
+      organization: 'NZG',
+      messageEmails: ['kai@example.com'],
     },
   ]
   const roster: AgencyTalent[] = [

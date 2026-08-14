@@ -24,6 +24,7 @@ import {
   VENDORS_SEED,
 } from '@/constants/agency-seed'
 import { loadAgencyRecords, saveAgencyRecords } from '@/services/agency-store'
+import { nextAccountNumber } from '@/lib/account-number'
 import type {
   AgencyClient,
   AgencyProspect,
@@ -99,6 +100,12 @@ interface AgencyDataValue {
   updateDisbursement: (id: string, patch: Partial<Disbursement>) => void
   deleteDisbursement: (id: string) => void
   sendMessage: (m: Omit<MessageThread, 'id' | 'sentAt' | 'status'>) => void
+  createProspect: (
+    input: Omit<
+      AgencyProspect,
+      'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd'
+    >,
+  ) => AgencyProspect
   advanceProspect: (id: string) => void
   createRenewalOffer: (talentId: string) => string
 }
@@ -425,6 +432,36 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     ])
   }, [])
 
+  const createProspect = useCallback(
+    (
+      input: Omit<
+        AgencyProspect,
+        'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd'
+      >,
+    ) => {
+      const used = [
+        ...prospects.map((p) => p.accountId),
+        ...talent.map((t) => t.accountId),
+      ]
+      const created: AgencyProspect = {
+        ...input,
+        id: uid('pros'),
+        accountId: nextAccountNumber(used),
+        submittedAt: new Date().toISOString(),
+        stage: 'new',
+        contractStart: null,
+        contractEnd: null,
+        messageEmails:
+          input.messageEmails?.length > 0
+            ? input.messageEmails
+            : [input.email].filter(Boolean),
+      }
+      setProspects((prev) => [created, ...prev])
+      return created
+    },
+    [prospects, talent],
+  )
+
   const advanceProspect = useCallback((id: string) => {
     const order = ['new', 'screening', 'interview', 'offer', 'signed'] as const
     setProspects((prev) =>
@@ -496,6 +533,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       updateDisbursement,
       deleteDisbursement,
       sendMessage,
+      createProspect,
       advanceProspect,
       createRenewalOffer,
     }),
@@ -549,6 +587,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       updateDisbursement,
       deleteDisbursement,
       sendMessage,
+      createProspect,
       advanceProspect,
       createRenewalOffer,
     ],

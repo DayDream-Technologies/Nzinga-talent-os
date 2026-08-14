@@ -32,6 +32,11 @@ function hydrateProspects(list: AgencyProspect[], used: string[]): AgencyProspec
       ...p,
       accountId,
       workArea: p.workArea || DEFAULT_WORK_AREA,
+      organization: p.organization || 'NZG',
+      messageEmails:
+        Array.isArray(p.messageEmails) && p.messageEmails.length > 0
+          ? p.messageEmails
+          : [p.email].filter(Boolean),
       contractStart: p.contractStart !== undefined ? p.contractStart : seed?.contractStart ?? null,
       contractEnd: p.contractEnd !== undefined ? p.contractEnd : seed?.contractEnd ?? null,
     }

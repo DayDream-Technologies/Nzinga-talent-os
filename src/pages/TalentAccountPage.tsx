@@ -43,7 +43,7 @@ export function TalentAccountPage() {
   const directory = useTalentDirectory()
   const entry = directory.byAccountId.get(accountId)
   const { talents, history, tasks } = useAppData()
-  const { tickets, invoices, calendar, expenseLogs, disbursements, appointments, updateTicket } =
+  const { tickets, invoices, calendar, expenseLogs, disbursements, appointments, updateTicket, prospects } =
     useAgencyData()
   const { user } = useAuth()
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
@@ -63,6 +63,7 @@ export function TalentAccountPage() {
 
   const name = entry.name
   const pipeline = talents.find((t) => t.account_number === accountId || t.id === entry.pipelineId)
+  const prospect = prospects.find((p) => p.accountId === accountId)
   const relatedTickets = tickets.filter((t) => t.talentName && t.talentName === name)
   const relatedInvoices = invoices.filter((i) => i.talentName === name)
   const relatedEvents = calendar.filter((e) => e.talentName === name)
@@ -106,6 +107,28 @@ export function TalentAccountPage() {
           <FieldRow label="Handle" value={entry.socialHandle} />
           <FieldRow label="Platform" value={entry.platform} />
           <FieldRow label="Role" value={entry.role} />
+          {prospect && (
+            <>
+              <FieldRow label="Organization" value={prospect.organization} />
+              <FieldRow label="Date of birth" value={prospect.dateOfBirth} />
+              <FieldRow label="Interest level" value={prospect.interestLevel != null ? String(prospect.interestLevel) : undefined} />
+              <FieldRow label="Preferred contact" value={prospect.preferredContact} />
+              <FieldRow label="Representation" value={prospect.representationType} />
+              <FieldRow label="Term length" value={prospect.termLengthYears ? `${prospect.termLengthYears} year(s)` : undefined} />
+              <FieldRow label="Assigned agent" value={prospect.assignedAgentName} />
+              <FieldRow
+                label="Message recipients"
+                value={prospect.messageEmails?.length ? prospect.messageEmails.join(', ') : undefined}
+              />
+              {prospect.isMinor && (
+                <>
+                  <FieldRow label="Parent name" value={prospect.parentName} />
+                  <FieldRow label="Parent email" value={prospect.parentEmail} />
+                  <FieldRow label="Parent phone" value={prospect.parentPhone} />
+                </>
+              )}
+            </>
+          )}
         </Card>
         <Card>
           <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
