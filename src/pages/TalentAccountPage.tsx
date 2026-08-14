@@ -6,10 +6,10 @@ import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useTalentDirectory } from '@/hooks/useTalentDirectory'
 import {
-  formatContractEnd,
   formatContractStart,
   hasContract,
   isContractLive,
+  parseDay,
 } from '@/lib/contract-dates'
 import { STAGE_LABELS } from '@/constants/stages'
 import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
@@ -81,6 +81,18 @@ export function TalentAccountPage() {
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || null
   const isDirector = user?.role === 'director'
 
+  const contractStart = prospect?.contractStart ?? entry.contractStart
+  const contractEnd = prospect?.contractEnd ?? entry.contractEnd
+  const contractLive = isContractLive(contractStart, contractEnd)
+  const contractEndDate = parseDay(contractEnd)
+  const contractStatus = !hasContract(contractStart)
+    ? 'Pending'
+    : contractLive
+      ? contractEndDate
+        ? 'Current'
+        : 'Current (open-ended)'
+      : 'Expired / ended'
+
   return (
     <Panel
       title={entry.name}
@@ -113,8 +125,6 @@ export function TalentAccountPage() {
               <FieldRow label="Date of birth" value={prospect.dateOfBirth} />
               <FieldRow label="Interest level" value={prospect.interestLevel != null ? String(prospect.interestLevel) : undefined} />
               <FieldRow label="Preferred contact" value={prospect.preferredContact} />
-              <FieldRow label="Representation" value={prospect.representationType} />
-              <FieldRow label="Term length" value={prospect.termLengthYears ? `${prospect.termLengthYears} year(s)` : undefined} />
               <FieldRow label="Assigned agent" value={prospect.assignedAgentName} />
               <FieldRow
                 label="Message recipients"
@@ -145,26 +155,6 @@ export function TalentAccountPage() {
             value={entry.submittedAt ? new Date(entry.submittedAt).toLocaleDateString() : undefined}
           />
           <FieldRow
-            label="Contract start"
-            value={
-              hasContract(entry.contractStart) ? (
-                formatContractStart(entry.contractStart)
-              ) : (
-                <Badge color={T.amber}>Pending</Badge>
-              )
-            }
-          />
-          <FieldRow
-            label="Contract end"
-            value={
-              isContractLive(entry.contractStart, entry.contractEnd) ? (
-                <Badge color={T.green}>Current</Badge>
-              ) : (
-                formatContractEnd(entry.contractStart, entry.contractEnd) || undefined
-              )
-            }
-          />
-          <FieldRow
             label="Availability"
             value={
               entry.available === undefined
@@ -180,6 +170,76 @@ export function TalentAccountPage() {
           />
         </Card>
       </div>
+
+      <Card style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          Contract
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <FieldRow
+              label="Original start date"
+              value={
+                hasContract(contractStart) ? (
+                  formatContractStart(contractStart)
+                ) : (
+                  <Badge color={T.amber}>Pending</Badge>
+                )
+              }
+            />
+            <FieldRow
+              label="Contract end date"
+              value={
+                !hasContract(contractStart)
+                  ? undefined
+                  : contractEndDate
+                    ? contractEndDate.toLocaleDateString()
+                    : 'Open-ended'
+              }
+            />
+            <FieldRow
+              label="Contract status"
+              value={
+                <Badge
+                  color={
+                    contractStatus.startsWith('Current')
+                      ? T.green
+                      : contractStatus === 'Pending'
+                        ? T.amber
+                        : T.red
+                  }
+                >
+                  {contractStatus}
+                </Badge>
+              }
+            />
+          </div>
+          <div>
+            <FieldRow
+              label="Representation type"
+              value={
+                prospect?.representationType
+                  ? prospect.representationType === 'exclusive'
+                    ? 'Exclusive'
+                    : 'Non-exclusive'
+                  : undefined
+              }
+            />
+            <FieldRow
+              label="Term length"
+              value={
+                prospect?.termLengthYears
+                  ? `${prospect.termLengthYears} year${prospect.termLengthYears === 1 ? '' : 's'}`
+                  : undefined
+              }
+            />
+            <FieldRow
+              label="Notes"
+              value={prospect?.notes || undefined}
+            />
+          </div>
+        </div>
+      </Card>
 
       <Card style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>

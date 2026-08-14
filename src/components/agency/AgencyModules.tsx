@@ -22,7 +22,6 @@ import {
 import { DocViewer } from '@/components/ui/DocViewer'
 import type { UploadedDoc } from '@/types'
 import {
-  formatContractEnd,
   formatContractStart,
   hasContract,
   isContractLive,
@@ -392,8 +391,8 @@ const PROSPECT_COLUMNS: Array<{ header: string; key: ProspectSortKey | null }> =
   { header: 'Division', key: 'workArea' },
   { header: 'Agent', key: 'assignedAgentName' },
   { header: 'Interest', key: 'interestLevel' },
-  { header: 'Contract Start', key: 'contractStart' },
-  { header: 'Contract End', key: 'contractEnd' },
+  { header: 'Original start', key: 'contractStart' },
+  { header: 'Contract end', key: 'contractEnd' },
   { header: 'Email', key: 'email' },
   { header: 'Stage', key: 'stage' },
   { header: 'Source', key: 'source' },
@@ -490,9 +489,20 @@ function ProspectsModule() {
             hasContract(p.contractStart)
               ? formatContractStart(p.contractStart)
               : <Badge key={`ps-${p.id}`} color={T.amber}>Pending</Badge>,
-            isContractLive(p.contractStart, p.contractEnd)
-              ? <Badge key={`c-${p.id}`} color={T.green}>Current</Badge>
-              : formatContractEnd(p.contractStart, p.contractEnd),
+            !hasContract(p.contractStart) ? (
+              '—'
+            ) : (
+              <span key={`ce-${p.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {p.contractEnd?.trim()
+                  ? new Date(`${p.contractEnd}T12:00:00`).toLocaleDateString()
+                  : 'Open-ended'}
+                {isContractLive(p.contractStart, p.contractEnd) ? (
+                  <Badge color={T.green}>Current</Badge>
+                ) : (
+                  <Badge color={T.red}>Ended</Badge>
+                )}
+              </span>
+            ),
             <span key={`em-${p.id}`}>
               {p.email}
               {p.messageEmails?.length > 1 ? (
