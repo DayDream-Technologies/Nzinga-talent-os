@@ -4,7 +4,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAppData } from '@/context/AppDataContext'
 import { ApplicationReview } from '@/components/application/ApplicationModals'
 import { TalentRecord } from '@/components/talent/TalentRecord'
-import { InviteUserModal } from '@/components/admin/InviteUserModal'
 import { TopNav, BreadcrumbBar, FullMenu, Sidebar } from '@/components/layout/Layout'
 import { AGENCY_PAGE_TITLES } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
@@ -33,11 +32,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   } = useAppData()
 
   const [menuOpen, setMenuOpen] = useState(false)
-  const [inviteOpen, setInviteOpen] = useState(false)
 
   if (!user) return null
 
-  const pageTitle = view.startsWith('talent/') ? 'Talent Account' : AGENCY_PAGE_TITLES[view] || view
+  const pageTitle = view.startsWith('talent/')
+    ? 'Talent Account'
+    : AGENCY_PAGE_TITLES[view] || view
 
   useEffect(() => {
     if (location.pathname.startsWith('/talent/')) setSelectedTalent(null)
@@ -82,17 +82,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         tasks={tasks}
       />
       <BreadcrumbBar label={pageTitle} sub={undefined} />
-      {user.role === 'director' && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px 4px', background: T.pageBg }}>
-          <button
-            type="button"
-            onClick={() => setInviteOpen(true)}
-            style={{ fontSize: 11, fontWeight: 600, color: T.purple, background: 'rgba(124,58,237,0.08)', border: `1px solid rgba(124,58,237,0.2)`, borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            + Invite Team Member
-          </button>
-        </div>
-      )}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar view={view} onNav={nav} userRole={user.role} />
         <div key={view} className="flex flex-1 flex-col overflow-hidden animate-fade-in">
@@ -115,12 +104,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           app={reviewingApp}
           onClose={() => setReviewingApp(null)}
           onImportToPipeline={() => importAppToPipeline(reviewingApp)}
-        />
-      )}
-      {inviteOpen && (
-        <InviteUserModal
-          onClose={() => setInviteOpen(false)}
-          onSuccess={() => setInviteOpen(false)}
         />
       )}
       {currentTalent && (

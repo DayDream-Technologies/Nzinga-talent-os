@@ -1,19 +1,25 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { AppDataProvider } from '@/context/AppDataContext'
 import { AgencyDataProvider } from '@/context/AgencyDataContext'
 import { AppShell } from '@/components/layout/AppShell'
 import { canAccessAgencyPath } from '@/constants/agency-nav'
+import { lazyWithReload } from '@/lib/lazy-with-reload'
 import type { Role } from '@/types'
 
-const WorkspacePage = lazy(() => import('@/pages/WorkspacePage').then(m => ({ default: m.WorkspacePage })))
-const AgencyModulePage = lazy(() => import('@/pages/AgencyModulePage').then(m => ({ default: m.AgencyModulePage })))
-const ApplicationsPage = lazy(() => import('@/pages/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })))
-const RosterPage = lazy(() => import('@/pages/RosterPage').then(m => ({ default: m.RosterPage })))
-const AgencyReportsPage = lazy(() => import('@/pages/AgencyReportsPage').then(m => ({ default: m.AgencyReportsPage })))
-const PipelinePage = lazy(() => import('@/pages/PipelinePage').then(m => ({ default: m.PipelinePage })))
-const TalentAccountPage = lazy(() => import('@/pages/TalentAccountPage').then(m => ({ default: m.TalentAccountPage })))
+const WorkspacePage = lazyWithReload(() => import('@/pages/WorkspacePage').then(m => ({ default: m.WorkspacePage })))
+const AgencyModulePage = lazyWithReload(() => import('@/pages/AgencyModulePage').then(m => ({ default: m.AgencyModulePage })))
+const ApplicationsPage = lazyWithReload(() => import('@/pages/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })))
+const RosterPage = lazyWithReload(() => import('@/pages/RosterPage').then(m => ({ default: m.RosterPage })))
+const AgencyReportsPage = lazyWithReload(() => import('@/pages/AgencyReportsPage').then(m => ({ default: m.AgencyReportsPage })))
+const PipelinePage = lazyWithReload(() => import('@/pages/PipelinePage').then(m => ({ default: m.PipelinePage })))
+const TalentAccountPage = lazyWithReload(() => import('@/pages/TalentAccountPage').then(m => ({ default: m.TalentAccountPage })))
+const AdminUsersPage = lazyWithReload(() => import('@/pages/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })))
+const AdminInvitePage = lazyWithReload(() => import('@/pages/AdminInvitePage').then(m => ({ default: m.AdminInvitePage })))
+const AdminRolesPage = lazyWithReload(() => import('@/pages/AdminRolesPage').then(m => ({ default: m.AdminRolesPage })))
+const AdminAuditPage = lazyWithReload(() => import('@/pages/AdminAuditPage').then(m => ({ default: m.AdminAuditPage })))
+const AdminSettingsPage = lazyWithReload(() => import('@/pages/AdminSettingsPage').then(m => ({ default: m.AdminSettingsPage })))
 
 function PageLoader() {
   return <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, fontSize: 14, color: '#6b7280' }}>Loading…</div>
@@ -78,6 +84,46 @@ export default function ProtectedApp() {
                 }
               />
               <Route path="talent/:accountId" element={<TalentAccountPage />} />
+              <Route
+                path="admin/invite"
+                element={
+                  <RoleRoute path="admin/invite" role={user.role}>
+                    <AdminInvitePage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/users"
+                element={
+                  <RoleRoute path="admin/users" role={user.role}>
+                    <AdminUsersPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/roles"
+                element={
+                  <RoleRoute path="admin/roles" role={user.role}>
+                    <AdminRolesPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/audit-log"
+                element={
+                  <RoleRoute path="admin/audit-log" role={user.role}>
+                    <AdminAuditPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/settings"
+                element={
+                  <RoleRoute path="admin/settings" role={user.role}>
+                    <AdminSettingsPage />
+                  </RoleRoute>
+                }
+              />
               <Route path=":moduleId" element={<AgencyModulePage />} />
               <Route path="*" element={<Navigate to="/workspace" replace />} />
             </Routes>

@@ -150,7 +150,10 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
           <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>Menu</span>
           <button onClick={() => { onNav("workspace"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Workspace</button>
           {userRole === "director" && (
-            <button onClick={() => { onNav("admin/users"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Admin</button>
+            <>
+              <button onClick={() => { onNav("admin/invite"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Invite Team Member</button>
+              <button onClick={() => { onNav("admin/users"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Admin</button>
+            </>
           )}
           <div style={{ flex: 1 }} />
           <button onClick={onClose} className="transition-fast" style={{ background: "transparent", border: "none", fontSize: 16, cursor: "pointer", color: T.t3 }}>✕</button>

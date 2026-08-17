@@ -214,6 +214,11 @@ export const AGENCY_PAGE_TITLES: Record<string, string> = Object.fromEntries(
   ).concat([
     ['workspace', 'My Workspace'],
     ['reports', 'My Reports'],
+    ['admin/users', 'Team Users'],
+    ['admin/roles', 'Role Management'],
+    ['admin/audit-log', 'Audit Log'],
+    ['admin/settings', 'System Settings'],
+    ['admin/invite', 'Invite Team Member'],
   ]),
 )
 
@@ -257,6 +262,13 @@ export const AGENCY_SIDEBAR: { label: string; items: AgencyNavItem[] }[] = [
       { id: 'report-roster-scorecard', label: 'Roster Scorecard', path: 'report-roster-scorecard' },
       { id: 'report-gross-bookings', label: 'Gross Bookings', path: 'report-gross-bookings' },
       { id: 'report-pending-payouts', label: 'Pending Payouts', path: 'report-pending-payouts' },
+    ],
+  },
+  {
+    label: 'ADMIN',
+    items: [
+      { id: 'admin-invite', label: 'Invite Team Member', path: 'admin/invite' },
+      { id: 'admin-users', label: 'Team Users', path: 'admin/users' },
     ],
   },
 ]
