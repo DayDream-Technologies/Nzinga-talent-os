@@ -33,99 +33,107 @@ function RoleRoute({ path, role, children }: { path: string; role: Role; childre
   return <>{children}</>
 }
 
-export default function ProtectedApp() {
+/** Only mounts after SessionGate confirms a user — avoids reading user.role while restoring. */
+function AuthenticatedApp() {
   const { user } = useAuth()
+  if (!user) return null
 
   return (
+    <AppDataProvider>
+      <AgencyDataProvider>
+        <AppShell>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="workspace" element={<WorkspacePage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route
+                path="applications"
+                element={
+                  <RoleRoute path="applications" role={user.role}>
+                    <ApplicationsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="roster" element={<Navigate to="/clients" replace />} />
+              <Route
+                path="pipeline"
+                element={
+                  <RoleRoute path="pipeline" role={user.role}>
+                    <PipelinePage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="prospect-tracking"
+                element={
+                  <RoleRoute path="prospect-tracking" role={user.role}>
+                    <AgencyModulePage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="reports"
+                element={
+                  <RoleRoute path="reports" role={user.role}>
+                    <AgencyReportsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path="talent/:accountId" element={<TalentAccountPage />} />
+              <Route
+                path="admin/invite"
+                element={
+                  <RoleRoute path="admin/invite" role={user.role}>
+                    <AdminInvitePage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/users"
+                element={
+                  <RoleRoute path="admin/users" role={user.role}>
+                    <AdminUsersPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/roles"
+                element={
+                  <RoleRoute path="admin/roles" role={user.role}>
+                    <AdminRolesPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/audit-log"
+                element={
+                  <RoleRoute path="admin/audit-log" role={user.role}>
+                    <AdminAuditPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="admin/settings"
+                element={
+                  <RoleRoute path="admin/settings" role={user.role}>
+                    <AdminSettingsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route path=":moduleId" element={<AgencyModulePage />} />
+              <Route path="*" element={<Navigate to="/workspace" replace />} />
+            </Routes>
+          </Suspense>
+        </AppShell>
+      </AgencyDataProvider>
+    </AppDataProvider>
+  )
+}
+
+export default function ProtectedApp() {
+  return (
     <SessionGate>
-      <AppDataProvider>
-        <AgencyDataProvider>
-          <AppShell>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="workspace" element={<WorkspacePage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route
-                  path="applications"
-                  element={
-                    <RoleRoute path="applications" role={user!.role}>
-                      <ApplicationsPage />
-                    </RoleRoute>
-                  }
-                />
-                <Route path="roster" element={<Navigate to="/clients" replace />} />
-                <Route
-                  path="pipeline"
-                  element={
-                    <RoleRoute path="pipeline" role={user!.role}>
-                      <PipelinePage />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="prospect-tracking"
-                  element={
-                    <RoleRoute path="prospect-tracking" role={user!.role}>
-                      <AgencyModulePage />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="reports"
-                  element={
-                    <RoleRoute path="reports" role={user!.role}>
-                      <AgencyReportsPage />
-                    </RoleRoute>
-                  }
-                />
-                <Route path="talent/:accountId" element={<TalentAccountPage />} />
-                <Route
-                  path="admin/invite"
-                  element={
-                    <RoleRoute path="admin/invite" role={user!.role}>
-                      <AdminInvitePage />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="admin/users"
-                  element={
-                    <RoleRoute path="admin/users" role={user!.role}>
-                      <AdminUsersPage />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="admin/roles"
-                  element={
-                    <RoleRoute path="admin/roles" role={user!.role}>
-                      <AdminRolesPage />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="admin/audit-log"
-                  element={
-                    <RoleRoute path="admin/audit-log" role={user!.role}>
-                      <AdminAuditPage />
-                    </RoleRoute>
-                  }
-                />
-                <Route
-                  path="admin/settings"
-                  element={
-                    <RoleRoute path="admin/settings" role={user!.role}>
-                      <AdminSettingsPage />
-                    </RoleRoute>
-                  }
-                />
-                <Route path=":moduleId" element={<AgencyModulePage />} />
-                <Route path="*" element={<Navigate to="/workspace" replace />} />
-              </Routes>
-            </Suspense>
-          </AppShell>
-        </AgencyDataProvider>
-      </AppDataProvider>
+      <AuthenticatedApp />
     </SessionGate>
   )
 }
