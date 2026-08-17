@@ -151,7 +151,7 @@ function Workspace({ currentUser, onNav }) {
   return(
     <div style={dashPageStyle("22px 26px")}>
       <div style={{ textAlign:"center",marginBottom:28 }}>
-        <div style={{ fontSize:26,fontWeight:700,color:DASH.text.primary,fontFamily:"Georgia,serif" }}>Welcome, {currentUser.name.split(" ")[0]}</div>
+        <div style={{ fontSize:26,fontWeight:700,color:DASH.text.primary,fontFamily:"'Syne',sans-serif" }}>Welcome, {currentUser.name.split(" ")[0]}</div>
         <div style={{ fontSize:13,color:DASH.text.secondary,marginTop:3 }}>Let's get to work.</div>
       </div>
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18 }}>

@@ -12,7 +12,7 @@ export function EmailConfirmedPage() {
         display: 'flex',
         flexDirection: 'column',
         background: 'linear-gradient(135deg, #f5f0ea, #ede8e0 40%, #e8e2f5)',
-        fontFamily: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
+        fontFamily: "'Outfit', 'Segoe UI', system-ui, -apple-system, sans-serif",
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -87,7 +87,7 @@ export function EmailConfirmedPage() {
           </div>
           <h1
             style={{
-              fontFamily: 'Georgia, serif',
+              fontFamily: "'Syne', sans-serif",
               fontSize: 22,
               fontWeight: 700,
               color: '#111827',

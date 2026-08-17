@@ -322,7 +322,7 @@ export function ModalShell({
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: T.t1, margin: 0, fontFamily: 'Georgia, serif' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: T.t1, margin: 0, fontFamily: "'Syne', sans-serif" }}>
             {title}
           </h2>
           <button

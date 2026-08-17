@@ -32,7 +32,7 @@ function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) 
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400 }}>
       <div style={{ background:"#fff",borderRadius:12,width:440,padding:28,textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
         <div style={{ fontSize:40,marginBottom:10 }}>✅</div>
-        <div style={{ fontSize:17,fontWeight:700,color:T.t1,marginBottom:6,fontFamily:"Georgia,serif" }}>Application Ready!</div>
+        <div style={{ fontSize:17,fontWeight:700,color:T.t1,marginBottom:6,fontFamily:"'Syne',sans-serif" }}>Application Ready!</div>
         <div style={{ fontSize:13,color:T.t3,marginBottom:16,lineHeight:1.6 }}>
           {method==="email"?`Invitation prepared for ${email}. `:"Code generated for in-person delivery. "}
           {sendErr&&<span style={{ color:T.amber }}>{sendErr}</span>}
@@ -90,7 +90,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
         <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.blue,background:"#fafbfc",flexShrink:0 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
             <div>
-              <div style={{ fontSize:15,fontWeight:700,color:T.t1,fontFamily:"Georgia,serif" }}>Application Review — {app.talent_name}</div>
+              <div style={{ fontSize:15,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>Application Review — {app.talent_name}</div>
               <div style={{ display:"flex",gap:8,marginTop:3,alignItems:"center",flexWrap:"wrap" }}>
                 <span style={{ background:isPendingGuardian?T.amberL:isSubmitted?T.greenL:T.amberL,color:isPendingGuardian?T.amber:isSubmitted?T.green:T.amber,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{isPendingGuardian?"GUARDIAN PENDING":isSubmitted?"SUBMITTED":"IN PROGRESS"}</span>
                 {isMinor(d.dob)&&<span style={{ background:T.purpleL,color:T.purple,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>MINOR</span>}

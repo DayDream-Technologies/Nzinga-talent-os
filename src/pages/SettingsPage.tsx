@@ -75,7 +75,7 @@ export function SettingsPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 680 }}>
-      <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, fontFamily: 'Georgia, serif' }}>Settings</h1>
+      <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4, fontFamily: "'Syne', sans-serif" }}>Settings</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Manage your account integrations and preferences.</p>
 
       {message && (

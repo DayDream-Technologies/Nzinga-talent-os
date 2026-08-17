@@ -54,7 +54,7 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
         }}
       >
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.t1, fontFamily: 'Georgia, serif' }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.t1, fontFamily: "'Syne', sans-serif" }}>
             All Users
           </div>
           <div style={{ fontSize: 12, color: T.t3, marginTop: 2 }}>

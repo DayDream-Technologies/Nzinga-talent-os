@@ -22,6 +22,8 @@
   --color-brand-red: #dc2626;
   --color-brand-cyan: #0891b2;
   --color-brand-orange: #ea580c;
+  --font-sans: 'Outfit', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Syne', 'Outfit', sans-serif;
 }
 
 *,
@@ -39,10 +41,17 @@ body,
 }
 
 body {
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-page-bg);
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
 }
 
 ::-webkit-scrollbar {

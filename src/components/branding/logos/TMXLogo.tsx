@@ -30,7 +30,7 @@ export function TMXLogo({
         x="0"
         y="38"
         fill={textFill}
-        fontFamily="'Inter', 'Segoe UI', system-ui, sans-serif"
+        fontFamily="'Outfit', 'Segoe UI', system-ui, sans-serif"
         fontSize="34"
         fontWeight="700"
         letterSpacing="0.02em"

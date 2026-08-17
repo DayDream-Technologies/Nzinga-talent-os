@@ -40,7 +40,7 @@ export function AgreementViewer({ onScrollComplete, hasScrolledToBottom }: Agree
           border: `1px solid ${hasScrolledToBottom ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.12)'}`,
           borderRadius: 8,
           padding: '16px 20px',
-          fontFamily: 'Georgia, serif',
+          fontFamily: "'Syne', sans-serif",
           fontSize: 12,
           lineHeight: 1.7,
           color: 'rgba(255,255,255,0.75)',

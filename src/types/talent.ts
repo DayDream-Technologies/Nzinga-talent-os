@@ -37,7 +37,6 @@ export interface AuditLogEntry {
   ts: string
 }
 
-/** Agency applicant fields mapped from RMX New Prospect → Nzinga dictionary. */
 export interface ApplicantProfile {
   first_name?: string
   last_name?: string
@@ -72,6 +71,13 @@ export interface ApplicantProfile {
   shoe_size?: string
   eye_color?: string
   scout_notes?: string
+  /** Social / web links */
+  link_instagram?: string
+  link_tiktok?: string
+  link_youtube?: string
+  link_website?: string
+  link_portfolio?: string
+  link_other?: string
 }
 
 export interface Talent extends ApplicantProfile {

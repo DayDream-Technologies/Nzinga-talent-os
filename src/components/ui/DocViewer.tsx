@@ -66,7 +66,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
           ) : isText ? (
             <pre
               className="whitespace-pre-wrap rounded-md border border-gray-100 bg-[#fafbfc] p-4 font-serif text-xs leading-relaxed text-t1"
-              style={{ fontFamily: 'Georgia, serif' }}
+              style={{ fontFamily: "'Syne', sans-serif" }}
             >
               {textBody}
             </pre>

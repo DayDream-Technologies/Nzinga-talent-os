@@ -100,13 +100,13 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
   if(mode==="form"&&foundApp) return <ApplicationForm applications={apps} app={foundApp} onSave={updated=>{onSaveApp(updated);setApps(prev=>({...prev,[updated.id]:updated}));setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
 
   return (
-    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44,#162038)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",position:"relative",overflow:"hidden" }}>
+    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44,#162038)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",position:"relative",overflow:"hidden" }}>
       <div style={{ position:"absolute",width:500,height:500,borderRadius:"50%",background:"rgba(124,58,237,0.08)",top:-150,right:-100,pointerEvents:"none" }}/>
       <div style={{ position:"absolute",inset:0,backgroundImage:"radial-gradient(rgba(255,255,255,0.025) 1px,transparent 1px)",backgroundSize:"28px 28px",pointerEvents:"none" }}/>
       <div style={{ width:500,zIndex:1 }}>
         <div style={{ textAlign:"center",marginBottom:28 }}>
-          <div style={{ width:60,height:60,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,color:"#fff",fontFamily:"Georgia,serif",fontWeight:800,margin:"0 auto 12px",boxShadow:"0 8px 24px rgba(124,58,237,0.4)" }}>N</div>
-          <div style={{ fontSize:28,fontWeight:800,color:"#fff",fontFamily:"Georgia,serif" }}>Nzinga Talent</div>
+          <div style={{ width:60,height:60,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,color:"#fff",fontFamily:"'Syne',sans-serif",fontWeight:800,margin:"0 auto 12px",boxShadow:"0 8px 24px rgba(124,58,237,0.4)" }}>N</div>
+          <div style={{ fontSize:28,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif" }}>Nzinga Talent</div>
           <div style={{ fontSize:12,color:"rgba(255,255,255,0.4)",letterSpacing:"0.14em",textTransform:"uppercase",marginTop:3 }}>Talent Application Portal</div>
         </div>
 
@@ -303,9 +303,9 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   const progress=total?Math.round((visibleSections.filter(s=>completedSections.has(s.id)&&!(missingMap[s.id]||[]).length).length/total)*100):0;
 
   if(submitted){return(
-    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Inter',sans-serif",padding:20 }}>
+    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",padding:20 }}>
       <div style={{ textAlign:"center",maxWidth:440,padding:36 }}>
-        <div style={{ fontSize:26,fontWeight:800,color:"#fff",fontFamily:"'Syne',Georgia,serif",marginBottom:8 }}>
+        <div style={{ fontSize:26,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif",marginBottom:8 }}>
           {pendingGuardian?"Pending parent/guardian verification":"Application Submitted"}
         </div>
         <div style={{ fontSize:14,color:"rgba(255,255,255,0.55)",lineHeight:1.7,marginBottom:20 }}>
@@ -327,10 +327,10 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   }
 
   return (
-    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",fontFamily:"'Outfit','Inter',sans-serif",display:"flex",flexDirection:"column" }}>
+    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",fontFamily:"'Outfit','Segoe UI',sans-serif",display:"flex",flexDirection:"column" }}>
       <div style={{ background:"rgba(255,255,255,0.04)",borderBottom:"1px solid rgba(255,255,255,0.07)",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,gap:8,flexWrap:"wrap" }}>
         <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-          <div style={{ width:28,height:28,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#fff",fontFamily:"Georgia,serif",fontWeight:800 }}>N</div>
+          <div style={{ width:28,height:28,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#fff",fontFamily:"'Syne',sans-serif",fontWeight:800 }}>N</div>
           <div>
             <div style={{ fontSize:13,fontWeight:700,color:"#fff" }}>Nzinga Application</div>
             <div style={{ fontSize:10,color:"rgba(255,255,255,0.35)" }}>{app.talent_name} · {app.access_code}{age!==null?` · Age ${age}`:""}{minorApplicant?" · Minor":""}</div>
@@ -373,7 +373,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
               </div>
             )}
             <div style={{ marginBottom:20 }}>
-              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}><span style={{ fontSize:20 }}>{sec.icon}</span><div style={{ fontSize:22,fontWeight:700,color:"#fff",fontFamily:"'Syne',Georgia,serif" }}>{sec.label}</div></div>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}><span style={{ fontSize:20 }}>{sec.icon}</span><div style={{ fontSize:22,fontWeight:700,color:"#fff",fontFamily:"'Syne',sans-serif" }}>{sec.label}</div></div>
               <div style={{ fontSize:12,color:"rgba(255,255,255,0.4)" }}>Step {currentSection+1} of {total}{age!==null?` · Age ${age}`:""}</div>
             </div>
 

@@ -11,7 +11,7 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
   const [code,setCode]=useState(""); const [err,setErr]=useState("");
   function go(){const c=code.trim().toUpperCase();if(COMPANY_CODES[c])onCode(c);else setErr("Code not found. Try: NZG");}
   return (
-    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#f5f0ea,#ede8e0 40%,#e8e2f5)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",position:"relative",overflow:"hidden" }}>
+    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#f5f0ea,#ede8e0 40%,#e8e2f5)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",position:"relative",overflow:"hidden" }}>
       <div style={{ position:"absolute",width:600,height:600,borderRadius:"50%",background:"rgba(124,58,237,0.06)",top:-150,right:-100,pointerEvents:"none" }}/>
       <div style={{ position:"absolute",width:400,height:400,borderRadius:"50%",background:"rgba(37,99,235,0.05)",bottom:-100,left:-80,pointerEvents:"none" }}/>
       <div style={{ width:440,zIndex:1 }}>
@@ -23,7 +23,7 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
           <div style={{ display:"flex",justifyContent:"center",marginBottom:20 }}>
             <TMXLogo size="md" />
           </div>
-          <div style={{ fontSize:18,fontWeight:700,textAlign:"center",color:"#111827",marginBottom:4,fontFamily:"Georgia,serif" }}>Welcome</div>
+          <div style={{ fontSize:18,fontWeight:700,textAlign:"center",color:"#111827",marginBottom:4,fontFamily:"'Syne',sans-serif" }}>Welcome</div>
           <div style={{ fontSize:13,textAlign:"center",color:"#6b7280",marginBottom:20 }}>Enter your company code to continue</div>
           <Lbl>Company Code</Lbl>
           <FInput value={code} onChange={setCode} placeholder="e.g. NZG" style={{ textAlign:"center",fontSize:16,fontWeight:600,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6 }}/>

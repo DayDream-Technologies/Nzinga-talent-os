@@ -171,7 +171,7 @@ export function AgencyWorkspace() {
             fontSize: 26,
             fontWeight: 700,
             color: T.t1,
-            fontFamily: 'Georgia, serif',
+            fontFamily: "'Syne', sans-serif",
           }}
         >
           Welcome, {firstName}

@@ -52,7 +52,7 @@ export function InviteUserModal({ onClose, onSuccess }: InviteUserModalProps) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }} onClick={onClose}>
       <div style={{ background: '#fff', borderRadius: 12, padding: '28px 32px', width: 420, maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: T.t1, marginBottom: 4, fontFamily: 'Georgia, serif' }}>Invite Team Member</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: T.t1, marginBottom: 4, fontFamily: "'Syne', sans-serif" }}>Invite Team Member</h2>
         <p style={{ fontSize: 12, color: T.t3, marginBottom: 20 }}>They'll receive an email to set up their account.</p>
 
         <form onSubmit={handleSubmit}>

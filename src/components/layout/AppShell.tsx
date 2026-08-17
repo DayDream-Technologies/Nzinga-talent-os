@@ -69,7 +69,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   return (
     <div
       className="flex h-screen flex-col overflow-hidden text-[13px] text-t1"
-      style={{ fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", background: T.pageBg }}
+      style={{ fontFamily: "'Outfit','Segoe UI',system-ui,sans-serif", background: T.pageBg }}
     >
       <TopNav
         user={user}
@@ -126,7 +126,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       {currentTalent && (
         <TalentRecord
           talent={currentTalent}
-          talents={talents}
           currentUser={user}
           allHistory={history}
           setHistory={setHistory}

@@ -61,7 +61,7 @@ export function NzingaWordmark({
           color: textColor,
           fontWeight: 700,
           fontSize,
-          fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+          fontFamily: "'Outfit', 'Segoe UI', system-ui, sans-serif",
           letterSpacing: '-0.01em',
         }}
       >

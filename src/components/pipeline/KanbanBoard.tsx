@@ -475,7 +475,7 @@ export function KanbanBoard({
         }}
       >
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.t1, fontFamily: 'Georgia, serif' }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.t1, fontFamily: "'Syne', sans-serif" }}>
             Talent Pipeline
           </div>
           <div style={{ fontSize: 11, color: T.t4, marginTop: 2 }}>

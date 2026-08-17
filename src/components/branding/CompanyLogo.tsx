@@ -106,7 +106,7 @@ function CompanyLogoBlock({
           color: theme === 'dark' ? '#fff' : '#111827',
           fontWeight: 700,
           fontSize: size === 'sm' ? 14 : 16,
-          fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+          fontFamily: "'Outfit', 'Segoe UI', system-ui, sans-serif",
         }}
       >
         {brand.displayName}

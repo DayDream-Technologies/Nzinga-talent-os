@@ -103,7 +103,7 @@ export function TicketDetailModal({
                   fontWeight: 700,
                   color: T.t1,
                   margin: 0,
-                  fontFamily: 'Georgia, serif',
+                  fontFamily: "'Syne', sans-serif",
                   lineHeight: 1.3,
                 }}
               >

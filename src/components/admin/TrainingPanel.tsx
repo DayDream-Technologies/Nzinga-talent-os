@@ -104,7 +104,7 @@ export function TrainingPanel({ role }: TrainingPanelProps) {
   return (
     <div style={{ padding: '22px 26px', flex: 1, overflowY: 'auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <div style={{ fontSize: 26, fontWeight: 700, color: T.t1, fontFamily: 'Georgia, serif' }}>
+        <div style={{ fontSize: 26, fontWeight: 700, color: T.t1, fontFamily: "'Syne', sans-serif" }}>
           My Training
         </div>
         <div style={{ fontSize: 13, color: T.t3, marginTop: 3 }}>

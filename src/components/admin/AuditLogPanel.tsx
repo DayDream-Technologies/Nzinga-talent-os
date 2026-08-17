@@ -54,7 +54,7 @@ export function AuditLogPanel() {
 
   return (
     <div style={{ padding: '14px 18px', flex: 1, overflowY: 'auto' }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: T.t1, marginBottom: 4, fontFamily: 'Georgia, serif' }}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: T.t1, marginBottom: 4, fontFamily: "'Syne', sans-serif" }}>
         Global Audit Log
       </div>
       <div style={{ fontSize: 12, color: T.t3, marginBottom: 14 }}>
