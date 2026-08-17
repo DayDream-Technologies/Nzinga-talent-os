@@ -1,8 +1,95 @@
 /**
- * 1:1 RMX → Nzinga applicant field dictionary options.
- * Source: Replacement Dictionary Converting (Nzinga Management Agency).
+ * NZG short-application option lists (Application Build Requirements).
  */
 
+export const REPRESENTATION_INTERESTS = [
+  'Modeling',
+  'Acting',
+  'Sports & Athletics',
+  'Influencing / Content Creation',
+] as const
+
+export const EXPERIENCE_LEVELS = [
+  'New / Emerging',
+  'Some Experience',
+  'Experienced',
+  'Professional',
+  'Established',
+] as const
+
+export const MODELING_CATEGORIES = [
+  'Editorial',
+  'Runway',
+  'Commercial',
+  'Print',
+  'E-Commerce',
+  'Beauty',
+  'Lifestyle',
+  'Fitness',
+  'Swimwear',
+  'Promotional',
+  'Other',
+] as const
+
+export const ACTING_CATEGORIES = [
+  'Film',
+  'Television',
+  'Streaming',
+  'Theater',
+  'Commercial',
+  'Voiceover',
+  'Hosting',
+  'Music Video',
+  'Short Film',
+  'Other',
+] as const
+
+export const INFLUENCER_CONTENT_CATEGORIES = [
+  'Fashion',
+  'Beauty',
+  'Lifestyle',
+  'Fitness',
+  'Sports',
+  'Gaming',
+  'Entertainment',
+  'Comedy',
+  'Food',
+  'Travel',
+  'Music',
+  'Education',
+  'Technology',
+  'Business',
+  'Other',
+] as const
+
+export const SOCIAL_PLATFORMS = [
+  'Instagram',
+  'TikTok',
+  'YouTube',
+  'Facebook',
+  'X',
+  'Twitch',
+  'Snapchat',
+  'Other',
+] as const
+
+export const WORK_MARKETS = ['Local', 'Regional', 'National', 'International'] as const
+
+export const YES_NO = ['Yes', 'No'] as const
+
+export const REPRESENTATION_TYPES = ['Exclusive', 'Non-exclusive', 'Mixed / Other'] as const
+
+/** Early scout sub-statuses within holding_entry (New / Lead). */
+export const APPLICANT_STAGE_STATUSES = [
+  'New / Lead',
+  'Under Review',
+  'Qualification in Progress',
+  'Qualified',
+  'Client Packet Pending',
+  'Withdrawn',
+] as const
+
+/** Legacy option lists retained for staff TalentRecord selects. */
 export const WORK_AREAS = [
   'Acting',
   'Modeling',
@@ -12,11 +99,10 @@ export const WORK_AREAS = [
 ] as const
 
 export const ROSTER_DIVISIONS = [
-  'High Fashion',
-  'Commercial',
-  'Voiceover',
-  'TV/Film',
-  'Print',
+  'Modeling',
+  'Acting',
+  'Sports & Athletics',
+  'Influencing / Content Creation',
 ] as const
 
 export const SECONDARY_SPECIALIZATIONS = [
@@ -32,16 +118,6 @@ export const CONTRACT_DURATION_PREFS = [
   '24 Months',
   'Non-Exclusive',
   'Open to Discussion',
-] as const
-
-export const APPLICANT_STAGE_STATUSES = [
-  'New Inquiry',
-  'Portfolio Review',
-  'Screen Test',
-  'Callback',
-  'Audition',
-  'Contract Sent',
-  'Approved',
 ] as const
 
 export const DISCOVERY_SOURCES = [
@@ -72,8 +148,6 @@ export const REFERENCE_CHECK_STATUSES = [
   'Cleared',
   'Flagged',
 ] as const
-
-export const YES_NO = ['Yes', 'No'] as const
 
 export const MEDIA_UPLOAD_TYPES = [
   { id: 'headshot', label: 'Headshot / Digitals' },

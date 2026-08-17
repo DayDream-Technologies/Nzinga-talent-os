@@ -41,6 +41,7 @@ import type {
   RetainerPlan,
   SupportTicket,
   Vendor,
+  ProspectContract,
 } from '@/types/agency'
 
 interface AgencyDataValue {
@@ -103,9 +104,10 @@ interface AgencyDataValue {
   createProspect: (
     input: Omit<
       AgencyProspect,
-      'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd'
-    >,
+      'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd' | 'contracts'
+    > & { contracts?: AgencyProspect['contracts'] },
   ) => AgencyProspect
+  addProspectContract: (prospectId: string, contract: Omit<ProspectContract, 'id' | 'uploadedAt'> & { id?: string; uploadedAt?: string }) => void
   advanceProspect: (id: string) => void
   createRenewalOffer: (talentId: string) => string
 }
@@ -436,8 +438,8 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     (
       input: Omit<
         AgencyProspect,
-        'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd'
-      >,
+        'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd' | 'contracts'
+      > & { contracts?: AgencyProspect['contracts'] },
     ) => {
       const used = [
         ...prospects.map((p) => p.accountId),
@@ -451,6 +453,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
         stage: 'new',
         contractStart: null,
         contractEnd: null,
+        contracts: input.contracts ?? [],
         messageEmails:
           input.messageEmails?.length > 0
             ? input.messageEmails
@@ -460,6 +463,42 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       return created
     },
     [prospects, talent],
+  )
+
+  const addProspectContract = useCallback(
+    (
+      prospectId: string,
+      contract: Omit<ProspectContract, 'id' | 'uploadedAt'> & { id?: string; uploadedAt?: string },
+    ) => {
+      const full: ProspectContract = {
+        ...contract,
+        id: contract.id || uid('ctr'),
+        uploadedAt: contract.uploadedAt || new Date().toISOString(),
+      }
+      setProspects((prev) =>
+        prev.map((p) => {
+          if (p.id !== prospectId) return p
+          const contracts =
+            full.status === 'current'
+              ? [
+                  ...p.contracts.map((c) =>
+                    c.status === 'current' ? { ...c, status: 'past' as const } : c,
+                  ),
+                  full,
+                ]
+              : [...p.contracts, full]
+          return {
+            ...p,
+            contracts,
+            contractStart: full.status === 'current' ? full.startDate : p.contractStart,
+            contractEnd: full.status === 'current' ? full.endDate ?? null : p.contractEnd,
+            representationType: full.representationType ?? p.representationType,
+            termLengthYears: full.termLengthYears ?? p.termLengthYears,
+          }
+        }),
+      )
+    },
+    [],
   )
 
   const advanceProspect = useCallback((id: string) => {
@@ -534,6 +573,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       deleteDisbursement,
       sendMessage,
       createProspect,
+      addProspectContract,
       advanceProspect,
       createRenewalOffer,
     }),
@@ -588,6 +628,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       deleteDisbursement,
       sendMessage,
       createProspect,
+      addProspectContract,
       advanceProspect,
       createRenewalOffer,
     ],

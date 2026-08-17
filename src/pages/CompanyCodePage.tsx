@@ -316,6 +316,10 @@ export function CompanyCodePage() {
                     Talent applications are not available for this company code yet.
                   </p>
                 )}
+
+                <button type="button" className="hover-lift" onClick={() => navigate('/talent/login')} style={secondaryBtn}>
+                  Talent login →
+                </button>
               </div>
 
               <div style={{ marginTop: 20, textAlign: 'center' }}>

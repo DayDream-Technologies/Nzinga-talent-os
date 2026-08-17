@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { isEmailConfigured, sendApplicationInviteEmail } from "@/lib/email";
 
@@ -71,111 +71,119 @@ function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) 
 function ApplicationReview({ app, onClose, onImportToPipeline }) {
   const [tab,setTab]=useState("overview");
   const [viewingDoc,setViewingDoc]=useState(null);
+  const d=app.data||{};
   const isSubmitted=app.status==="submitted";
+  const isPendingGuardian=app.status==="pending_guardian"||app.guardian_status==="pending";
   const isComplete=isAppComplete(app);
-  const progress=Math.round(((app.completed_sections||[]).length/APP_SECTIONS.length)*100);
-  const missingMap={};APP_SECTIONS.forEach(s=>{missingMap[s.id]=validateSection(s.id,app.data||{});});
+  const visible=getVisibleSections(d);
+  const progress=Math.round((visible.filter(s=>(app.completed_sections||[]).includes(s.id)&&validateSection(s.id,d).length===0).length/Math.max(visible.length,1))*100);
+  const missingMap={};visible.forEach(s=>{missingMap[s.id]=validateSection(s.id,d);});
+  const age=ageFromDob(d.dob);
+  const interests=String(d.representation_interests||"").split(",").filter(Boolean);
+  const docFields=Object.keys(d).filter(k=>k.startsWith("doc_")&&!k.endsWith("_name")&&!k.endsWith("_type")&&d[k]);
+  const tabIds=["overview",...visible.map(s=>s.id),"documents","incomplete"];
 
   return(
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:350,padding:"16px 0",overflowY:"auto" }}>
       {viewingDoc&&<DocViewer doc={viewingDoc} onClose={()=>setViewingDoc(null)}/>}
-      <div style={{ width:840,background:"#fff",borderRadius:10,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
-        {/* Header */}
+      <div style={{ width:880,background:"#fff",borderRadius:10,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
         <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.blue,background:"#fafbfc",flexShrink:0 }}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
             <div>
               <div style={{ fontSize:15,fontWeight:700,color:T.t1,fontFamily:"Georgia,serif" }}>Application Review — {app.talent_name}</div>
               <div style={{ display:"flex",gap:8,marginTop:3,alignItems:"center",flexWrap:"wrap" }}>
-                <span style={{ background:isSubmitted?T.greenL:T.amberL,color:isSubmitted?T.green:T.amber,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{isSubmitted?"✓ SUBMITTED":"⏳ IN PROGRESS"}</span>
-                {isSubmitted&&!isComplete&&<span style={{ background:T.redL,color:T.red,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>⚠ INCOMPLETE FIELDS</span>}
-                {isComplete&&<span style={{ background:T.greenL,color:T.green,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>✓ 100% COMPLETE</span>}
+                <span style={{ background:isPendingGuardian?T.amberL:isSubmitted?T.greenL:T.amberL,color:isPendingGuardian?T.amber:isSubmitted?T.green:T.amber,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{isPendingGuardian?"GUARDIAN PENDING":isSubmitted?"SUBMITTED":"IN PROGRESS"}</span>
+                {isMinor(d.dob)&&<span style={{ background:T.purpleL,color:T.purple,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>MINOR</span>}
+                {d.currently_represented==="Yes"&&<span style={{ background:T.redL,color:T.red,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>EXISTING REP</span>}
+                {isComplete&&isSubmitted&&!isPendingGuardian&&<span style={{ background:T.greenL,color:T.green,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>100% COMPLETE</span>}
                 <span style={{ fontSize:11,color:T.t4 }}>Code: <strong style={{ color:T.purple }}>{app.access_code}</strong> · {progress}%</span>
               </div>
             </div>
             <div style={{ display:"flex",gap:8 }}>
-              {isComplete&&isSubmitted&&<Btn variant="success" sm onClick={onImportToPipeline}>Import to Pipeline ↓</Btn>}
-              {!isComplete&&isSubmitted&&<Btn variant="warning" sm onClick={()=>setTab("incomplete")}>View Incomplete Fields</Btn>}
+              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm onClick={onImportToPipeline}>Import to New / Lead</Btn>}
               <button onClick={onClose} style={{ background:"transparent",border:"1px solid #e5e7eb",borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display:"flex",borderBottom:"1px solid #e5e7eb",background:"#fff",flexShrink:0,overflowX:"auto" }}>
-          {["overview","personal","social","talent","business","documents","consent","incomplete"].map(t=><div key={t} onClick={()=>setTab(t)} style={{ padding:"7px 14px",cursor:"pointer",fontSize:12,fontWeight:tab===t?600:400,color:tab===t?T.blue:T.t3,borderBottom:`2px solid ${tab===t?T.blue:"transparent"}`,textTransform:"capitalize",whiteSpace:"nowrap" }}>{t==="incomplete"?"⚠ Incomplete":t}</div>)}
+          {tabIds.map(t=><div key={t} onClick={()=>setTab(t)} style={{ padding:"7px 14px",cursor:"pointer",fontSize:12,fontWeight:tab===t?600:400,color:tab===t?T.blue:T.t3,borderBottom:`2px solid ${tab===t?T.blue:"transparent"}`,textTransform:"capitalize",whiteSpace:"nowrap" }}>{t==="incomplete"?"Incomplete":t.replace(/_/g," ")}</div>)}
         </div>
 
         <div style={{ flex:1,overflowY:"auto",padding:16 }}>
           {tab==="overview"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
-            <Section title="Application Status" accent={isComplete?T.green:T.amber}>
-              {[["Status",isSubmitted?"Submitted":"In Progress"],["Name",app.talent_name],["Email",app.talent_email],["Code",app.access_code],["Created",new Date(app.created_at).toLocaleDateString()],["Last Saved",new Date(app.last_saved).toLocaleString()],["Complete",isComplete?"Yes — ready for pipeline":"No — fields missing"]].map(([k,v])=>(
-                <div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>
+            <Section title="Quick Profile" accent={T.blue}>
+              {[
+                ["Name",[d.legal_first,d.legal_last].filter(Boolean).join(" ")||app.talent_name],
+                ["Preferred",d.preferred_name||"—"],
+                ["Age",age!==null?String(age):"—"],
+                ["Location",[d.city,d.state,d.country].filter(Boolean).join(", ")||"—"],
+                ["Market",d.current_market||"—"],
+                ["Experience",d.experience_level||"—"],
+                ["Travel",d.willing_to_travel||"—"],
+                ["Available",d.currently_available||"—"],
+                ["Work markets",d.work_markets||"—"],
+              ].map(([k,v])=>(
+                <div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500,textAlign:"right",maxWidth:"60%" }}>{v}</span></div>
               ))}
+              <div style={{ marginTop:10,display:"flex",flexWrap:"wrap",gap:6 }}>{interests.map(n=><NichePill key={n} n={n}/>)}</div>
             </Section>
-            <Section title="Section Completion" accent={T.blue}>
-              {APP_SECTIONS.map(s=>{
+            <Section title="Flags & Goals" accent={isPendingGuardian||d.currently_represented==="Yes"?T.amber:T.green}>
+              <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>Goals:</strong> {d.career_goals||d.goals_1_2_years||"—"}</div>
+              <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>About:</strong> {d.about_yourself||"—"}</div>
+              <div style={{ fontSize:12,marginBottom:4 }}>Guardian: <strong>{app.guardian_status||"not_required"}</strong>{app.guardian_email?` · ${app.guardian_email}`:""}</div>
+              <div style={{ fontSize:12,marginBottom:4 }}>Existing representation: <strong>{d.currently_represented||"—"}</strong></div>
+              <div style={{ fontSize:12,marginBottom:4 }}>Conflicts: <strong>{d.has_conflicting_obligations||"—"}</strong></div>
+              <div style={{ fontSize:12 }}>Socials: {[d.link_instagram,d.link_tiktok,d.influencer_handle].filter(Boolean).join(" · ")||"—"}</div>
+              <div style={{ marginTop:10,padding:"8px 10px",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:6,fontSize:11,color:"#9a3412",lineHeight:1.45 }}>
+                Scout boundary (SOP): Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
+              </div>
+            </Section>
+            <Section title="Section Completion" accent={T.purple}>
+              {visible.map(s=>{
                 const done=(app.completed_sections||[]).includes(s.id);
                 const missing=missingMap[s.id]||[];
                 return <div key={s.id} style={{ display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}>
                   <span style={{ color:T.t2 }}>{s.icon} {s.label}</span>
-                  <span style={{ color:done&&missing.length===0?T.green:missing.length>0?T.red:T.t4,fontWeight:600 }}>{done&&missing.length===0?"✓":missing.length>0?`⚠ ${missing.length} missing`:"Incomplete"}</span>
+                  <span style={{ color:done&&missing.length===0?T.green:missing.length>0?T.red:T.t4,fontWeight:600 }}>{done&&missing.length===0?"Done":missing.length>0?`${missing.length} missing`:"Incomplete"}</span>
                 </div>;
               })}
-              <div style={{ marginTop:8,height:6,background:"#e5e7eb",borderRadius:3,overflow:"hidden" }}><div style={{ height:"100%",width:progress+"%",background:isComplete?T.green:T.blue,borderRadius:3 }}/></div>
             </Section>
           </div>}
 
           {tab==="incomplete"&&<div>
-            <div style={{ background:T.redL,border:`1px solid ${T.red}44`,borderRadius:8,padding:"10px 14px",marginBottom:14 }}>
-              <div style={{ fontSize:13,fontWeight:700,color:T.red,marginBottom:4 }}>⚠ Incomplete / Missing Fields</div>
-              <div style={{ fontSize:12,color:T.t2 }}>The following required fields have not been completed. The application will remain in the Applications Pipeline until all items are resolved.</div>
-            </div>
-            {APP_SECTIONS.map(s=>{
+            {visible.map(s=>{
               const missing=missingMap[s.id]||[];
               if(missing.length===0)return null;
-              const secDef=s;
               return <div key={s.id} style={{ background:"#fff",border:"1px solid #fca5a5",borderRadius:8,padding:12,marginBottom:10 }}>
-                <div style={{ fontSize:12,fontWeight:700,color:T.red,marginBottom:8 }}>{s.icon} {s.label} — {missing.length} field{missing.length>1?"s":""} missing</div>
-                {missing.map(fieldId=>{const field=secDef.fields.find(f=>f.id===fieldId);return <div key={fieldId} style={{ display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:"1px solid #fef2f2",fontSize:12 }}><span style={{ color:T.red,fontWeight:700 }}>✗</span><span style={{ color:T.t1 }}>{field?.label||fieldId}</span>{field?.required&&<span style={{ fontSize:10,background:T.redL,color:T.red,borderRadius:8,padding:"0 5px",fontWeight:700 }}>REQUIRED</span>}</div>;})}
+                <div style={{ fontSize:12,fontWeight:700,color:T.red,marginBottom:8 }}>{s.label} — {missing.length} missing</div>
+                {missing.map(fieldId=>{const field=s.fields.find(f=>f.id===fieldId);return <div key={fieldId} style={{ fontSize:12,padding:"4px 0" }}>{field?.label||fieldId}</div>;})}
               </div>;
             })}
           </div>}
 
-          {tab==="documents"&&<div>
-            <div style={{ marginBottom:12,padding:"8px 12px",background:T.blueL,border:`1px solid ${T.blue}33`,borderRadius:6,fontSize:12,color:T.blue,fontWeight:500 }}>
-              📎 Documents uploaded by the prospect. Click any document to view. These are accessible to Ops Specialists for the Director Ready Packet.
-            </div>
-            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
-              {REQUIRED_DOCS.map(doc=>{
-                const fieldKey="doc_"+doc.id;
-                const val=app.data&&app.data[fieldKey];
-                const name=app.data&&app.data[fieldKey+"_name"];
-                const type=app.data&&app.data[fieldKey+"_type"];
-                return <div key={doc.id} style={{ border:`1px solid ${val?"#86efac":"#fca5a5"}`,borderRadius:8,padding:14,background:val?"#f0fdf4":"#fff5f5" }}>
-                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
-                    <span style={{ fontSize:20 }}>{doc.icon}</span>
-                    <div><div style={{ fontSize:12,fontWeight:700,color:T.t1 }}>{doc.label}</div><div style={{ fontSize:10,color:T.t4 }}>{doc.note}</div></div>
-                    <span style={{ marginLeft:"auto",fontWeight:700,color:val?T.green:T.red }}>{val?"✓":"✗"}</span>
-                  </div>
-                  {doc.id==="proof_income"&&<div style={{ fontSize:10,color:T.amber,background:T.amberL,border:`1px solid ${T.amber}33`,borderRadius:5,padding:"3px 8px",marginBottom:6 }}>ℹ Self-support verification only — not used in approval decisions</div>}
-                  {val?<button onClick={()=>setViewingDoc({name:name||doc.label,data:val,type:type||"image/jpeg"})} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"5px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>👁 View Document</button>:<div style={{ fontSize:11,color:T.t4,textAlign:"center",padding:"4px 0" }}>Not yet uploaded</div>}
-                </div>;
-              })}
-            </div>
+          {tab==="documents"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+            {docFields.length===0&&<div style={{ gridColumn:"1/-1",fontSize:13,color:T.t3 }}>No documents uploaded yet.</div>}
+            {docFields.map(fieldKey=>{
+              const name=d[fieldKey+"_name"]||fieldKey;
+              const type=d[fieldKey+"_type"]||"application/octet-stream";
+              return <div key={fieldKey} style={{ border:"1px solid #86efac",borderRadius:8,padding:14,background:"#f0fdf4" }}>
+                <div style={{ fontSize:12,fontWeight:700,marginBottom:8 }}>{String(name)}</div>
+                <button onClick={()=>setViewingDoc({name:String(name),data:d[fieldKey],type:String(type),doc_type:fieldKey.replace(/^doc_/,""),uploaded_by:"applicant",status:"received"})} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>View</button>
+              </div>;
+            })}
           </div>}
 
-          {/* Section data tabs */}
-          {["personal","social","talent","business","consent"].includes(tab)&&(()=>{
+          {visible.some(s=>s.id===tab)&&(()=>{
             const secDef=APP_SECTIONS.find(s=>s.id===tab);if(!secDef)return null;
             return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
               {secDef.fields.map(field=>{
-                const val=app.data&&app.data[field.id];
+                const val=d[field.id];
                 const hasVal=val&&val.toString().trim();
-                const isMissing=field.required&&!hasVal;
-                return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"?"1/-1":"auto" }}>
-                  <Lbl required={field.required}>{field.label}</Lbl>
-                  <div style={{ padding:"7px 10px",background:isMissing?"#fff5f5":"#f8f9fb",border:`1px solid ${isMissing?"#fca5a5":"#e5e7eb"}`,borderRadius:5,fontSize:12,color:hasVal?T.t1:T.t4,minHeight:30 }}>
-                    {isMissing?<span style={{ color:T.red,fontWeight:600 }}>⚠ Missing — required field</span>:field.type==="checkbox"?(val?"✓ Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):val||"—"}
+                return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"?"1/-1":"auto" }}>
+                  <Lbl>{field.label}</Lbl>
+                  <div style={{ padding:"7px 10px",background:"#f8f9fb",border:"1px solid #e5e7eb",borderRadius:5,fontSize:12,color:hasVal?T.t1:T.t4,minHeight:30 }}>
+                    {field.type==="checkbox"?(val?"Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):field.type==="file_upload"?(val?String(d[field.id+"_name"]||"Uploaded"):"—"):val||"—"}
                   </div>
                 </div>;
               })}

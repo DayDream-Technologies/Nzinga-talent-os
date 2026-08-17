@@ -72,10 +72,36 @@ export interface AgencyProspect {
   parentPhone?: string
   /** Emails that should receive account messages (prospect + parent if minor) */
   messageEmails: string[]
+  /** ISO datetime of last portal login, if known */
+  lastLoginAt?: string | null
+  /** Representation contracts (current and past) with downloadable documents */
+  contracts: ProspectContract[]
   /** ISO date (YYYY-MM-DD). Empty when no representation contract exists yet. */
   contractStart?: string | null
   /** ISO date (YYYY-MM-DD). Empty/null means open-ended / still live. */
   contractEnd?: string | null
+}
+
+export interface ProspectContractDocument {
+  name: string
+  data: string
+  type: string
+}
+
+export type ProspectContractStatus = 'current' | 'past'
+
+export interface ProspectContract {
+  id: string
+  title: string
+  status: ProspectContractStatus
+  /** Original / term start (YYYY-MM-DD) */
+  startDate: string
+  /** Term end (YYYY-MM-DD). Null/empty = open-ended */
+  endDate?: string | null
+  representationType?: RepresentationType
+  termLengthYears?: TermLengthYears
+  uploadedAt: string
+  document: ProspectContractDocument
 }
 
 export interface SupportTicket {

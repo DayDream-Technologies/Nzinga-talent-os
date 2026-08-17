@@ -6,13 +6,13 @@ import { hasEmailConfirmationInUrl } from '@/lib/auth-redirect'
 import { useInView } from '@/hooks/useInView'
 
 const STAGES = [
-  'Holding Entry',
-  'Scout Complete',
-  'Team 1 Review',
-  'Ops Processing',
-  'Team 2 Audit',
-  'Executive Review',
-  'Signed Onboarding',
+  'New / Lead',
+  'More Information Required',
+  'Client Packet Review',
+  'Success Manager Validation',
+  'Contract Pending',
+  'Director Review',
+  'Active Client',
 ]
 
 function Reveal({ children, className = '', style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
@@ -276,6 +276,23 @@ export function HomePage() {
               }}
             >
               Talent Application Portal →
+            </button>
+            <button
+              type="button"
+              className="mh-ghost mh-link-underline"
+              onClick={() => navigate('/talent/login')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--mh-muted)',
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                padding: '8px 4px',
+              }}
+            >
+              Talent login →
             </button>
           </div>
         </div>

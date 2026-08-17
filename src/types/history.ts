@@ -18,4 +18,9 @@ export interface HistoryEntry {
   call_recording_url?: string
   call_direction?: 'inbound' | 'outbound'
   sms_direction?: 'inbound' | 'outbound'
+  /** Communication follow-up tracking (Build Requirements §23). */
+  follow_up_needed?: boolean
+  follow_up_date?: string | null
+  method?: string
+  staff_name?: string
 }

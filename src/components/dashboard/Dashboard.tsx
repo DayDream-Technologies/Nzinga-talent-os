@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { TalentLink } from "@/components/talent/TalentLink";
 
@@ -193,21 +193,21 @@ function ApplicationsPanel({ applications, talents, onViewApp, onImportApp }) {
   const [filter,setFilter]=useState("all");
   const apps=Object.values(applications);
   const filtered=apps.filter(a=>{
-    if(filter==="pending") return a.status==="sent"||a.status==="in_progress";
-    if(filter==="submitted_complete") return a.status==="submitted"&&isAppComplete(a);
-    if(filter==="submitted_incomplete") return a.status==="submitted"&&!isAppComplete(a);
+    if(filter==="pending") return a.status==="sent"||a.status==="in_progress"||a.status==="pending_guardian";
+    if(filter==="submitted_complete") return a.status==="submitted"&&isAppComplete(a)&&a.guardian_status!=="pending";
+    if(filter==="submitted_incomplete") return (a.status==="submitted"&&!isAppComplete(a))||a.status==="pending_guardian";
     return true;
   });
-  const counts={all:apps.length,pending:apps.filter(a=>a.status==="sent"||a.status==="in_progress").length,submitted_complete:apps.filter(a=>a.status==="submitted"&&isAppComplete(a)).length,submitted_incomplete:apps.filter(a=>a.status==="submitted"&&!isAppComplete(a)).length};
+  const counts={all:apps.length,pending:apps.filter(a=>a.status==="sent"||a.status==="in_progress"||a.status==="pending_guardian").length,submitted_complete:apps.filter(a=>a.status==="submitted"&&isAppComplete(a)&&a.guardian_status!=="pending").length,submitted_incomplete:apps.filter(a=>(a.status==="submitted"&&!isAppComplete(a))||a.status==="pending_guardian").length};
 
   return(
     <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}>
       <div style={{ background:T.blueL,border:`1px solid ${T.blue}33`,borderRadius:8,padding:"9px 14px",marginBottom:12,fontSize:12,color:T.blue }}>
-        <strong>Application Pipeline Rules:</strong> Incomplete applications remain here until 100% complete. Once fully submitted, they auto-import into the main pipeline as a Holding Entry.
+        <strong>Application Pipeline Rules:</strong> Incomplete applications remain here until 100% complete. Minors stay pending until guardian verification. Fully submitted apps enter as New / Lead.
       </div>
       <div style={{ display:"flex",gap:6,marginBottom:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap" }}>
         <div style={{ display:"flex",gap:5 }}>
-          {[["all","All",T.t3],["pending","⏳ In Progress",T.amber],["submitted_complete","✅ Ready to Import",T.green],["submitted_incomplete","⚠ Incomplete",T.red]].map(([v,l,c])=>(
+          {[["all","All",T.t3],["pending","In Progress",T.amber],["submitted_complete","Ready to Import",T.green],["submitted_incomplete","Incomplete / Guardian",T.red]].map(([v,l,c])=>(
             <button key={v} onClick={()=>setFilter(v)} style={{ background:filter===v?"#fff":"transparent",border:`1px solid ${filter===v?"#d1d5db":"transparent"}`,borderRadius:5,padding:"4px 10px",fontSize:11,color:filter===v?c:T.t3,cursor:"pointer",fontWeight:filter===v?600:400,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4 }}>
               {l}<span style={{ background:"#f3f4f6",color:T.t3,borderRadius:8,padding:"0 5px",fontSize:10 }}>{counts[v]}</span>
             </button>
@@ -219,10 +219,10 @@ function ApplicationsPanel({ applications, talents, onViewApp, onImportApp }) {
           <thead><tr><TH>Talent</TH><TH>Status</TH><TH>Progress</TH><TH>Access Code</TH><TH>Missing Fields</TH><TH>Last Activity</TH><TH>Actions</TH></tr></thead>
           <tbody>
             {filtered.map(app=>{
-              const progress=Math.round(((app.completed_sections||[]).length/APP_SECTIONS.length)*100);
+              const progress=Math.round(((app.completed_sections||[]).length/Math.max(getVisibleSections(app.data||{}).length,1))*100);
               const complete=isAppComplete(app);
-              const missingCount=APP_SECTIONS.reduce((a,s)=>a+(validateSection(s.id,app.data||{}).length),0);
-              const st={sent:{bg:T.amberL,c:T.amber,l:"Sent"},in_progress:{bg:T.blueL,c:T.blue,l:"In Progress"},submitted:{bg:complete?T.greenL:T.redL,c:complete?T.green:T.red,l:complete?"✅ Complete":"⚠ Incomplete"}}[app.status]||{bg:"#f3f4f6",c:T.t3,l:"Draft"};
+              const missingCount=getVisibleSections(app.data||{}).reduce((a,s)=>a+(validateSection(s.id,app.data||{}).length),0);
+              const st={sent:{bg:T.amberL,c:T.amber,l:"Sent"},in_progress:{bg:T.blueL,c:T.blue,l:"In Progress"},pending_guardian:{bg:T.amberL,c:T.amber,l:"Guardian Pending"},submitted:{bg:complete?T.greenL:T.redL,c:complete?T.green:T.red,l:complete?"Complete":"Incomplete"}}[app.status]||{bg:"#f3f4f6",c:T.t3,l:"Draft"};
               return <tr key={app.id} onMouseEnter={e=>e.currentTarget.style.background="#f8f9fb"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <TD><TalentLink name={app.talent_name} /><div style={{ fontSize:10,color:T.t4 }}>{app.talent_email}</div></TD>
                 <TD><span style={{ background:st.bg,color:st.c,borderRadius:10,padding:"2px 8px",fontSize:11,fontWeight:700 }}>{st.l}</span></TD>

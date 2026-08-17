@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppData } from '@/context/AppDataContext'
 import { useAgencyData } from '@/context/AgencyDataContext'
@@ -14,9 +14,14 @@ import {
 import { STAGE_LABELS } from '@/constants/stages'
 import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
 import { T } from '@/lib/tokens'
-import { Badge, Card, Money, Panel, StatusColor, Table } from '@/components/agency/AgencyUI'
+import { Badge, Btn, Card, Money, Panel, StatusColor, Table } from '@/components/agency/AgencyUI'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { TalentLink } from '@/components/talent/TalentLink'
+import { DocViewer } from '@/components/ui/DocViewer'
+import { getProspectProfileByEmail, sendPasswordResetEmail } from '@/services/auth.service'
+import { downloadUploadedDoc } from '@/lib/representation-agreement'
+import type { UploadedDoc } from '@/types'
+import type { ProspectContract } from '@/types/agency'
 
 function FieldRow({ label, value }: { label: string; value: ReactNode }) {
   if (value === undefined || value === null || value === '') return null
@@ -37,16 +42,130 @@ function FieldRow({ label, value }: { label: string; value: ReactNode }) {
   )
 }
 
+function ContractFilesSection({
+  contracts,
+  canUpload,
+  onView,
+  onDownload,
+  onUpload,
+}: {
+  contracts: ProspectContract[]
+  canUpload: boolean
+  onView: (c: ProspectContract) => void
+  onDownload: (c: ProspectContract) => void
+  onUpload?: (file: File) => void
+}) {
+  const current = contracts.filter((c) => c.status === 'current')
+  const past = contracts.filter((c) => c.status === 'past')
+
+  function renderGroup(title: string, rows: ProspectContract[]) {
+    return (
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: T.t1, marginBottom: 6 }}>{title}</div>
+        {rows.length === 0 ? (
+          <div style={{ fontSize: 12, color: T.t4, padding: '6px 0' }}>None on file.</div>
+        ) : (
+          <Table
+            headers={['Title', 'Original start', 'End', 'File', '']}
+            rows={rows.map((c) => [
+              <span key={`t-${c.id}`}>
+                <div style={{ fontWeight: 600 }}>{c.title}</div>
+                {c.representationType && (
+                  <div style={{ fontSize: 10, color: T.t4, marginTop: 2 }}>
+                    {c.representationType}
+                    {c.termLengthYears ? ` · ${c.termLengthYears}y` : ''}
+                  </div>
+                )}
+              </span>,
+              new Date(`${c.startDate}T12:00:00`).toLocaleDateString(),
+              c.endDate?.trim()
+                ? new Date(`${c.endDate}T12:00:00`).toLocaleDateString()
+                : 'Open-ended',
+              <span key={`f-${c.id}`} style={{ fontSize: 11, color: T.t2 }}>
+                {c.document.name}
+              </span>,
+              <div key={`a-${c.id}`} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <Btn variant="secondary" onClick={() => onView(c)}>
+                  View
+                </Btn>
+                <Btn variant="ghost" onClick={() => onDownload(c)}>
+                  Download
+                </Btn>
+              </div>,
+            ])}
+          />
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
+      {renderGroup('Current contracts', current)}
+      {renderGroup('Past contracts', past)}
+      {canUpload && onUpload && (
+        <label
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 4,
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+            color: T.blue,
+          }}
+        >
+          <input
+            type="file"
+            accept="image/*,.pdf,.doc,.docx,.txt"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onUpload(file)
+              e.target.value = ''
+            }}
+          />
+          + Upload contract document
+        </label>
+      )}
+    </div>
+  )
+}
+
 export function TalentAccountPage() {
   const { accountId: rawId } = useParams<{ accountId: string }>()
   const accountId = rawId ? decodeURIComponent(rawId) : ''
   const directory = useTalentDirectory()
   const entry = directory.byAccountId.get(accountId)
   const { talents, history, tasks } = useAppData()
-  const { tickets, invoices, calendar, expenseLogs, disbursements, appointments, updateTicket, prospects } =
+  const { tickets, invoices, calendar, expenseLogs, disbursements, appointments, updateTicket, prospects, addProspectContract } =
     useAgencyData()
   const { user } = useAuth()
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [lastLoginAt, setLastLoginAt] = useState<string | null | undefined>(undefined)
+  const [resetState, setResetState] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
+  const [resetMessage, setResetMessage] = useState('')
+  const [viewDoc, setViewDoc] = useState<UploadedDoc | null>(null)
+
+  const pipeline = talents.find((t) => t.account_number === accountId || t.id === entry?.pipelineId)
+  const prospect = prospects.find((p) => p.accountId === accountId)
+  const talentEmail = (prospect?.email || entry?.email || pipeline?.email || '').trim()
+
+  useEffect(() => {
+    let cancelled = false
+    setLastLoginAt(prospect?.lastLoginAt ?? null)
+    setResetState('idle')
+    setResetMessage('')
+    if (!talentEmail) return
+    getProspectProfileByEmail(talentEmail).then((profile) => {
+      if (cancelled || !profile?.last_login_at) return
+      setLastLoginAt(profile.last_login_at)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [talentEmail, prospect?.lastLoginAt, accountId])
 
   if (!entry) {
     return (
@@ -62,8 +181,28 @@ export function TalentAccountPage() {
   }
 
   const name = entry.name
-  const pipeline = talents.find((t) => t.account_number === accountId || t.id === entry.pipelineId)
-  const prospect = prospects.find((p) => p.accountId === accountId)
+
+  async function handleSendPasswordReset() {
+    if (!talentEmail) {
+      setResetState('error')
+      setResetMessage('No email on file for this talent.')
+      return
+    }
+    setResetState('loading')
+    setResetMessage('')
+    const { error, demo } = await sendPasswordResetEmail(talentEmail)
+    if (error) {
+      setResetState('error')
+      setResetMessage(error)
+      return
+    }
+    setResetState('sent')
+    setResetMessage(
+      demo
+        ? `Demo mode: password reset simulated for ${talentEmail}.`
+        : `Password reset email sent to ${talentEmail}.`,
+    )
+  }
   const relatedTickets = tickets.filter((t) => t.talentName && t.talentName === name)
   const relatedInvoices = invoices.filter((i) => i.talentName === name)
   const relatedEvents = calendar.filter((e) => e.talentName === name)
@@ -155,6 +294,16 @@ export function TalentAccountPage() {
             value={entry.submittedAt ? new Date(entry.submittedAt).toLocaleDateString() : undefined}
           />
           <FieldRow
+            label="Last login"
+            value={
+              lastLoginAt
+                ? new Date(lastLoginAt).toLocaleString()
+                : prospect
+                  ? 'Never'
+                  : undefined
+            }
+          />
+          <FieldRow
             label="Availability"
             value={
               entry.available === undefined
@@ -168,14 +317,50 @@ export function TalentAccountPage() {
             label="Booked dates"
             value={entry.bookedDates?.length ? entry.bookedDates.join(', ') : undefined}
           />
+          {(prospect || talentEmail) && (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #f3f4f6' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 8 }}>
+                Account access
+              </div>
+              <div style={{ fontSize: 12, color: T.t2, marginBottom: 8 }}>
+                Portal email: <strong>{talentEmail || '—'}</strong>
+              </div>
+              <Btn
+                variant="secondary"
+                disabled={resetState === 'loading' || !talentEmail}
+                onClick={handleSendPasswordReset}
+              >
+                {resetState === 'loading' ? 'Sending…' : 'Send password reset email'}
+              </Btn>
+              {resetMessage && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 12,
+                    color: resetState === 'error' ? T.red : T.green,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {resetMessage}
+                </div>
+              )}
+            </div>
+          )}
         </Card>
       </div>
 
       <Card style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-          Contract
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Contract
+            </div>
+            <div style={{ fontSize: 12, color: T.t3, marginTop: 4 }}>
+              Current and past representation contracts — viewable and downloadable by organization users and clients with account access.
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 14 }}>
           <div>
             <FieldRow
               label="Original start date"
@@ -239,7 +424,40 @@ export function TalentAccountPage() {
             />
           </div>
         </div>
+
+        <ContractFilesSection
+          contracts={prospect?.contracts || []}
+          canUpload={Boolean(user && prospect)}
+          onView={(c) => setViewDoc(c.document)}
+          onDownload={(c) => downloadUploadedDoc(c.document)}
+          onUpload={
+            prospect
+              ? (file) => {
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    const today = new Date().toISOString().slice(0, 10)
+                    addProspectContract(prospect.id, {
+                      title: file.name.replace(/\.[^.]+$/, '') || 'Uploaded contract',
+                      status: 'current',
+                      startDate: today,
+                      endDate: null,
+                      representationType: prospect.representationType,
+                      termLengthYears: prospect.termLengthYears,
+                      document: {
+                        name: file.name,
+                        data: reader.result as string,
+                        type: file.type || 'application/octet-stream',
+                      },
+                    })
+                  }
+                  reader.readAsDataURL(file)
+                }
+              : undefined
+          }
+        />
       </Card>
+
+      <DocViewer doc={viewDoc} onClose={() => setViewDoc(null)} />
 
       <Card style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>

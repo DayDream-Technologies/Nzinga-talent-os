@@ -3,6 +3,44 @@ import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { demoStore } from './demo-store'
 import { nextAccountNumber } from '@/lib/account-number'
 
+export async function fetchTalentByEmailOrApplication(opts: {
+  email: string
+  applicationId?: string | null
+}): Promise<Talent | null> {
+  const email = opts.email.trim()
+  if (!email) return null
+
+  if (!supabaseConfigured || !supabase) {
+    const all = demoStore.getTalents()
+    const lower = email.toLowerCase()
+    return (
+      all.find(
+        (t) =>
+          (t.email || '').toLowerCase() === lower ||
+          (opts.applicationId && t.application_id === opts.applicationId),
+      ) ?? null
+    )
+  }
+
+  if (opts.applicationId) {
+    const { data: byApp } = await supabase
+      .from('talents')
+      .select('*')
+      .eq('application_id', opts.applicationId)
+      .maybeSingle()
+    if (byApp) return byApp as Talent
+  }
+
+  const { data, error } = await supabase
+    .from('talents')
+    .select('*')
+    .ilike('email', email)
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return (data as Talent) ?? null
+}
+
 export async function fetchTalents(): Promise<Talent[]> {
   if (!supabaseConfigured || !supabase) {
     return demoStore.getTalents()

@@ -1,21 +1,49 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext'
+import { TalentAuthProvider } from '@/context/TalentAuthContext'
 import { CompanyCodePage } from '@/pages/CompanyCodePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { HomePage } from '@/pages/HomePage'
 import { EmailConfirmedPage } from '@/pages/EmailConfirmedPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
+import { TalentLoginPage } from '@/pages/TalentLoginPage'
+import { TalentHomePage } from '@/pages/TalentHomePage'
+import { GuardianVerifyPage } from '@/pages/GuardianVerifyPage'
 import './index.css'
 import './styles/animations.css'
 
 const ProtectedApp = lazy(() => import('@/components/ProtectedApp'))
-const ProspectPortalPage = lazy(() => import('@/pages/ProspectPortalPage').then(m => ({ default: m.ProspectPortalPage })))
+const ProspectPortalPage = lazy(() =>
+  import('@/pages/ProspectPortalPage').then((m) => ({ default: m.ProspectPortalPage })),
+)
 
 function PageLoader() {
-  return <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, fontSize: 14, color: '#6b7280' }}>Loading…</div>
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+        fontSize: 14,
+        color: '#6b7280',
+      }}
+    >
+      Loading…
+    </div>
+  )
+}
+
+function TalentPortalLayout() {
+  return (
+    <TalentAuthProvider>
+      <Outlet />
+    </TalentAuthProvider>
+  )
 }
 
 const queryClient = new QueryClient({
@@ -30,11 +58,31 @@ const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   {
     path: '/portal',
-    element: <Suspense fallback={<PageLoader />}><ProspectPortalPage /></Suspense>,
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <ProspectPortalPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/guardian/verify',
+    element: <GuardianVerifyPage />,
+  },
+  {
+    path: '/talent',
+    element: <TalentPortalLayout />,
+    children: [
+      { path: 'login', element: <TalentLoginPage /> },
+      { path: 'home', element: <TalentHomePage /> },
+    ],
   },
   {
     path: '/*',
-    element: <Suspense fallback={<PageLoader />}><ProtectedApp /></Suspense>,
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <ProtectedApp />
+      </Suspense>
+    ),
   },
 ])
 

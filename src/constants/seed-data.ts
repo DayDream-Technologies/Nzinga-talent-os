@@ -1057,12 +1057,14 @@ const SEED_DOC = 'data:application/pdf;base64,JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC
 
 const completeSections = [
   'personal',
+  'interests',
+  'general',
+  'influencing',
+  'conflicts',
+  'availability',
   'social',
-  'talent',
-  'business',
-  'specs',
-  'documents',
-  'consent',
+  'id_verification',
+  'final',
 ] as const
 
 function completeSeedAppData(p: {
@@ -1071,14 +1073,14 @@ function completeSeedAppData(p: {
   dob: string
   phone: string
   email: string
-  address: string
+  address?: string
   city: string
   state: string
-  zip: string
+  zip?: string
   handle: string
   platform: string
   followers: string
-  er: string
+  er?: string
   niches: string
   bio: string
   achievements: string
@@ -1086,47 +1088,61 @@ function completeSeedAppData(p: {
   goals90: string
   goals1y?: string
 }) {
+  const interests = p.niches
+    .split(',')
+    .map((s) => s.trim())
+    .map((n) =>
+      n === 'Model'
+        ? 'Modeling'
+        : n === 'Actor'
+          ? 'Acting'
+          : n === 'Athlete'
+            ? 'Sports & Athletics'
+            : n === 'Influencer'
+              ? 'Influencing / Content Creation'
+              : n,
+    )
+    .join(',')
   return {
     legal_first: p.first,
     legal_last: p.last,
+    preferred_name: `${p.first} ${p.last}`,
     dob: p.dob,
     phone: p.phone,
     email: p.email,
-    address: p.address,
     city: p.city,
     state: p.state,
-    zip: p.zip,
-    primary_handle: p.handle,
-    primary_platform: p.platform,
-    follower_count: p.followers,
-    er_pct: p.er,
-    niches: p.niches,
-    bio: p.bio,
-    achievements: p.achievements,
-    collab_brands: p.brands || '',
-    goals_90day: p.goals90,
-    goals_1year: p.goals1y || '',
-    rep_type_pref: 'Open to Discussion',
-    referred_by: 'Agent Scout',
-    roster_division: 'Commercial',
-    union_affiliation: 'Non-Union',
-    parent_guardian_required: 'No',
+    country: 'USA',
+    current_market: `${p.city}, ${p.state}`,
+    doc_profile_photo: SEED_DOC,
+    doc_profile_photo_name: 'profile.jpg',
+    doc_profile_photo_type: 'image/jpeg',
+    representation_interests: interests || 'Influencing / Content Creation',
+    experience_level: 'Experienced',
+    about_yourself: p.bio,
+    career_goals: p.goals90,
+    proud_accomplishments: p.achievements,
+    why_nzinga_interest: 'I want professional representation with Nzinga.',
+    influencer_primary_platform: p.platform,
+    influencer_handle: p.handle,
+    influencer_content_categories: 'Lifestyle,Fashion',
+    influencer_followers: p.followers,
+    influencer_content_desc: p.bio,
+    currently_represented: 'No',
+    has_conflicting_obligations: 'No',
+    work_markets: 'Local,National',
+    willing_to_travel: 'Yes',
+    currently_available: 'Yes',
+    link_instagram: `https://instagram.com/${p.handle.replace('@', '')}`,
     doc_gov_id: SEED_DOC,
     doc_gov_id_name: 'Government_ID.pdf',
     doc_gov_id_type: 'application/pdf',
-    doc_tax: SEED_DOC,
-    doc_tax_name: 'W9.pdf',
-    doc_tax_type: 'application/pdf',
-    doc_banking: SEED_DOC,
-    doc_banking_name: 'Voided_Check.pdf',
-    doc_banking_type: 'application/pdf',
-    doc_proof_income: SEED_DOC,
-    doc_proof_income_name: 'Proof_of_Income.pdf',
-    doc_proof_income_type: 'application/pdf',
-    consent_data: true,
-    consent_contact: true,
-    consent_truth: true,
+    why_represent: 'I believe Nzinga is the right partner for my career.',
+    goals_1_2_years: p.goals1y || p.goals90,
+    consent_truth: 'yes',
+    consent_contact: 'yes',
     signature: `${p.first} ${p.last}`,
+    signature_date: '2026-07-18',
   }
 }
 
@@ -1141,20 +1157,22 @@ export const APPLICATIONS_SEED: ApplicationsMap = {
     status: 'in_progress',
     created_at: '2026-05-18T10:00:00Z',
     last_saved: '2026-05-19T14:30:00Z',
-    completed_sections: ['personal', 'social'],
+    completed_sections: ['personal', 'interests'],
     data: {
       legal_first: 'Kai',
       legal_last: 'Johnson',
+      preferred_name: 'Kai Johnson',
       dob: '2000-03-15',
       phone: '312-555-0199',
       email: 'kai@example.com',
-      address: '123 West Loop Dr',
       city: 'Chicago',
       state: 'IL',
-      zip: '60601',
-      primary_handle: '@kaij_music',
-      primary_platform: 'TikTok',
-      follower_count: '320K',
+      country: 'USA',
+      current_market: 'Chicago, IL',
+      representation_interests: 'Influencing / Content Creation',
+      influencer_handle: '@kaij_music',
+      influencer_primary_platform: 'TikTok',
+      influencer_followers: '320K',
     },
   },
   app_aaliyah: {
@@ -1180,21 +1198,22 @@ export const APPLICATIONS_SEED: ApplicationsMap = {
     status: 'in_progress',
     created_at: '2026-07-28T15:25:00Z',
     last_saved: '2026-08-03T18:10:00Z',
-    completed_sections: ['personal', 'social'],
+    completed_sections: ['personal', 'interests'],
     data: {
       legal_first: 'Marcus',
       legal_last: 'Nguyen',
+      preferred_name: 'Marcus Nguyen',
       dob: '1998-11-02',
       phone: '714-555-0288',
       email: 'marcus.nguyen@example.com',
-      address: '882 Harbor Blvd',
       city: 'Costa Mesa',
       state: 'CA',
-      zip: '92626',
-      primary_handle: '@marcusnguyen',
-      primary_platform: 'TikTok',
-      follower_count: '210K',
-      er_pct: '3.8',
+      country: 'USA',
+      current_market: 'Costa Mesa, CA',
+      representation_interests: 'Influencing / Content Creation',
+      influencer_handle: '@marcusnguyen',
+      influencer_primary_platform: 'TikTok',
+      influencer_followers: '210K',
     },
   },
   app_sofia: {
@@ -1207,25 +1226,31 @@ export const APPLICATIONS_SEED: ApplicationsMap = {
     status: 'submitted',
     created_at: '2026-07-20T11:05:00Z',
     last_saved: '2026-07-25T20:00:00Z',
-    completed_sections: ['personal', 'social', 'talent', 'business'],
+    completed_sections: ['personal', 'interests', 'general', 'modeling', 'influencing'],
     data: {
       legal_first: 'Sofia',
       legal_last: 'Ramirez',
+      preferred_name: 'Sofia Ramirez',
       dob: '1997-06-18',
       phone: '312-555-0344',
       email: 'sofia.ramirez@example.com',
-      address: '455 N Michigan Ave',
       city: 'Chicago',
       state: 'IL',
-      zip: '60611',
-      primary_handle: '@sofiaramirez',
-      primary_platform: 'Instagram',
-      follower_count: '780K',
-      er_pct: '6.2',
-      niches: 'Model,Influencer',
-      bio: 'Chicago-based fashion and lifestyle creator focused on accessible luxury and Latine culture.',
-      achievements: 'Featured in Vogue Mexico digital, 4 paid brand campaigns in 2025.',
-      goals_90day: 'Land two mid-tier fashion partnerships and grow IG Reels by 20%.',
+      country: 'USA',
+      current_market: 'Chicago, IL',
+      representation_interests: 'Modeling,Influencing / Content Creation',
+      experience_level: 'Experienced',
+      about_yourself: 'Chicago-based fashion and lifestyle creator focused on accessible luxury and Latine culture.',
+      career_goals: 'Land two mid-tier fashion partnerships and grow IG Reels by 20%.',
+      proud_accomplishments: 'Featured in Vogue Mexico digital, 4 paid brand campaigns in 2025.',
+      why_nzinga_interest: 'I want professional representation with Nzinga.',
+      influencer_handle: '@sofiaramirez',
+      influencer_primary_platform: 'Instagram',
+      influencer_followers: '780K',
+      influencer_content_categories: 'Fashion,Lifestyle',
+      influencer_content_desc: 'Fashion and lifestyle content.',
+      currently_represented: 'No',
+      has_conflicting_obligations: 'No',
     },
   },
   app_jamal: {

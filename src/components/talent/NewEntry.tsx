@@ -37,7 +37,7 @@ const EMPTY_FORM = {
   legal_minor_status: 'No',
   animal_skill_onset: '',
   travel_logistics: '',
-  applicant_stage_status: 'New Inquiry',
+  applicant_stage_status: 'New / Lead',
   scout_id: '',
   discovery_source: '',
   next_callback_date: '',

@@ -11,11 +11,20 @@ export interface Compliance {
   social_ownership?: boolean
 }
 
+export type DocRecordStatus = 'received' | 'verified' | 'expired' | 'rejected'
+
 export interface UploadedDoc {
   name: string
   data: string
   type: string
   storagePath?: string
+  /** Document classification (gov_id, headshot, etc.) */
+  doc_type?: string
+  uploaded_at?: string
+  uploaded_by?: string
+  status?: DocRecordStatus
+  expiration_date?: string | null
+  internal_notes?: string
 }
 
 export type UploadedDocs = Record<string, UploadedDoc | null>

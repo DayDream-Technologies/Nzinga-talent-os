@@ -33,8 +33,8 @@ export function ageFromDateOfBirth(dob: string, asOf = new Date()): number | nul
 
 export type CreateProspectInput = Omit<
   AgencyProspect,
-  'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd'
->
+  'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd' | 'contracts'
+> & { contracts?: AgencyProspect['contracts'] }
 
 interface CreateProspectModalProps {
   defaultOrganization: string

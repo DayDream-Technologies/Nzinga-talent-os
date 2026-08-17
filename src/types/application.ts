@@ -1,4 +1,6 @@
-export type ApplicationStatus = 'sent' | 'in_progress' | 'submitted'
+export type ApplicationStatus = 'sent' | 'in_progress' | 'submitted' | 'pending_guardian'
+
+export type GuardianStatus = 'not_required' | 'pending' | 'completed'
 
 export type AppFieldType =
   | 'text'
@@ -12,12 +14,18 @@ export type AppFieldType =
   | 'checkbox'
   | 'file_upload'
 
+export type AppFieldCondition =
+  | { field: string; condition: 'minor' }
+  | { field: string; equals: string }
+  | { field: string; includes: string }
+
 export interface AppField {
   id: string
   label: string
   type: AppFieldType
   required?: boolean
-  requiredIf?: { field: string; condition: 'minor' }
+  requiredIf?: AppFieldCondition
+  showIf?: AppFieldCondition
   options?: string[]
   note?: string
 }
@@ -27,6 +35,8 @@ export interface AppSection {
   label: string
   icon: string
   fields: AppField[]
+  /** Hide entire section unless condition matches (e.g. representation interest). */
+  showIf?: AppFieldCondition
 }
 
 export type ApplicationData = Record<string, string | boolean | undefined>
@@ -43,6 +53,10 @@ export interface Application {
   created_at: string
   last_saved?: string
   completed_sections?: string[]
+  submitted_at?: string
+  /** Guardian verification for minors. */
+  guardian_status?: GuardianStatus
+  guardian_email?: string | null
   data: ApplicationData
 }
 

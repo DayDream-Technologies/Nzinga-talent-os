@@ -21,16 +21,17 @@ export const STAGES: TalentStage[] = [
   'not_viable',
 ]
 
+/** Product / SOP labels mapped onto existing stage keys (Build Requirements + SOP). */
 export const STAGE_LABELS: Record<TalentStage, string> = {
-  holding_entry: 'Holding Entry',
-  scout_complete: 'Scout Complete',
-  team1_review: 'Team 1 Review',
-  ops_processing: 'Ops Processing',
-  team2_audit: 'Team 2 Audit',
-  executive_review: 'Executive Review',
-  signed_onboarding: 'Signed – Onboarding',
+  holding_entry: 'New / Lead',
+  scout_complete: 'More Information Required',
+  team1_review: 'Client Packet Review',
+  ops_processing: 'Success Manager Validation',
+  team2_audit: 'Contract Pending',
+  executive_review: 'Director Review',
+  signed_onboarding: 'Active Client',
   archived: 'Archived',
-  not_viable: 'Not Viable',
+  not_viable: 'Declined',
 }
 
 export const STAGE_COLORS: Record<TalentStage, string> = {

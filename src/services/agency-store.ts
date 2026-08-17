@@ -37,6 +37,7 @@ function hydrateProspects(list: AgencyProspect[], used: string[]): AgencyProspec
         Array.isArray(p.messageEmails) && p.messageEmails.length > 0
           ? p.messageEmails
           : [p.email].filter(Boolean),
+      contracts: Array.isArray(p.contracts) ? p.contracts : seed?.contracts ?? [],
       contractStart: p.contractStart !== undefined ? p.contractStart : seed?.contractStart ?? null,
       contractEnd: p.contractEnd !== undefined ? p.contractEnd : seed?.contractEnd ?? null,
     }

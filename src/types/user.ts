@@ -27,4 +27,5 @@ export interface ProspectProfile {
   name: string
   application_id: string | null
   created_at: string
+  last_login_at?: string | null
 }

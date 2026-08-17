@@ -11,12 +11,53 @@ import type {
   EscrowDeposit,
   ExpensePayoutLog,
   MessageThread,
+  ProspectContract,
   RetainerPlan,
   SupportTicket,
   Vendor,
 } from '@/types/agency'
+import {
+  makeTextContractDocument,
+  REPRESENTATION_AGREEMENT_TEXT,
+} from '@/lib/representation-agreement'
 
 /** Scenario: Sarah (agent) · Nike (client) · Maya (talent) · $10k shoot @ 20% commission */
+
+function seededContract(input: {
+  id: string
+  title: string
+  status: ProspectContract['status']
+  startDate: string
+  endDate?: string | null
+  representationType?: ProspectContract['representationType']
+  termLengthYears?: ProspectContract['termLengthYears']
+  talentName: string
+}): ProspectContract {
+  const termNote = input.endDate
+    ? `Term: ${input.startDate} through ${input.endDate}.`
+    : `Term begins ${input.startDate} (open-ended).`
+  const body = `${REPRESENTATION_AGREEMENT_TEXT}
+
+---
+Talent: ${input.talentName}
+${termNote}
+Representation: ${input.representationType || 'exclusive'}
+`
+  return {
+    id: input.id,
+    title: input.title,
+    status: input.status,
+    startDate: input.startDate,
+    endDate: input.endDate ?? null,
+    representationType: input.representationType,
+    termLengthYears: input.termLengthYears,
+    uploadedAt: `${input.startDate}T12:00:00Z`,
+    document: makeTextContractDocument(
+      `${input.title.replace(/\s+/g, '_')}.txt`,
+      body,
+    ),
+  }
+}
 
 export const AGENCY_STAFF = {
   id: 'staff_sarah',
@@ -101,8 +142,31 @@ export const AGENCY_PROSPECTS_SEED: AgencyProspect[] = [
     assignedAgentName: 'Sarah Chen',
     representationType: 'exclusive',
     termLengthYears: 1,
+    lastLoginAt: '2026-08-12T14:22:00Z',
     contractStart: '2026-01-15',
     contractEnd: null,
+    contracts: [
+      seededContract({
+        id: 'ctr_kai_past',
+        title: 'Representation Agreement 2025',
+        status: 'past',
+        startDate: '2025-01-15',
+        endDate: '2026-01-14',
+        representationType: 'exclusive',
+        termLengthYears: 1,
+        talentName: 'Kai Johnson',
+      }),
+      seededContract({
+        id: 'ctr_kai_current',
+        title: 'Representation Agreement 2026',
+        status: 'current',
+        startDate: '2026-01-15',
+        endDate: null,
+        representationType: 'exclusive',
+        termLengthYears: 1,
+        talentName: 'Kai Johnson',
+      }),
+    ],
   },
   {
     id: 'pros_2',
@@ -119,8 +183,21 @@ export const AGENCY_PROSPECTS_SEED: AgencyProspect[] = [
     assignedAgentName: 'Jordan Hayes',
     representationType: 'exclusive',
     termLengthYears: 1,
+    lastLoginAt: '2026-08-10T09:05:00Z',
     contractStart: '2025-08-01',
     contractEnd: '2026-07-31',
+    contracts: [
+      seededContract({
+        id: 'ctr_riley_past',
+        title: 'Exclusive Modeling Agreement 2025–2026',
+        status: 'past',
+        startDate: '2025-08-01',
+        endDate: '2026-07-31',
+        representationType: 'exclusive',
+        termLengthYears: 1,
+        talentName: 'Riley Quinn',
+      }),
+    ],
   },
   {
     id: 'pros_3',
@@ -137,8 +214,10 @@ export const AGENCY_PROSPECTS_SEED: AgencyProspect[] = [
     assignedAgentName: 'Sarah Chen',
     representationType: 'nonexclusive',
     termLengthYears: 2,
+    lastLoginAt: null,
     contractStart: null,
     contractEnd: null,
+    contracts: [],
   },
 ]
 

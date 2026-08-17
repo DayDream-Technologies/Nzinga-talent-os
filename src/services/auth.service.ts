@@ -1,7 +1,19 @@
-import type { ProspectProfile, User } from '@/types'
+import type { ProspectProfile, Talent, TalentStage, User } from '@/types'
 import { USERS } from '@/constants/seed-data'
 import { COMPANY_CODES } from '@/constants/roles'
 import { clearLocalAuthSession, supabase, supabaseConfigured } from '@/lib/supabase'
+import { fetchTalentByEmailOrApplication } from '@/services/talent.service'
+
+/** Director-approved talent may use the talent portal (signed onboarding and beyond). */
+export function isTalentPortalApproved(stage: TalentStage | string | null | undefined): boolean {
+  return stage === 'signed_onboarding' || stage === 'archived'
+}
+
+export const TALENT_UNDER_REVIEW_MESSAGE =
+  'Your application is still under review. Talent login is available after director approval and signed onboarding.'
+
+export const TALENT_LOGIN_DEMO_MESSAGE =
+  'Talent login is not available in demo mode. Connect Supabase to enable approved talent access.'
 
 export function validateCompanyCode(code: string): boolean {
   return Boolean(COMPANY_CODES[code.toUpperCase()])
@@ -182,18 +194,136 @@ export async function prospectLogin(
     email.split('@')[0] ||
     'Prospect'
 
-  return ensureProspectProfile(authData.user.id, email, metaName)
+  const result = await ensureProspectProfile(authData.user.id, email, metaName)
+  if (result.profile) {
+    const lastLoginAt = new Date().toISOString()
+    const { data: updated } = await supabase
+      .from('prospect_profiles')
+      .update({ last_login_at: lastLoginAt })
+      .eq('auth_uid', authData.user.id)
+      .select()
+      .maybeSingle()
+    if (updated) {
+      return { profile: updated as ProspectProfile, error: null }
+    }
+    return {
+      profile: { ...result.profile, last_login_at: lastLoginAt },
+      error: null,
+    }
+  }
+  return result
 }
 
-export async function sendPasswordResetEmail(email: string): Promise<{ error: string | null }> {
+/**
+ * Prospect account login for the talent home portal.
+ * Requires Supabase and a pipeline talent at signed_onboarding (or archived).
+ * Signs out and returns a clear under-review message when not yet approved.
+ */
+export async function loginApprovedTalent(
+  email: string,
+  password: string,
+): Promise<{ profile: ProspectProfile | null; talent: Talent | null; error: string | null }> {
   if (!supabaseConfigured || !supabase) {
-    return { error: 'Not available in demo mode.' }
+    return { profile: null, talent: null, error: TALENT_LOGIN_DEMO_MESSAGE }
+  }
+
+  const { profile, error } = await prospectLogin(email, password)
+  if (error || !profile) {
+    return {
+      profile: null,
+      talent: null,
+      error: error ? friendlyAuthError(error) : 'Login failed.',
+    }
+  }
+
+  let talent: Talent | null = null
+  try {
+    talent = await fetchTalentByEmailOrApplication({
+      email: profile.email,
+      applicationId: profile.application_id,
+    })
+  } catch {
+    await logout()
+    return {
+      profile: null,
+      talent: null,
+      error: 'Unable to verify your talent status. Please try again shortly.',
+    }
+  }
+
+  if (!talent || !isTalentPortalApproved(talent.stage)) {
+    await logout()
+    return { profile: null, talent: null, error: TALENT_UNDER_REVIEW_MESSAGE }
+  }
+
+  return { profile, talent, error: null }
+}
+
+/** Restore an approved talent session from an existing prospect auth session. */
+export async function restoreApprovedTalentSession(): Promise<{
+  profile: ProspectProfile | null
+  talent: Talent | null
+  error: string | null
+}> {
+  if (!supabaseConfigured || !supabase) {
+    return { profile: null, talent: null, error: TALENT_LOGIN_DEMO_MESSAGE }
+  }
+
+  const profile = await getProspectProfile()
+  if (!profile) {
+    return { profile: null, talent: null, error: null }
+  }
+
+  let talent: Talent | null = null
+  try {
+    talent = await fetchTalentByEmailOrApplication({
+      email: profile.email,
+      applicationId: profile.application_id,
+    })
+  } catch {
+    return {
+      profile: null,
+      talent: null,
+      error: 'Unable to verify your talent status. Please try again shortly.',
+    }
+  }
+
+  if (!talent || !isTalentPortalApproved(talent.stage)) {
+    await logout()
+    return { profile: null, talent: null, error: TALENT_UNDER_REVIEW_MESSAGE }
+  }
+
+  return { profile, talent, error: null }
+}
+
+export async function sendPasswordResetEmail(
+  email: string,
+): Promise<{ error: string | null; demo?: boolean }> {
+  const trimmed = email.trim()
+  if (!trimmed) return { error: 'Email is required.' }
+
+  if (!supabaseConfigured || !supabase) {
+    // Demo / local mode: treat as sent so staff workflows are testable
+    return { error: null, demo: true }
   }
   const redirectTo =
     typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+  const { error } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo })
   if (error) return { error: error.message }
   return { error: null }
+}
+
+/** Staff lookup of prospect portal profile by email (includes last_login_at). */
+export async function getProspectProfileByEmail(
+  email: string,
+): Promise<ProspectProfile | null> {
+  if (!supabaseConfigured || !supabase || !email.trim()) return null
+  const { data } = await supabase
+    .from('prospect_profiles')
+    .select('*')
+    .ilike('email', email.trim())
+    .maybeSingle()
+  return (data as ProspectProfile) ?? null
 }
 
 export async function updatePassword(newPassword: string): Promise<{ error: string | null }> {

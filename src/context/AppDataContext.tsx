@@ -167,7 +167,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           await persistTalents(next)
         }
 
-        if (app.status === 'submitted' && isAppComplete(app)) {
+        if (app.status === 'submitted' && isAppComplete(app) && app.guardian_status !== 'pending') {
           const existingFull = talentsRef.current.find((t) => t.application_id === app.id)
           if (existingFull) {
             const fullTalent = talentFromApp(
@@ -191,7 +191,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               talent_id: existingFull.id,
               user_id: null,
               type: 'system',
-              text: 'Application submitted and 100% complete — profile upgraded and entered main pipeline.',
+              text: 'Application submitted and 100% complete — profile upgraded as New / Lead.',
               ts: new Date().toISOString(),
               flagged: false,
               is_document: false,
@@ -211,7 +211,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               talent_id: newTalent.id,
               user_id: null,
               type: 'system',
-              text: 'Application auto-imported to Holding Entry pipeline.',
+              text: 'Application auto-imported to New / Lead.',
               ts: new Date().toISOString(),
               flagged: false,
               is_document: false,

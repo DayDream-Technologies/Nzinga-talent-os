@@ -8,6 +8,7 @@ export type {
   AgencyClient,
   AgencyTalent,
   AgencyProspect,
+  ProspectContract,
   SupportTicket,
   AgencyTask,
   Appointment,

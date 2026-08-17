@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, canScoutEditTalent, isScoutReadOnlyView } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, canScoutEditTalent, isScoutReadOnlyView } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
 import { ComposeEmail } from "@/components/talent/ComposeEmail";
@@ -22,6 +22,8 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
   const tTasks=allTasks.filter(t=>t.related_talent===local.id);
   const [newNote,setNewNote]=useState(""); const [noteType,setNoteType]=useState("note");
   const [historyFilter,setHistoryFilter]=useState("all");
+  const [followUpNeeded,setFollowUpNeeded]=useState(false);
+  const [followUpDate,setFollowUpDate]=useState("");
   const [opsReturnNotes,setOpsReturnNotes]=useState("");
   const scoutUser=USERS.find(u=>u.id===local.scout_id);
   const scoutReadOnly=isScoutReadOnlyView(role,local.stage,local.scout_id,currentUser.id);
@@ -31,7 +33,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
 
   // Incomplete section detection for linked app
   const appMissingMap={};
-  if(linkedApp){APP_SECTIONS.forEach(s=>{ appMissingMap[s.id]=validateSection(s.id,linkedApp.data||{}); });}
+  if(linkedApp){getVisibleSections(linkedApp.data||{}).forEach(s=>{ appMissingMap[s.id]=validateSection(s.id,linkedApp.data||{}); });}
   const appHasIncomplete=linkedApp&&Object.values(appMissingMap).some(arr=>arr.length>0);
 
   function p(f,v){setLocal(x=>({...x,[f]:v}));}
@@ -42,18 +44,36 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
   function save(u){onUpdate(u);}
   function postNote(){
     if(!newNote.trim())return;
-    setHistory(prev=>[{id:"h"+Date.now(),talent_id:local.id,user_id:currentUser.id,type:noteType,text:newNote,ts:new Date().toISOString(),flagged:false,is_document:noteType==="document"},...prev]);
+    setHistory(prev=>[{
+      id:"h"+Date.now(),
+      talent_id:local.id,
+      user_id:currentUser.id,
+      type:noteType,
+      text:newNote,
+      ts:new Date().toISOString(),
+      flagged:Boolean(followUpNeeded),
+      is_document:noteType==="document",
+      follow_up_needed:Boolean(followUpNeeded),
+      follow_up_date:followUpNeeded&&followUpDate?followUpDate:null,
+      method:noteType,
+      staff_name:currentUser.name,
+    },...prev]);
+    if(followUpNeeded&&followUpDate){
+      onUpdate({...local,next_callback_date:followUpDate,last_contacted:new Date().toISOString().split("T")[0]});
+    }
     setNewNote("");
+    setFollowUpNeeded(false);
+    setFollowUpDate("");
   }
 
   // Upload doc to profile — fixed compliance key mapping, no line-break bug
   function uploadDocToProfile(docId,data,name,type){
-    const updDocs={...(local.uploaded_docs||{}),[docId]:{name,data,type}};
+    const updDocs={...(local.uploaded_docs||{}),[docId]:{name,data,type,doc_type:docId,uploaded_at:new Date().toISOString(),uploaded_by:currentUser.name,status:"received"}};
     const compKey={gov_id:"gov_id",tax_doc:"tax_doc",banking:"banking",proof_income:"proof_income"}[docId]||docId;
     const updComp={...local.compliance,[compKey]:true};
     const updated={...local,uploaded_docs:updDocs,compliance:updComp};
     setLocal(updated);
-    setHistory(prev=>[{id:"h"+Date.now(),talent_id:local.id,user_id:currentUser.id,type:"document",text:`Document uploaded: ${name}`,ts:new Date().toISOString(),flagged:false,is_document:true,doc_name:name,doc_data:data,doc_type:type},...prev]);
+    setHistory(prev=>[{id:"h"+Date.now(),talent_id:local.id,user_id:currentUser.id,type:"document",text:`Document uploaded: ${name}`,ts:new Date().toISOString(),flagged:false,is_document:true,doc_name:name,doc_data:data,doc_type:type,staff_name:currentUser.name},...prev]);
     onUpdate(updated);
   }
 
@@ -65,7 +85,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
     }
     if(local.jordan_score<3.5){setErr("Jordan Score must be at least 3.5.");return;}
     if(!local.revenue_path||!local.scout_summary||!local.niches.length){setErr("Complete all required fields.");return;}
-    setErr("");save({...local,stage:"team1_review",audit_log:auditLog("Submitted Talent Packet → Team 1 Review","team1_review")});onClose();
+    setErr("");save({...local,stage:"team1_review",applicant_stage_status:"Qualified",audit_log:auditLog("Submitted Client Packet → Client Packet Review","team1_review")});onClose();
   }
   function scoutArchive(){save({...local,stage:"not_viable",audit_log:auditLog("Marked Not Viable","not_viable")});onClose();}
   function markLost(){save({...local,stage:"not_viable",audit_log:auditLog("Marked Lost","not_viable")});onClose();}
@@ -252,7 +272,10 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
             {linkedApp?.data?.parent_name&&<Section title="Parent / Guardian" accent={T.purple} style={{ marginBottom:10 }}>
               {[["Name",linkedApp.data.parent_name],["Phone",linkedApp.data.parent_phone],["Email",linkedApp.data.parent_email],["Relationship",linkedApp.data.parent_relationship]].filter(([,v])=>v).map(([k,v])=><div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500 }}>{v}</span></div>)}
             </Section>}
-            {role==="scout"&&local.stage==="holding_entry"&&!scoutReadOnly&&<div style={{ display:"flex",gap:7 }}><Btn variant="primary" onClick={()=>setTab("Scoring")}>Complete Talent Packet →</Btn><Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>📧 Send Application</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>}
+            {role==="scout"&&local.stage==="holding_entry"&&!scoutReadOnly&&<div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+              <div style={{ fontSize:11,color:"#9a3412",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:6,padding:"8px 10px",lineHeight:1.45 }}>SOP: Scouts qualify leads and build Client Packets. Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.</div>
+              <div style={{ display:"flex",gap:7,flexWrap:"wrap" }}><Btn variant="primary" onClick={()=>setTab("Scoring")}>Build Client Packet →</Btn><Btn variant="orange" sm onClick={()=>setShowSendApp(true)}>Send Application</Btn><Btn variant="ghost" sm onClick={()=>{upd("applicant_stage_status","Under Review");onUpdate({...local,applicant_stage_status:"Under Review"});}}>Mark Under Review</Btn><Btn variant="danger" sm onClick={scoutArchive}>Declined</Btn><Btn variant="warning" sm onClick={markLost}>Withdrawn / Lost</Btn></div>
+            </div>}
             {role==="team1_lead"&&local.stage==="team1_review"&&<Section title="Gate 1 Decision" accent={T.amber} style={{ marginTop:10 }}><div style={{ marginBottom:8 }}><Lbl>Correction Notes (required for revision)</Lbl><FTextarea value={local.team1_notes} onChange={v=>p("team1_notes",v)} rows={2}/></div><div style={{ display:"flex",gap:7 }}><Btn variant="success" onClick={()=>t1("approved")}>✓ Approve for Ops</Btn><Btn variant="warning" onClick={()=>t1("revision")}>↩ Return for Revision</Btn><Btn variant="danger" onClick={()=>t1("rejected")}>✗ Reject</Btn></div></Section>}
           </div>}
 
@@ -277,7 +300,7 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                   <div style={{ fontSize:12,color:local.jordan_score>=3.5?T.green:T.red,fontWeight:600 }}>{local.jordan_score>=3.5?"✓ Meets 3.5 threshold":local.jordan_score>0?"✗ Below 3.5 threshold — cannot advance":"Enter pillar scores above"}</div>
                 </div>
               </Section>
-              <div style={{ display:"flex",gap:7,marginTop:10 }}><Btn variant="primary" onClick={scoutSubmit} disabled={local.jordan_score<3.5||local.pillar_scores.some(s=>s<3)} title={local.jordan_score<3.5?"Jordan Score must be at least 3.5.":local.pillar_scores.some(s=>s<3)?"Every pillar must be at least 3.":""}>Submit Packet → Team 1 Review</Btn><Btn variant="danger" sm onClick={scoutArchive}>Not Viable</Btn><Btn variant="warning" sm onClick={markLost}>Mark Lost</Btn></div>
+              <div style={{ display:"flex",gap:7,marginTop:10 }}><Btn variant="primary" onClick={scoutSubmit} disabled={local.jordan_score<3.5||local.pillar_scores.some(s=>s<3)} title={local.jordan_score<3.5?"Jordan Score must be at least 3.5.":local.pillar_scores.some(s=>s<3)?"Every pillar must be at least 3.":""}>Submit Client Packet → Client Packet Review</Btn><Btn variant="danger" sm onClick={scoutArchive}>Declined</Btn><Btn variant="warning" sm onClick={markLost}>Withdrawn / Lost</Btn></div>
             </div>:<div>
               {PILLAR_NAMES.map((name,i)=><Section key={i} title={`P${i+1}: ${name}`} accent={local.pillar_scores[i]>=3?T.green:local.pillar_scores[i]>0?T.red:T.t5} style={{ marginBottom:8 }}>
                 <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4 }}><div style={{ flex:1,marginRight:10 }}><ScoreBar score={local.pillar_scores[i]}/></div><div style={{ width:32,height:32,borderRadius:6,background:local.pillar_scores[i]>=3?T.greenL:T.redL,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:15,color:local.pillar_scores[i]>=3?T.green:T.red }}>{local.pillar_scores[i]}</div></div>
@@ -414,6 +437,12 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                 <FSelect value={noteType} onChange={setNoteType} options={["note","call","email","sms","task","document"]} style={{ width:100 }}/>
                 <div style={{ flex:1 }}><FTextarea value={newNote} onChange={setNewNote} placeholder="Log a note, call summary, email, or document note…" rows={2}/></div>
               </div>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:10,alignItems:"center",marginBottom:8 }}>
+                <label style={{ display:"flex",alignItems:"center",gap:6,fontSize:12,color:T.t2 }}>
+                  <input type="checkbox" checked={followUpNeeded} onChange={e=>setFollowUpNeeded(e.target.checked)}/> Follow-up needed
+                </label>
+                {followUpNeeded&&<input type="date" value={followUpDate} onChange={e=>setFollowUpDate(e.target.value)} style={{ padding:"4px 8px",borderRadius:6,border:"1px solid #e5e7eb",fontSize:12 }}/>}
+              </div>
               <Btn sm variant="primary" onClick={postNote}>Post Note</Btn>
             </Section>
 
@@ -445,7 +474,9 @@ function TalentRecord({ talent, talents, currentUser, allHistory, setHistory, al
                     {h.call_recording_url&&<a href={h.call_recording_url} target="_blank" rel="noopener noreferrer" style={{ fontSize:10,color:T.blue,fontWeight:600,textDecoration:"none" }}>🎙 Recording</a>}
                     {h.email_subject&&<span style={{ fontSize:10,color:T.purple,background:T.purpleL,padding:"0 5px",borderRadius:4 }}>Re: {h.email_subject}</span>}
                   </div>
-                  {h.is_document&&<span style={{ background:"#dcfce7",color:T.green,fontSize:10,padding:"1px 6px",borderRadius:8,fontWeight:700 }}>📎 DOCUMENT</span>}
+                    {h.follow_up_needed&&<span style={{ fontSize:10,color:"#b45309",background:"#fffbeb",padding:"0 5px",borderRadius:4,fontWeight:600 }}>Follow-up{h.follow_up_date?`: ${h.follow_up_date}`:""}</span>}
+                    {h.staff_name&&!u&&<span style={{ fontSize:10,color:T.t4 }}>{h.staff_name}</span>}
+                    {h.is_document&&<span style={{ background:"#dcfce7",color:T.green,fontSize:10,padding:"1px 6px",borderRadius:8,fontWeight:700 }}>DOCUMENT</span>}
                   {h.is_document&&h.doc_data&&<button onClick={()=>setViewingDoc({name:h.doc_name||"Document",data:h.doc_data,type:h.doc_type||"image/jpeg"})} style={{ marginLeft:6,background:T.green,color:"#fff",border:"none",borderRadius:4,padding:"2px 8px",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>👁 View</button>}
                 </div>
               </div>;})}
