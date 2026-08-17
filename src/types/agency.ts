@@ -4,7 +4,32 @@ export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'partial'
 export type PayoutStatus = 'pending' | 'issued' | 'completed'
 export type EscrowStatus = 'pending' | 'cleared' | 'disbursed'
 export type TaskStatus = 'open' | 'done'
-export type ProspectStage = 'new' | 'screening' | 'interview' | 'offer' | 'signed' | 'declined'
+export type ProspectStage =
+  | 'new_prospect'
+  | 'guest_card'
+  | 'first_contact'
+  | 'second_contact'
+  | 'third_contact'
+  | 'communicating'
+  | 'wait_list'
+  | 'application_sent'
+  | 'application_started'
+  | 'application_completed'
+  | 'screening_completed'
+  | 'application_pending'
+  | 'application_approved'
+  | 'application_denied'
+  | 'contact_published'
+  | 'contract_completed'
+  /** @deprecated legacy — normalized on load */
+  | 'new'
+  | 'screening'
+  | 'interview'
+  | 'offer'
+  | 'signed'
+  | 'declined'
+
+export type ClientLifecycleStatus = 'current' | 'future' | 'past'
 /** Roster/talent niches (legacy + extended). */
 export type WorkArea =
   | 'Acting'
@@ -33,21 +58,35 @@ export interface AgencyTalent {
   id: string
   accountId: string
   name: string
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
   role: string
-  status: 'active' | 'prospect' | 'offboarding'
+  /** Client lifecycle: current (default) | future | past. Legacy: active→current, offboarding→past */
+  status: ClientLifecycleStatus | 'active' | 'prospect' | 'offboarding'
   workArea: WorkArea
+  /** Unit / division label */
+  division?: string
   niches: string[]
+  property?: string
   bankReady: boolean
   taxFormsReady: boolean
   available: boolean
   bookedDates: string[]
+  contractStart?: string | null
+  contractEnd?: string | null
+  linkedProspectId?: string | null
 }
 
 export interface AgencyProspect {
   id: string
   accountId: string
   name: string
+  firstName?: string
+  lastName?: string
   email: string
+  phone?: string
   /** Tiered division (Modeling / Influencing / Sports / Music). Legacy seed may use other WorkArea values. */
   workArea: WorkArea
   stage: ProspectStage
@@ -56,6 +95,11 @@ export interface AgencyProspect {
   notes: string
   /** Company code: NZG | NZINGA | TCG */
   organization: string
+  property?: string
+  street?: string
+  city?: string
+  state?: string
+  postal?: string
   dateOfBirth?: string
   interestLevel?: number
   preferredContact?: PreferredContactMethod
@@ -80,6 +124,9 @@ export interface AgencyProspect {
   contractStart?: string | null
   /** ISO date (YYYY-MM-DD). Empty/null means open-ended / still live. */
   contractEnd?: string | null
+  /** Linked pipeline application id when synced from Applications */
+  linkedApplicationId?: string | null
+  lost?: boolean
 }
 
 export interface ProspectContractDocument {

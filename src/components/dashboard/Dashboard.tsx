@@ -134,12 +134,12 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
 // ─── WORKSPACE ────────────────────────────────────────────────────────────────
 function Workspace({ currentUser, onNav }) {
   const favItems={
-    "Talent":["All Talent","Pipeline","Add Talent Applicant","Applications"],
+    "Talent":["Prospects","Clients","Tracking Board","Applications"],
     "Operations":["Tasks","History / Notes"],
     "Reports":["Jordan Score Report","Revenue Forecast","Pipeline Summary"],
   };
   const reports={"Pipeline":["Pipeline Summary","Prospect Box Score"],"Scoring":["Jordan Score Report"],"Revenue":["Revenue Forecast"]};
-  const nm={"All Talent":"roster","Pipeline":"pipeline","Add Talent Applicant":"new-entry","Tasks":"tasks","History / Notes":"history","Jordan Score Report":"reports?tab=jordan_scores","Revenue Forecast":"reports?tab=revenue_forecast","Pipeline Summary":"reports?tab=pipeline_summary","Prospect Box Score":"reports?tab=prospect_box_score","Applications":"applications"};
+  const nm={"Prospects":"prospects","Clients":"clients","Tracking Board":"prospect-tracking","All Talent":"clients","Pipeline":"pipeline","Add Talent Applicant":"new-entry","Tasks":"agency-tasks","History / Notes":"history","Jordan Score Report":"reports?tab=jordan_scores","Revenue Forecast":"reports?tab=revenue_forecast","Pipeline Summary":"reports?tab=pipeline_summary","Prospect Box Score":"reports?tab=prospect_box_score","Applications":"applications"};
   function navTo(item) {
     const target=nm[item];
     if(!target) return;
@@ -149,33 +149,33 @@ function Workspace({ currentUser, onNav }) {
     } else onNav(target);
   }
   return(
-    <div style={dashPageStyle("22px 26px")}>
-      <div style={{ textAlign:"center",marginBottom:28 }}>
-        <div style={{ fontSize:26,fontWeight:700,color:DASH.text.primary,fontFamily:"'Syne',sans-serif" }}>Welcome, {currentUser.name.split(" ")[0]}</div>
-        <div style={{ fontSize:13,color:DASH.text.secondary,marginTop:3 }}>Let's get to work.</div>
+    <div style={dashPageStyle("28px 32px")}>
+      <div style={{ textAlign:"center",marginBottom:32 }}>
+        <div style={{ fontSize:36,fontWeight:700,color:DASH.text.primary,fontFamily:"'Syne',sans-serif" }}>Welcome, {currentUser.name.split(" ")[0]}</div>
+        <div style={{ fontSize:16,color:DASH.text.secondary,marginTop:8 }}>Let's get to work.</div>
       </div>
-      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18 }}>
-        <div style={dashCardStyle()}>
-          <div style={dashPanelHeaderStyle({ justifyContent:'flex-start' })}><span style={{ fontSize:14,fontWeight:700,color:DASH.text.primary }}>My Favorites</span></div>
-          <div style={{ padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
-            {Object.entries(favItems).map(([cat,items],idx)=><div key={cat} style={dashSubCardStyle()}>
-              <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:5 }}>
-                <div style={{ width:26,height:26,borderRadius:7,background:DASH.iconBgs[idx%DASH.iconBgs.length],display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Talent"?"🏠":cat==="Operations"?"⚙":"📊"}</div>
-                <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary }}>{cat}</span>
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:22 }}>
+        <div style={{ ...dashCardStyle(), padding: 4 }}>
+          <div style={dashPanelHeaderStyle({ justifyContent:'flex-start', padding: '14px 16px' })}><span style={{ fontSize:16,fontWeight:700,color:DASH.text.primary }}>My Favorites</span></div>
+          <div style={{ padding:"16px 18px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:16 }}>
+            {Object.entries(favItems).map(([cat,items],idx)=><div key={cat} style={{ ...dashSubCardStyle(), padding: '14px 14px' }}>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                <div style={{ width:30,height:30,borderRadius:8,background:DASH.iconBgs[idx%DASH.iconBgs.length],display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }}>{cat==="Talent"?"🏠":cat==="Operations"?"⚙":"📊"}</div>
+                <span style={{ fontSize:13,fontWeight:700,color:DASH.text.primary }}>{cat}</span>
               </div>
-              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:DASH.blue.link,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
+              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:13,color:DASH.blue.link,cursor:"pointer",padding:"4px 0",paddingLeft:38 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
             </div>)}
           </div>
         </div>
-        <div style={dashCardStyle()}>
-          <div style={dashPanelHeaderStyle({ justifyContent:'flex-start' })}><span style={{ fontSize:14,fontWeight:700,color:DASH.text.primary }}>My Reports</span></div>
-          <div style={{ padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
-            {Object.entries(reports).map(([cat,items],idx)=><div key={cat} style={dashSubCardStyle()}>
-              <div style={{ display:"flex",alignItems:"center",gap:7,marginBottom:5 }}>
-                <div style={{ width:26,height:26,borderRadius:7,background:DASH.iconBgs[idx%DASH.iconBgs.length],display:"flex",alignItems:"center",justifyContent:"center",fontSize:13 }}>{cat==="Pipeline"?"🏠":cat==="Scoring"?"💰":"📊"}</div>
-                <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary }}>{cat}</span>
+        <div style={{ ...dashCardStyle(), padding: 4 }}>
+          <div style={dashPanelHeaderStyle({ justifyContent:'flex-start', padding: '14px 16px' })}><span style={{ fontSize:16,fontWeight:700,color:DASH.text.primary }}>My Reports</span></div>
+          <div style={{ padding:"16px 18px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:16 }}>
+            {Object.entries(reports).map(([cat,items],idx)=><div key={cat} style={{ ...dashSubCardStyle(), padding: '14px 14px' }}>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                <div style={{ width:30,height:30,borderRadius:8,background:DASH.iconBgs[idx%DASH.iconBgs.length],display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }}>{cat==="Pipeline"?"🏠":cat==="Scoring"?"💰":"📊"}</div>
+                <span style={{ fontSize:13,fontWeight:700,color:DASH.text.primary }}>{cat}</span>
               </div>
-              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:12,color:DASH.blue.link,cursor:"pointer",padding:"2px 0",paddingLeft:33 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
+              {items.map(item=><div key={item} onClick={()=>navTo(item)} style={{ fontSize:13,color:DASH.blue.link,cursor:"pointer",padding:"4px 0",paddingLeft:38 }} onMouseEnter={e=>e.target.style.textDecoration="underline"} onMouseLeave={e=>e.target.style.textDecoration="none"}>{item}</div>)}
             </div>)}
           </div>
         </div>
@@ -193,21 +193,28 @@ function ApplicationsPanel({ applications, talents, onViewApp, onImportApp }) {
   const [filter,setFilter]=useState("all");
   const apps=Object.values(applications);
   const filtered=apps.filter(a=>{
-    if(filter==="pending") return a.status==="sent"||a.status==="in_progress"||a.status==="pending_guardian";
+    if(filter==="pending") return a.status==="sent"||a.status==="in_progress";
+    if(filter==="pending_parent") return a.status==="pending_guardian"||a.guardian_status==="pending";
     if(filter==="submitted_complete") return a.status==="submitted"&&isAppComplete(a)&&a.guardian_status!=="pending";
-    if(filter==="submitted_incomplete") return (a.status==="submitted"&&!isAppComplete(a))||a.status==="pending_guardian";
+    if(filter==="submitted_incomplete") return a.status==="submitted"&&!isAppComplete(a);
     return true;
   });
-  const counts={all:apps.length,pending:apps.filter(a=>a.status==="sent"||a.status==="in_progress"||a.status==="pending_guardian").length,submitted_complete:apps.filter(a=>a.status==="submitted"&&isAppComplete(a)&&a.guardian_status!=="pending").length,submitted_incomplete:apps.filter(a=>(a.status==="submitted"&&!isAppComplete(a))||a.status==="pending_guardian").length};
+  const counts={
+    all:apps.length,
+    pending:apps.filter(a=>a.status==="sent"||a.status==="in_progress").length,
+    pending_parent:apps.filter(a=>a.status==="pending_guardian"||a.guardian_status==="pending").length,
+    submitted_complete:apps.filter(a=>a.status==="submitted"&&isAppComplete(a)&&a.guardian_status!=="pending").length,
+    submitted_incomplete:apps.filter(a=>a.status==="submitted"&&!isAppComplete(a)).length,
+  };
 
   return(
     <div style={{ padding:"14px 18px",flex:1,overflowY:"auto" }}>
       <div style={{ background:T.blueL,border:`1px solid ${T.blue}33`,borderRadius:8,padding:"9px 14px",marginBottom:12,fontSize:12,color:T.blue }}>
-        <strong>Application Pipeline Rules:</strong> Incomplete applications remain here until 100% complete. Minors stay pending until guardian verification. Fully submitted apps enter as New / Lead.
+        <strong>Applications (review):</strong> View pipeline-linked applications here. Create and manage people on Prospects — new invites sync there automatically. Incomplete apps stay here until complete; under-18 submit as Pending Parent Approval.
       </div>
       <div style={{ display:"flex",gap:6,marginBottom:12,alignItems:"center",justifyContent:"space-between",flexWrap:"wrap" }}>
         <div style={{ display:"flex",gap:5 }}>
-          {[["all","All",T.t3],["pending","In Progress",T.amber],["submitted_complete","Ready to Import",T.green],["submitted_incomplete","Incomplete / Guardian",T.red]].map(([v,l,c])=>(
+          {[["all","All",T.t3],["pending","In Progress",T.amber],["pending_parent","Pending Parent Approval",T.amber],["submitted_complete","Ready to Import",T.green],["submitted_incomplete","Incomplete",T.red]].map(([v,l,c])=>(
             <button key={v} onClick={()=>setFilter(v)} style={{ background:filter===v?"#fff":"transparent",border:`1px solid ${filter===v?"#d1d5db":"transparent"}`,borderRadius:5,padding:"4px 10px",fontSize:11,color:filter===v?c:T.t3,cursor:"pointer",fontWeight:filter===v?600:400,fontFamily:"inherit",display:"flex",alignItems:"center",gap:4 }}>
               {l}<span style={{ background:"#f3f4f6",color:T.t3,borderRadius:8,padding:"0 5px",fontSize:10 }}>{counts[v]}</span>
             </button>
@@ -222,7 +229,7 @@ function ApplicationsPanel({ applications, talents, onViewApp, onImportApp }) {
               const progress=Math.round(((app.completed_sections||[]).length/Math.max(getVisibleSections(app.data||{}).length,1))*100);
               const complete=isAppComplete(app);
               const missingCount=getVisibleSections(app.data||{}).reduce((a,s)=>a+(validateSection(s.id,app.data||{}).length),0);
-              const st={sent:{bg:T.amberL,c:T.amber,l:"Sent"},in_progress:{bg:T.blueL,c:T.blue,l:"In Progress"},pending_guardian:{bg:T.amberL,c:T.amber,l:"Guardian Pending"},submitted:{bg:complete?T.greenL:T.redL,c:complete?T.green:T.red,l:complete?"Complete":"Incomplete"}}[app.status]||{bg:"#f3f4f6",c:T.t3,l:"Draft"};
+              const st={sent:{bg:T.amberL,c:T.amber,l:"Sent"},in_progress:{bg:T.blueL,c:T.blue,l:"In Progress"},pending_guardian:{bg:T.amberL,c:T.amber,l:"Pending Parent Approval"},submitted:{bg:complete?T.greenL:T.redL,c:complete?T.green:T.red,l:complete?"Complete":"Incomplete"}}[app.status]||{bg:"#f3f4f6",c:T.t3,l:"Draft"};
               return <tr key={app.id} onMouseEnter={e=>e.currentTarget.style.background="#f8f9fb"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <TD><TalentLink name={app.talent_name} /><div style={{ fontSize:10,color:T.t4 }}>{app.talent_email}</div></TD>
                 <TD><span style={{ background:st.bg,color:st.c,borderRadius:10,padding:"2px 8px",fontSize:11,fontWeight:700 }}>{st.l}</span></TD>

@@ -34,6 +34,7 @@ import type {
   CalendarEvent,
   ChecklistItem,
   ClientInvoice,
+  ClientLifecycleStatus,
   Disbursement,
   EscrowDeposit,
   ExpensePayoutLog,
@@ -42,7 +43,10 @@ import type {
   SupportTicket,
   Vendor,
   ProspectContract,
+  ProspectStage,
 } from '@/types/agency'
+import { nextProspectStage, normalizeProspectStage } from '@/constants/prospect-stages'
+import { AGENCY_PROPERTY } from '@/lib/session-storage'
 
 interface AgencyDataValue {
   clients: AgencyClient[]
@@ -105,8 +109,30 @@ interface AgencyDataValue {
     input: Omit<
       AgencyProspect,
       'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd' | 'contracts'
-    > & { contracts?: AgencyProspect['contracts'] },
+    > & { contracts?: AgencyProspect['contracts']; stage?: ProspectStage },
   ) => AgencyProspect
+  updateProspect: (id: string, patch: Partial<AgencyProspect>) => void
+  setProspectStage: (id: string, stage: ProspectStage) => void
+  deleteProspects: (ids: string[]) => void
+  mergeProspects: (survivorId: string, duplicateId: string) => void
+  upsertProspectFromApplication: (input: {
+    email: string
+    name: string
+    stage: ProspectStage
+    applicationId?: string
+    organization?: string
+  }) => void
+  createClient: (input: {
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+    division: string
+    status: ClientLifecycleStatus
+    contractStart: string
+    contractEnd: string
+  }) => AgencyTalent
+  updateTalent: (id: string, patch: Partial<AgencyTalent>) => void
   addProspectContract: (prospectId: string, contract: Omit<ProspectContract, 'id' | 'uploadedAt'> & { id?: string; uploadedAt?: string }) => void
   advanceProspect: (id: string) => void
   createRenewalOffer: (talentId: string) => string
@@ -439,18 +465,22 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       input: Omit<
         AgencyProspect,
         'id' | 'accountId' | 'submittedAt' | 'stage' | 'contractStart' | 'contractEnd' | 'contracts'
-      > & { contracts?: AgencyProspect['contracts'] },
+      > & { contracts?: AgencyProspect['contracts']; stage?: ProspectStage },
     ) => {
       const used = [
         ...prospects.map((p) => p.accountId),
         ...talent.map((t) => t.accountId),
       ]
+      const nameParts = (input.name || '').trim().split(/\s+/)
       const created: AgencyProspect = {
         ...input,
         id: uid('pros'),
         accountId: nextAccountNumber(used),
         submittedAt: new Date().toISOString(),
-        stage: 'new',
+        stage: normalizeProspectStage(input.stage || 'new_prospect'),
+        property: input.property || AGENCY_PROPERTY,
+        firstName: input.firstName || nameParts[0] || '',
+        lastName: input.lastName || nameParts.slice(1).join(' ') || '',
         contractStart: null,
         contractEnd: null,
         contracts: input.contracts ?? [],
@@ -464,6 +494,158 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     },
     [prospects, talent],
   )
+
+  const updateProspect = useCallback((id: string, patch: Partial<AgencyProspect>) => {
+    setProspects((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p
+        const next = { ...p, ...patch }
+        if (patch.stage) next.stage = normalizeProspectStage(patch.stage)
+        if (patch.name && !patch.firstName) {
+          const parts = patch.name.trim().split(/\s+/)
+          next.firstName = parts[0] || p.firstName
+          next.lastName = parts.slice(1).join(' ') || p.lastName
+        }
+        return next
+      }),
+    )
+  }, [])
+
+  const setProspectStage = useCallback((id: string, stage: ProspectStage) => {
+    updateProspect(id, { stage: normalizeProspectStage(stage) })
+  }, [updateProspect])
+
+  const deleteProspects = useCallback((ids: string[]) => {
+    const set = new Set(ids)
+    setProspects((prev) => prev.filter((p) => !set.has(p.id)))
+  }, [])
+
+  const mergeProspects = useCallback((survivorId: string, duplicateId: string) => {
+    setProspects((prev) => {
+      const survivor = prev.find((p) => p.id === survivorId)
+      const dup = prev.find((p) => p.id === duplicateId)
+      if (!survivor || !dup) return prev
+      const merged: AgencyProspect = {
+        ...survivor,
+        notes: [survivor.notes, dup.notes].filter(Boolean).join('\n\n'),
+        contracts: [...(survivor.contracts || []), ...(dup.contracts || [])],
+        messageEmails: [...new Set([...(survivor.messageEmails || []), ...(dup.messageEmails || [])])],
+        linkedApplicationId: survivor.linkedApplicationId || dup.linkedApplicationId,
+        phone: survivor.phone || dup.phone,
+        street: survivor.street || dup.street,
+        city: survivor.city || dup.city,
+        state: survivor.state || dup.state,
+        postal: survivor.postal || dup.postal,
+        parentName: survivor.parentName || dup.parentName,
+        parentEmail: survivor.parentEmail || dup.parentEmail,
+        parentPhone: survivor.parentPhone || dup.parentPhone,
+      }
+      return prev.filter((p) => p.id !== duplicateId).map((p) => (p.id === survivorId ? merged : p))
+    })
+  }, [])
+
+  const upsertProspectFromApplication = useCallback(
+    (input: {
+      email: string
+      name: string
+      stage: ProspectStage
+      applicationId?: string
+      organization?: string
+    }) => {
+      const email = input.email.trim().toLowerCase()
+      if (!email) return
+      setProspects((prev) => {
+        const existing = prev.find(
+          (p) =>
+            p.email.toLowerCase() === email ||
+            (input.applicationId && p.linkedApplicationId === input.applicationId),
+        )
+        if (existing) {
+          return prev.map((p) =>
+            p.id === existing.id
+              ? {
+                  ...p,
+                  stage: normalizeProspectStage(input.stage),
+                  linkedApplicationId: input.applicationId || p.linkedApplicationId,
+                  name: p.name || input.name,
+                }
+              : p,
+          )
+        }
+        const used = [...prev.map((p) => p.accountId), ...talent.map((t) => t.accountId)]
+        const parts = input.name.trim().split(/\s+/)
+        const created: AgencyProspect = {
+          id: uid('pros'),
+          accountId: nextAccountNumber(used),
+          name: input.name,
+          firstName: parts[0] || '',
+          lastName: parts.slice(1).join(' ') || '',
+          email: input.email,
+          workArea: 'Acting',
+          stage: normalizeProspectStage(input.stage),
+          source: 'Portal application',
+          submittedAt: new Date().toISOString(),
+          notes: '',
+          organization: (input.organization || 'NZG').toUpperCase(),
+          property: AGENCY_PROPERTY,
+          messageEmails: [input.email],
+          contracts: [],
+          contractStart: null,
+          contractEnd: null,
+          linkedApplicationId: input.applicationId || null,
+        }
+        return [created, ...prev]
+      })
+    },
+    [talent],
+  )
+
+  const createClient = useCallback(
+    (input: {
+      firstName: string
+      lastName: string
+      email: string
+      phone: string
+      division: string
+      status: ClientLifecycleStatus
+      contractStart: string
+      contractEnd: string
+    }) => {
+      const used = [
+        ...prospects.map((p) => p.accountId),
+        ...talent.map((t) => t.accountId),
+      ]
+      const name = `${input.firstName} ${input.lastName}`.trim()
+      const created: AgencyTalent = {
+        id: uid('talent'),
+        accountId: nextAccountNumber(used),
+        name,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        phone: input.phone,
+        role: 'Signed Talent',
+        status: input.status,
+        workArea: (input.division as AgencyTalent['workArea']) || 'Modeling',
+        division: input.division,
+        niches: [],
+        property: AGENCY_PROPERTY,
+        bankReady: false,
+        taxFormsReady: false,
+        available: true,
+        bookedDates: [],
+        contractStart: input.contractStart || null,
+        contractEnd: input.contractEnd || null,
+      }
+      setTalent((prev) => [created, ...prev])
+      return created
+    },
+    [prospects, talent],
+  )
+
+  const updateTalentRecord = useCallback((id: string, patch: Partial<AgencyTalent>) => {
+    setTalent((prev) => patchById(prev, id, patch))
+  }, [])
 
   const addProspectContract = useCallback(
     (
@@ -502,13 +684,11 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
   )
 
   const advanceProspect = useCallback((id: string) => {
-    const order = ['new', 'screening', 'interview', 'offer', 'signed'] as const
     setProspects((prev) =>
       prev.map((p) => {
         if (p.id !== id) return p
-        const idx = order.indexOf(p.stage as (typeof order)[number])
-        if (idx < 0 || idx >= order.length - 1) return p
-        return { ...p, stage: order[idx + 1] }
+        const next = nextProspectStage(normalizeProspectStage(p.stage))
+        return next ? { ...p, stage: next } : p
       }),
     )
   }, [])
@@ -573,6 +753,13 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       deleteDisbursement,
       sendMessage,
       createProspect,
+      updateProspect,
+      setProspectStage,
+      deleteProspects,
+      mergeProspects,
+      upsertProspectFromApplication,
+      createClient,
+      updateTalent: updateTalentRecord,
       addProspectContract,
       advanceProspect,
       createRenewalOffer,
@@ -628,6 +815,13 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       deleteDisbursement,
       sendMessage,
       createProspect,
+      updateProspect,
+      setProspectStage,
+      deleteProspects,
+      mergeProspects,
+      upsertProspectFromApplication,
+      createClient,
+      updateTalentRecord,
       addProspectContract,
       advanceProspect,
       createRenewalOffer,

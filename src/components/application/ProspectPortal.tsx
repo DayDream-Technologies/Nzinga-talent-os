@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, isFieldVisible, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, isFieldVisible, fieldFailsLength, fieldLengthHint, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { supabaseConfigured } from "@/lib/supabase";
 import { prospectSignup, prospectLogin, sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
@@ -115,9 +115,9 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
             <div style={{ fontSize:17,fontWeight:700,color:"#fff",marginBottom:4 }}>Welcome, Talent</div>
             <div style={{ fontSize:13,color:"rgba(255,255,255,0.45)",marginBottom:24,lineHeight:1.6 }}>Apply to join the Nzinga Talent Group roster, or continue a saved application.</div>
             <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-              <button onClick={()=>setMode("apply")} style={{ width:"100%",padding:"12px",background:"linear-gradient(135deg,#7c3aed,#2563eb)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>🎭 Start New Application</button>
-              {supabaseConfigured&&<button onClick={()=>setMode("login")} style={{ width:"100%",padding:"12px",background:"rgba(22,163,74,0.2)",color:"#4ade80",border:"1px solid rgba(74,222,128,0.3)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>🔐 Log In to Resume</button>}
-              <button onClick={()=>setMode("lookup")} style={{ width:"100%",padding:"12px",background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.85)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>🔑 Resume with Access Code</button>
+              <button onClick={()=>setMode("apply")} style={{ width:"100%",padding:"12px",background:"linear-gradient(135deg,#7c3aed,#2563eb)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>Start New Application</button>
+              {supabaseConfigured&&<button onClick={()=>setMode("login")} style={{ width:"100%",padding:"12px",background:"rgba(22,163,74,0.2)",color:"#4ade80",border:"1px solid rgba(74,222,128,0.3)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>Log In to Resume</button>}
+              <button onClick={()=>setMode("lookup")} style={{ width:"100%",padding:"12px",background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.85)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit" }}>Resume with Access Code</button>
             </div>
             <div style={{ marginTop:16,textAlign:"center" }}><button onClick={onBack} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>← Back to company code</button></div>
           </div>
@@ -196,12 +196,14 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   const [completedSections,setCompletedSections]=useState(new Set(app.completed_sections||[]));
   const [saveStatus,setSaveStatus]=useState("saved");
   const [submitted,setSubmitted]=useState(app.status==="submitted"||app.status==="pending_guardian");
-  const [pendingGuardian,setPendingGuardian]=useState(app.status==="pending_guardian");
+  const [pendingGuardian,setPendingGuardian]=useState(app.status==="pending_guardian"||app.guardian_status==="pending");
   const [touched,setTouched]=useState({});
   const [jumpTarget,setJumpTarget]=useState(null);
   const [submitErr,setSubmitErr]=useState("");
+  const [submitNote,setSubmitNote]=useState("");
   const [hasScrolledAgreement,setHasScrolledAgreement]=useState(false);
   const [submitting,setSubmitting]=useState(false);
+  const [showSubmitConfirm,setShowSubmitConfirm]=useState(false);
   const autoRef=useRef(null);
 
   const visibleSections=getVisibleSections(data);
@@ -244,12 +246,32 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
     if(!sec) return;
     const missing=validateSection(sec.id,data);
     if(missing.length>0){setTouched(t=>{const n={...t};missing.forEach(id=>{n[id]=true;});return n;});return;}
-    setCompletedSections(prev=>{
-      const next=new Set(prev);next.add(sec.id);
-      const updated={...app,data,last_saved:new Date().toISOString(),completed_sections:Array.from(next)};
-      onSave(updated);return next;
-    });
-    if(idx<total-1) setCurrentSection(idx+1);
+    const nextCompleted=new Set(completedSections);
+    nextCompleted.add(sec.id);
+    setCompletedSections(nextCompleted);
+    const updated={...app,data,last_saved:new Date().toISOString(),completed_sections:Array.from(nextCompleted)};
+    onSave(updated);
+    if(idx<total-1){
+      setCurrentSection(idx+1);
+    }else{
+      setShowSubmitConfirm(true);
+    }
+  }
+
+  function requestSubmit(){
+    const allMissing={};
+    visibleSections.forEach(s=>{allMissing[s.id]=validateSection(s.id,data);});
+    const hasAny=Object.values(allMissing).some(arr=>arr.length>0);
+    if(hasAny){
+      const allFields={};
+      Object.values(allMissing).flat().forEach(id=>{allFields[id]=true;});
+      setTouched(allFields);
+      setShowSubmitConfirm(false);
+      const firstBad=visibleSections.findIndex(s=>(allMissing[s.id]||[]).length>0);
+      if(firstBad>=0) setCurrentSection(firstBad);
+      return;
+    }
+    setShowSubmitConfirm(true);
   }
 
   async function submitApp(){
@@ -276,23 +298,37 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
     }catch{ /* best-effort */ }
 
     setSubmitErr("");
+    setSubmitNote("");
     setSubmitting(true);
     try{
       if(minorApplicant){
         const gEmail=String(data.guardian_invite_email||"").trim();
         if(!gEmail){setSubmitErr("Parent/guardian email is required for applicants under 18.");setSubmitting(false);return;}
-        const draft={...app,data,last_saved:new Date().toISOString(),completed_sections:visibleSections.map(s=>s.id)};
-        const {invite,error}=await inviteGuardian(draft,gEmail);
-        if(error||!invite){setSubmitErr(error||"Could not invite guardian.");setSubmitting(false);return;}
-        const updated={...draft,status:"pending_guardian",guardian_status:"pending",guardian_email:gEmail,submitted_at:new Date().toISOString()};
-        onSave(updated);
+        const draft={
+          ...app,
+          data,
+          last_saved:new Date().toISOString(),
+          completed_sections:visibleSections.map(s=>s.id),
+          status:"pending_guardian",
+          guardian_status:"pending",
+          guardian_email:gEmail,
+          submitted_at:new Date().toISOString(),
+        };
+        const {emailWarning}=await inviteGuardian(draft,gEmail);
+        // Always treat as submitted pending parent approval (inviteGuardian also persists this status).
+        onSave(draft);
+        if(emailWarning){
+          setSubmitNote(`Your application is saved as Pending Parent Approval. Parent email could not be sent automatically (${emailWarning}).`);
+        }
         setPendingGuardian(true);
         setSubmitted(true);
+        setShowSubmitConfirm(false);
       }else{
         const updated={...app,data,status:"submitted",guardian_status:"not_required",last_saved:new Date().toISOString(),completed_sections:visibleSections.map(s=>s.id),submitted_at:new Date().toISOString()};
         onSave(updated);
         setPendingGuardian(false);
         setSubmitted(true);
+        setShowSubmitConfirm(false);
       }
     }finally{
       setSubmitting(false);
@@ -306,13 +342,18 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",padding:20 }}>
       <div style={{ textAlign:"center",maxWidth:440,padding:36 }}>
         <div style={{ fontSize:26,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif",marginBottom:8 }}>
-          {pendingGuardian?"Pending parent/guardian verification":"Application Submitted"}
+          {pendingGuardian?"Pending Parent Approval":"Application Submitted"}
         </div>
         <div style={{ fontSize:14,color:"rgba(255,255,255,0.55)",lineHeight:1.7,marginBottom:20 }}>
           {pendingGuardian
-            ? <>Thank you, <strong style={{ color:"rgba(255,255,255,0.85)" }}>{app.talent_name}</strong>. Your portion is complete. We emailed your parent/guardian a secure link. Your application stays pending until they finish verification and consent.</>
+            ? <>Thank you, <strong style={{ color:"rgba(255,255,255,0.85)" }}>{app.talent_name}</strong>. Your application has been submitted with status <strong style={{ color:"#fbbf24" }}>Pending Parent Approval</strong>. A parent/guardian must complete verification before it can move forward.</>
             : <>Thank you, <strong style={{ color:"rgba(255,255,255,0.85)" }}>{app.talent_name}</strong>. Your application is under review as a New / Lead. A scout will reach out within 5–7 business days.</>}
         </div>
+        {submitNote&&(
+          <div style={{ background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.35)",borderRadius:8,padding:12,marginBottom:16,fontSize:12,color:"#fcd34d",lineHeight:1.5,textAlign:"left" }}>
+            {submitNote}
+          </div>
+        )}
         <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:14,marginBottom:20 }}>
           <div style={{ fontSize:11,color:"rgba(255,255,255,0.4)",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:3 }}>Your Access Code</div>
           <div style={{ fontSize:22,fontWeight:800,color:"#7c3aed",letterSpacing:"0.15em" }}>{app.access_code}</div>
@@ -360,7 +401,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
             </div>;
           })}
           <div style={{ padding:"12px 14px 0",borderTop:"1px solid rgba(255,255,255,0.06)",marginTop:6 }}>
-            {allComplete&&<button onClick={()=>void submitApp()} disabled={submitting} style={{ width:"100%",padding:"10px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:submitting?0.7:1 }}>{submitting?"Submitting…":minorApplicant?"Submit for guardian →":"Submit Application"}</button>}
+            {allComplete&&<button onClick={requestSubmit} disabled={submitting} style={{ width:"100%",padding:"10px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:submitting?0.7:1 }}>{submitting?"Submitting…":minorApplicant?"Submit (Pending Parent Approval)":"Submit Application"}</button>}
             {!allComplete&&<div style={{ fontSize:10,color:"rgba(255,255,255,0.25)",textAlign:"center",lineHeight:1.5 }}>Complete all sections to submit</div>}
           </div>
         </div>
@@ -373,28 +414,64 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
               </div>
             )}
             <div style={{ marginBottom:20 }}>
-              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}><span style={{ fontSize:20 }}>{sec.icon}</span><div style={{ fontSize:22,fontWeight:700,color:"#fff",fontFamily:"'Syne',sans-serif" }}>{sec.label}</div></div>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}><div style={{ fontSize:22,fontWeight:700,color:"#fff",fontFamily:"'Syne',sans-serif" }}>{sec.label}</div></div>
               <div style={{ fontSize:12,color:"rgba(255,255,255,0.4)" }}>Step {currentSection+1} of {total}{age!==null?` · Age ${age}`:""}</div>
             </div>
 
             {sec.id==="final"&&<AgreementViewer onScrollComplete={setHasScrolledAgreement} hasScrolledToBottom={hasScrolledAgreement}/>}
+            {sec.id==="social"&&(
+              <div style={{ fontSize:12,color:"rgba(255,255,255,0.45)",marginBottom:14,lineHeight:1.45 }}>
+                Provide at least one of Instagram or Other link.
+              </div>
+            )}
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
               {sec.fields.filter(field=>isFieldVisible(field,data)).map(field=>{
                 const val=data[field.id]||"";
                 const req=field.required||(field.requiredIf&&(field.requiredIf.condition==="minor"?minorApplicant:field.requiredIf.equals?String(data[field.requiredIf.field]||"")===field.requiredIf.equals:false));
-                const isErr=touched[field.id]&&req&&!(typeof val==="boolean"?val:String(val).trim());
+                const inMissing=(missingMap[sec.id]||[]).includes(field.id);
+                const empty=!(typeof val==="boolean"?val:String(val).trim());
+                const lengthFail=fieldFailsLength(field,data);
+                const isErr=touched[field.id]&&inMissing;
                 const isFull=field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload";
+                const lengthHint=fieldLengthHint(field,data);
+                const errMsg=isErr
+                  ?(lengthFail
+                    ?(field.minLength&&field.maxLength
+                      ?`Enter ${field.minLength}–${field.maxLength} characters`
+                      :field.minLength
+                        ?`Enter at least ${field.minLength} characters`
+                        :`Maximum ${field.maxLength} characters`)
+                    :sec.id==="social"&&(field.id==="link_instagram"||field.id==="link_other")&&empty
+                      ?"Provide Instagram or Other link"
+                      :"Required")
+                  :null;
                 const inputStyle={background:"rgba(255,255,255,0.08)",border:`1px solid ${isErr?"#dc2626":"rgba(255,255,255,0.12)"}`,borderRadius:8,color:"#fff",padding:"12px 14px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit",minHeight:44};
                 return (
                   <div key={field.id} style={{ gridColumn:isFull?"1/-1":"auto" }}>
                     {field.type!=="checkbox"&&field.type!=="file_upload"&&<div style={{ fontSize:12,color:isErr?"#fca5a5":"rgba(255,255,255,0.55)",fontWeight:500,marginBottom:4 }}>{field.label}{req&&<span style={{ color:"#ef4444" }}> *</span>}{!req&&<span style={{ color:"rgba(255,255,255,0.3)",fontWeight:400 }}> (optional)</span>}</div>}
                     {field.note&&field.type!=="file_upload"&&<div style={{ fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6,lineHeight:1.4 }}>{field.note}</div>}
-                    {isErr&&<div style={{ fontSize:11,color:"#fca5a5",marginBottom:3,fontWeight:600 }}>Required</div>}
+                    {errMsg&&<div style={{ fontSize:11,color:"#fca5a5",marginBottom:3,fontWeight:600 }}>{errMsg}</div>}
                     {(field.type==="text"||field.type==="url")&&<input value={val} onChange={e=>{updateField(field.id,e.target.value);}} placeholder={field.label} style={inputStyle}/>}
                     {field.type==="email"&&<input type="email" value={val} onChange={e=>updateField(field.id,e.target.value)} placeholder="email@example.com" style={inputStyle}/>}
                     {field.type==="tel"&&<input type="tel" value={val} onChange={e=>updateField(field.id,e.target.value)} placeholder="(555) 000-0000" style={inputStyle}/>}
                     {field.type==="date"&&<input type="date" value={val} onChange={e=>updateField(field.id,e.target.value)} style={inputStyle}/>}
-                    {field.type==="textarea"&&<textarea rows={3} value={val} onChange={e=>updateField(field.id,e.target.value)} placeholder={field.label} style={{ ...inputStyle,resize:"vertical",minHeight:96 }}/>}
+                    {field.type==="textarea"&&(
+                      <>
+                        <textarea
+                          rows={4}
+                          value={val}
+                          maxLength={field.maxLength}
+                          onChange={e=>updateField(field.id,e.target.value)}
+                          placeholder={field.label}
+                          style={{ ...inputStyle,resize:"vertical",minHeight:110 }}
+                        />
+                        {lengthHint&&(
+                          <div style={{ fontSize:11,marginTop:4,color:lengthFail||(req&&String(val).trim().length<(field.minLength||0))?"#fca5a5":"rgba(255,255,255,0.35)",textAlign:"right" }}>
+                            {lengthHint}
+                          </div>
+                        )}
+                      </>
+                    )}
                     {field.type==="select"&&<select value={val} onChange={e=>updateField(field.id,e.target.value)} style={{ ...inputStyle,cursor:"pointer" }}><option value="">Select…</option>{(field.options||[]).map(o=><option key={o} value={o}>{o}</option>)}</select>}
                     {field.type==="multicheck"&&<div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>{(field.options||[]).map(o=>{const sel=(val||"").split(",").filter(Boolean);const checked=sel.includes(o);return <label key={o} style={{ display:"flex",alignItems:"center",gap:5,cursor:"pointer",padding:"8px 12px",borderRadius:20,background:checked?"rgba(124,58,237,0.3)":"rgba(255,255,255,0.05)",border:`1px solid ${checked?"#7c3aed":"rgba(255,255,255,0.1)"}`,fontSize:13,color:checked?"#c4b5fd":"rgba(255,255,255,0.55)" }}><input type="checkbox" checked={checked} onChange={e=>{const n=e.target.checked?[...sel,o]:sel.filter(x=>x!==o);updateField(field.id,n.join(","));}} style={{ display:"none" }}/>{o}</label>;})}
                     {isErr&&<div style={{ width:"100%",fontSize:11,color:"#fca5a5",fontWeight:600 }}>Select at least one</div>}</div>}
@@ -426,6 +503,49 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
           </div>
         </div>
       </div>
+
+      {showSubmitConfirm&&(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="submit-confirm-title"
+          style={{ position:"fixed",inset:0,zIndex:80,background:"rgba(0,0,0,0.65)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"'Outfit','Segoe UI',sans-serif" }}
+          onClick={()=>!submitting&&setShowSubmitConfirm(false)}
+        >
+          <div
+            style={{ width:"100%",maxWidth:420,background:"linear-gradient(160deg,#152238,#1a2d44)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:14,padding:"28px 24px",boxShadow:"0 20px 50px rgba(0,0,0,0.45)" }}
+            onClick={e=>e.stopPropagation()}
+          >
+            <div id="submit-confirm-title" style={{ fontSize:20,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif",marginBottom:8 }}>
+              Ready to submit?
+            </div>
+            <p style={{ fontSize:14,color:"rgba(255,255,255,0.65)",lineHeight:1.55,marginBottom:22 }}>
+              {minorApplicant
+                ? "You’ve finished every section. Submit now to send your parent/guardian a verification link, or take more time to review your answers."
+                : "You’ve finished every section. Submit now, or take more time to review your answers before sending."}
+            </p>
+            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={()=>void submitApp()}
+                style={{ width:"100%",padding:"12px 16px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:submitting?"not-allowed":"pointer",fontFamily:"inherit",opacity:submitting?0.7:1 }}
+              >
+                {submitting?"Submitting…":minorApplicant?"Yes, submit (pending parent approval)":"Yes, submit application"}
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={()=>setShowSubmitConfirm(false)}
+                style={{ width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.9)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:8,fontSize:14,fontWeight:600,cursor:submitting?"not-allowed":"pointer",fontFamily:"inherit" }}
+              >
+                I need more time to review
+              </button>
+            </div>
+            {submitErr&&<div style={{ marginTop:14,fontSize:13,color:"#fca5a5",fontWeight:600 }}>{submitErr}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

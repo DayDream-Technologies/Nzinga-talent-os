@@ -30,7 +30,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'personal',
     label: 'Basic Information',
-    icon: '👤',
+    icon: '',
     fields: [
       { id: 'legal_first', label: 'Legal First Name', type: 'text', required: true },
       { id: 'legal_middle', label: 'Middle Name', type: 'text', required: false },
@@ -64,7 +64,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'interests',
     label: 'Representation Interest',
-    icon: '⭐',
+    icon: '',
     fields: [
       {
         id: 'representation_interests',
@@ -79,7 +79,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'general',
     label: 'About You',
-    icon: '💬',
+    icon: '',
     fields: [
       {
         id: 'experience_level',
@@ -88,26 +88,48 @@ export const APP_SECTIONS: AppSection[] = [
         options: [...EXPERIENCE_LEVELS],
         required: true,
       },
-      { id: 'about_yourself', label: 'Tell us briefly about yourself', type: 'textarea', required: true },
-      { id: 'career_goals', label: 'What are your primary career goals?', type: 'textarea', required: true },
+      {
+        id: 'about_yourself',
+        label: 'Tell us briefly about yourself',
+        type: 'textarea',
+        required: true,
+        minLength: 200,
+        maxLength: 500,
+        note: '200–500 characters',
+      },
+      {
+        id: 'career_goals',
+        label: 'What are your primary career goals?',
+        type: 'textarea',
+        required: true,
+        minLength: 200,
+        maxLength: 500,
+        note: '200–500 characters',
+      },
       {
         id: 'proud_accomplishments',
         label: 'What experience or accomplishments are you most proud of?',
         type: 'textarea',
         required: true,
+        minLength: 200,
+        maxLength: 500,
+        note: '200–500 characters',
       },
       {
         id: 'why_nzinga_interest',
         label: 'Why are you interested in representation with Nzinga?',
         type: 'textarea',
         required: true,
+        minLength: 200,
+        maxLength: 500,
+        note: '200–500 characters',
       },
     ],
   },
   {
     id: 'modeling',
     label: 'Modeling',
-    icon: '📷',
+    icon: '',
     showIf: interest('Modeling'),
     fields: [
       { id: 'model_height', label: 'Height', type: 'text', required: true },
@@ -133,7 +155,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'acting',
     label: 'Acting',
-    icon: '🎬',
+    icon: '',
     showIf: interest('Acting'),
     fields: [
       {
@@ -150,7 +172,7 @@ export const APP_SECTIONS: AppSection[] = [
         options: [...ACTING_CATEGORIES],
         required: true,
       },
-      { id: 'acting_training', label: 'Acting Training / Experience', type: 'textarea', required: true },
+      { id: 'acting_training', label: 'Acting Training / Experience', type: 'textarea', required: false, minLength: 200, note: 'Optional — if provided, at least 200 characters' },
       { id: 'acting_credits', label: 'Notable Credits', type: 'textarea', required: false },
       { id: 'doc_acting_headshot', label: 'Headshot', type: 'file_upload', required: true },
       { id: 'doc_acting_resume', label: 'Resume', type: 'file_upload', required: false },
@@ -160,7 +182,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'sports',
     label: 'Sports & Athletics',
-    icon: '🏅',
+    icon: '',
     showIf: interest('Sports & Athletics'),
     fields: [
       { id: 'sport_primary', label: 'Primary Sport', type: 'text', required: true },
@@ -181,7 +203,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'influencing',
     label: 'Influencing / Content',
-    icon: '📱',
+    icon: '',
     showIf: interest('Influencing / Content Creation'),
     fields: [
       {
@@ -213,7 +235,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'conflicts',
     label: 'Representation & Conflicts',
-    icon: '⚠️',
+    icon: '',
     fields: [
       {
         id: 'currently_represented',
@@ -285,7 +307,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'availability',
     label: 'Availability',
-    icon: '📅',
+    icon: '',
     fields: [
       {
         id: 'work_markets',
@@ -319,7 +341,8 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'social',
     label: 'Social & Portfolio',
-    icon: '🔗',
+    icon: '',
+    requireAnyOf: [['link_instagram', 'link_other']],
     fields: [
       { id: 'link_instagram', label: 'Instagram', type: 'url', required: false },
       { id: 'link_tiktok', label: 'TikTok', type: 'url', required: false },
@@ -332,7 +355,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'id_verification',
     label: 'ID Verification',
-    icon: '🪪',
+    icon: '',
     fields: [
       {
         id: 'doc_gov_id',
@@ -355,7 +378,7 @@ export const APP_SECTIONS: AppSection[] = [
   {
     id: 'final',
     label: 'Final & Signature',
-    icon: '✍️',
+    icon: '',
     fields: [
       {
         id: 'why_represent',
@@ -466,20 +489,72 @@ function fieldIsRequired(field: AppField, data: ApplicationData): boolean {
   return matchesCondition(data, field.requiredIf)
 }
 
+function fieldCharLength(value: string | boolean | undefined): number {
+  if (typeof value !== 'string') return 0
+  return value.trim().length
+}
+
+/** Returns true when a non-empty value fails min/max length rules. */
+export function fieldFailsLength(field: AppField, data: ApplicationData): boolean {
+  const len = fieldCharLength(data[field.id])
+  if (len === 0) return false
+  if (field.minLength != null && len < field.minLength) return true
+  if (field.maxLength != null && len > field.maxLength) return true
+  return false
+}
+
+export function fieldLengthHint(field: AppField, data: ApplicationData): string | null {
+  const len = fieldCharLength(data[field.id])
+  if (field.minLength == null && field.maxLength == null) return null
+  if (field.minLength != null && field.maxLength != null) {
+    return `${len} / ${field.minLength}–${field.maxLength} characters`
+  }
+  if (field.minLength != null) {
+    return len === 0
+      ? `Optional — min ${field.minLength} characters if provided`
+      : `${len} / ${field.minLength}+ characters`
+  }
+  return `${len} / max ${field.maxLength} characters`
+}
+
 export function validateSection(secId: string, data: ApplicationData): string[] {
   const sec = APP_SECTIONS.find((s) => s.id === secId)
   if (!sec || !isSectionVisible(sec, data)) return []
-  return sec.fields
-    .filter((f) => isFieldVisible(f, data))
-    .filter((f) => fieldIsRequired(f, data))
-    .filter((f) => {
-      const v = data[f.id]
-      if (f.type === 'checkbox') return !v
-      if (!v) return true
-      if (typeof v === 'string' && !v.trim()) return true
-      return false
+
+  const missing = new Set<string>()
+
+  for (const f of sec.fields) {
+    if (!isFieldVisible(f, data)) continue
+    const v = data[f.id]
+    const required = fieldIsRequired(f, data)
+    const empty =
+      f.type === 'checkbox' ? !v : !v || (typeof v === 'string' && !v.trim())
+
+    if (required && empty) {
+      missing.add(f.id)
+      continue
+    }
+    if (fieldFailsLength(f, data)) {
+      missing.add(f.id)
+    }
+  }
+
+  for (const group of sec.requireAnyOf || []) {
+    const visibleIds = group.filter((id) => {
+      const f = sec.fields.find((x) => x.id === id)
+      return f ? isFieldVisible(f, data) : false
     })
-    .map((f) => f.id)
+    if (visibleIds.length === 0) continue
+    const ok = visibleIds.some((id) => {
+      const v = data[id]
+      return typeof v === 'string' ? Boolean(v.trim()) : Boolean(v)
+    })
+    if (!ok) {
+      for (const id of visibleIds) missing.add(id)
+    }
+  }
+
+  return [...missing]
 }
 
 export function isAppComplete(app: Application | null | undefined): boolean {

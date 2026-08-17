@@ -28,6 +28,10 @@ export interface AppField {
   showIf?: AppFieldCondition
   options?: string[]
   note?: string
+  /** Minimum character count when the field has a value (and always when required). */
+  minLength?: number
+  /** Maximum character count. */
+  maxLength?: number
 }
 
 export interface AppSection {
@@ -37,6 +41,11 @@ export interface AppSection {
   fields: AppField[]
   /** Hide entire section unless condition matches (e.g. representation interest). */
   showIf?: AppFieldCondition
+  /**
+   * At least one field id from each group must be non-empty.
+   * Example: [['link_instagram', 'link_other']]
+   */
+  requireAnyOf?: string[][]
 }
 
 export type ApplicationData = Record<string, string | boolean | undefined>

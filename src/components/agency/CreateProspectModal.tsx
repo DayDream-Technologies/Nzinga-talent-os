@@ -9,6 +9,7 @@ import type {
 import { COMPANY_CODES } from '@/constants/roles'
 import { Btn, Field, ModalShell, inputStyle } from './AgencyUI'
 import { T } from '@/lib/tokens'
+import { useUnsavedClose } from '@/components/ui/ConfirmDialog'
 
 export const PROSPECT_DIVISIONS: ProspectDivision[] = ['Modeling', 'Influencing', 'Sports', 'Music']
 
@@ -134,8 +135,21 @@ export function CreateProspectModal({
     })
   }
 
+  const dirty = Boolean(
+    name.trim() ||
+      email.trim() ||
+      notes.trim() ||
+      dateOfBirth ||
+      parentName.trim() ||
+      parentEmail.trim() ||
+      parentPhone.trim() ||
+      sourceDetail.trim(),
+  )
+  const { requestClose, dialog } = useUnsavedClose(dirty, onClose)
+
   return (
-    <ModalShell title="Create prospect" onClose={onClose} width={580}>
+    <>
+    <ModalShell title="Create prospect" onClose={requestClose} width={580}>
       <Field label="Organization">
         <select style={inputStyle} value={organization} onChange={(e) => setOrganization(e.target.value)}>
           {orgOptions.map((code) => (
@@ -312,11 +326,13 @@ export function CreateProspectModal({
       )}
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <Btn variant="secondary" onClick={onClose}>
+        <Btn variant="secondary" onClick={requestClose}>
           Cancel
         </Btn>
         <Btn onClick={submit}>Create prospect</Btn>
       </div>
     </ModalShell>
+    {dialog}
+    </>
   )
 }

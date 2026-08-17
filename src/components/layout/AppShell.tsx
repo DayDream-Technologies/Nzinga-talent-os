@@ -4,9 +4,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAppData } from '@/context/AppDataContext'
 import { ApplicationReview } from '@/components/application/ApplicationModals'
 import { TalentRecord } from '@/components/talent/TalentRecord'
-import { TopNav, BreadcrumbBar, FullMenu, Sidebar } from '@/components/layout/Layout'
+import { TopNav, BreadcrumbBar, FullMenu } from '@/components/layout/Layout'
 import { AGENCY_PAGE_TITLES } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
+import { ApplicationProspectSync } from '@/components/agency/ApplicationProspectSync'
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, companyCode, switchUser, logout } = useAuth()
@@ -83,11 +84,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       />
       <BreadcrumbBar label={pageTitle} sub={undefined} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar view={view} onNav={nav} userRole={user.role} />
         <div key={view} className="flex flex-1 flex-col overflow-hidden animate-fade-in">
           {children ?? <Outlet />}
         </div>
       </div>
+      <ApplicationProspectSync />
       {menuOpen && (
         <FullMenu
           onClose={() => setMenuOpen(false)}

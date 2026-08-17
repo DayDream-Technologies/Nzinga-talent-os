@@ -167,6 +167,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           await persistTalents(next)
         }
 
+        // Minor submitted — keep holding stub with pending parent approval (do not upgrade to full lead yet)
+        if (app.status === 'pending_guardian') {
+          const existing = talentsRef.current.find((t) => t.application_id === app.id)
+          if (existing) {
+            const next = talentsRef.current.map((t) =>
+              t.id === existing.id ? { ...t, application_status: 'pending_guardian' } : t,
+            )
+            await persistTalents(next)
+          }
+        }
+
         if (app.status === 'submitted' && isAppComplete(app) && app.guardian_status !== 'pending') {
           const existingFull = talentsRef.current.find((t) => t.application_id === app.id)
           if (existingFull) {

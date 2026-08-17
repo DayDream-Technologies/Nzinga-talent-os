@@ -5,11 +5,13 @@ import { useAuth } from '@/hooks/useAuth'
 import { AGENCY_STAFF, AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
 import { filterAgencyNav, type AgencyNavGroup } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
-import type { AgencyProspect, SupportTicket, TicketType } from '@/types/agency'
+import type { SupportTicket, TicketType } from '@/types/agency'
 import { TalentLink } from '@/components/talent/TalentLink'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { AppointmentFormModal } from '@/components/agency/AppointmentFormModal'
-import { CreateProspectModal } from '@/components/agency/CreateProspectModal'
+import { ProspectsCrmModule } from '@/components/agency/ProspectsCrmModule'
+import { ClientsModule } from '@/components/agency/ClientsModule'
+import { ProspectTrackingBoard } from '@/components/agency/ProspectTrackingBoard'
 import {
   DisbursementFormModal,
   EscrowFormModal,
@@ -21,11 +23,6 @@ import {
 } from '@/components/agency/FinanceFormModals'
 import { DocViewer } from '@/components/ui/DocViewer'
 import type { UploadedDoc } from '@/types'
-import {
-  formatContractStart,
-  hasContract,
-  isContractLive,
-} from '@/lib/contract-dates'
 import {
   Badge,
   Btn,
@@ -302,13 +299,14 @@ export function AgencyWorkspace() {
 export function AgencyModule({ moduleId }: { moduleId: string }) {
   switch (moduleId) {
     case 'prospects':
-      return <ProspectsModule />
+      return <ProspectsCrmModule />
     case 'renewal-offers':
       return <RenewalOffersModule />
+    case 'clients':
     case 'active-roster':
-      return <ActiveRosterModule />
+      return <ClientsModule />
     case 'prospect-tracking':
-      return <ProspectTrackingModule />
+      return <ProspectTrackingBoard />
     case 'send-email':
       return <SendEmailModule />
     case 'messaging':
@@ -370,167 +368,6 @@ export function AgencyModule({ moduleId }: { moduleId: string }) {
   }
 }
 
-type ProspectSortKey =
-  | 'accountId'
-  | 'name'
-  | 'workArea'
-  | 'contractStart'
-  | 'contractEnd'
-  | 'email'
-  | 'stage'
-  | 'source'
-  | 'submittedAt'
-  | 'organization'
-  | 'assignedAgentName'
-  | 'interestLevel'
-
-const PROSPECT_COLUMNS: Array<{ header: string; key: ProspectSortKey | null }> = [
-  { header: 'Account ID', key: 'accountId' },
-  { header: 'Name', key: 'name' },
-  { header: 'Org', key: 'organization' },
-  { header: 'Division', key: 'workArea' },
-  { header: 'Agent', key: 'assignedAgentName' },
-  { header: 'Interest', key: 'interestLevel' },
-  { header: 'Original start', key: 'contractStart' },
-  { header: 'Contract end', key: 'contractEnd' },
-  { header: 'Email', key: 'email' },
-  { header: 'Stage', key: 'stage' },
-  { header: 'Source', key: 'source' },
-  { header: 'Submitted', key: 'submittedAt' },
-  { header: '', key: null },
-]
-
-function prospectSortValue(p: AgencyProspect, key: ProspectSortKey): string {
-  switch (key) {
-    case 'accountId':
-      return p.accountId || ''
-    case 'name':
-      return p.name || ''
-    case 'workArea':
-      return p.workArea || ''
-    case 'organization':
-      return p.organization || ''
-    case 'assignedAgentName':
-      return p.assignedAgentName || ''
-    case 'interestLevel':
-      return String(p.interestLevel ?? '')
-    case 'contractStart':
-      return hasContract(p.contractStart) ? p.contractStart || '' : 'pending'
-    case 'contractEnd':
-      if (!hasContract(p.contractStart)) return ''
-      if (isContractLive(p.contractStart, p.contractEnd)) return 'current'
-      return p.contractEnd || ''
-    case 'email':
-      return p.email || ''
-    case 'stage':
-      return p.stage || ''
-    case 'source':
-      return p.source || ''
-    case 'submittedAt':
-      return p.submittedAt || ''
-  }
-}
-
-function ProspectsModule() {
-  const { prospects, advanceProspect, createProspect } = useAgencyData()
-  const { user, companyCode } = useAuth()
-  const [sortIndex, setSortIndex] = useState(1)
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-  const [showCreate, setShowCreate] = useState(false)
-
-  const sorted = useMemo(() => {
-    const col = PROSPECT_COLUMNS[sortIndex]
-    if (!col?.key) return prospects
-    const dir = sortDir === 'asc' ? 1 : -1
-    return [...prospects].sort((a, b) => {
-      const cmp = prospectSortValue(a, col.key!).localeCompare(
-        prospectSortValue(b, col.key!),
-        undefined,
-        { numeric: true, sensitivity: 'base' },
-      )
-      return cmp * dir
-    })
-  }, [prospects, sortIndex, sortDir])
-
-  function handleSort(index: number) {
-    if (!PROSPECT_COLUMNS[index]?.key) return
-    if (sortIndex === index) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-      return
-    }
-    setSortIndex(index)
-    setSortDir('asc')
-  }
-
-  return (
-    <Panel
-      title="Prospects"
-      subtitle="Inbound talent applicants waiting for agent screening. Click a column header to sort."
-      actions={<Btn onClick={() => setShowCreate(true)}>+ Create prospect</Btn>}
-    >
-      <Card>
-        <Table
-          headers={PROSPECT_COLUMNS.map((c) => c.header)}
-          sortIndex={sortIndex}
-          sortDir={sortDir}
-          onSort={handleSort}
-          rows={sorted.map((p) => [
-            <TalentLink key={`id-${p.id}`} accountId={p.accountId} name={p.name}>
-              <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, letterSpacing: '0.02em' }}>{p.accountId}</span>
-            </TalentLink>,
-            <span key={`n-${p.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <TalentLink accountId={p.accountId} name={p.name} />
-              {p.isMinor ? <Badge color={T.amber}>Minor</Badge> : null}
-            </span>,
-            p.organization || '—',
-            <Badge key={`w-${p.id}`} color={T.purple}>{p.workArea}</Badge>,
-            p.assignedAgentName || '—',
-            p.interestLevel != null ? String(p.interestLevel) : '—',
-            hasContract(p.contractStart)
-              ? formatContractStart(p.contractStart)
-              : <Badge key={`ps-${p.id}`} color={T.amber}>Pending</Badge>,
-            !hasContract(p.contractStart) ? (
-              '—'
-            ) : (
-              <span key={`ce-${p.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                {p.contractEnd?.trim()
-                  ? new Date(`${p.contractEnd}T12:00:00`).toLocaleDateString()
-                  : 'Open-ended'}
-                {isContractLive(p.contractStart, p.contractEnd) ? (
-                  <Badge color={T.green}>Current</Badge>
-                ) : (
-                  <Badge color={T.red}>Ended</Badge>
-                )}
-              </span>
-            ),
-            <span key={`em-${p.id}`}>
-              {p.email}
-              {p.messageEmails?.length > 1 ? (
-                <div style={{ fontSize: 10, color: T.t4 }}>+{p.messageEmails.length - 1} msg recip.</div>
-              ) : null}
-            </span>,
-            <Badge key={p.id} color={StatusColor(p.stage)}>{p.stage}</Badge>,
-            p.source,
-            new Date(p.submittedAt).toLocaleDateString(),
-            <Btn key={`a-${p.id}`} variant="success" onClick={() => advanceProspect(p.id)}>Advance</Btn>,
-          ])}
-        />
-      </Card>
-      {showCreate && user && (
-        <CreateProspectModal
-          defaultOrganization={(companyCode || user.company_code || 'NZG').toUpperCase()}
-          agent={{ id: user.id, name: user.name }}
-          onClose={() => setShowCreate(false)}
-          onCreate={(values) => {
-            createProspect(values)
-            setShowCreate(false)
-          }}
-        />
-      )}
-    </Panel>
-  )
-}
-
 function RenewalOffersModule() {
   const { talent, createRenewalOffer } = useAgencyData()
   const [msg, setMsg] = useState('')
@@ -553,69 +390,6 @@ function RenewalOffersModule() {
         />
         {msg && <div style={{ marginTop: 12, color: T.green, fontWeight: 600 }}>{msg}</div>}
       </Card>
-    </Panel>
-  )
-}
-
-function ActiveRosterModule() {
-  const { talent } = useAgencyData()
-  return (
-    <Panel title="Active Roster" subtitle="Signed talent available for booking.">
-      <Card>
-        <Table
-          headers={['Account ID', 'Name', 'Role', 'Niches', 'Availability', 'Bank', 'Tax forms']}
-          rows={talent
-            .filter((t) => t.status === 'active')
-            .map((t) => [
-              <TalentLink key={`id-${t.id}`} accountId={t.accountId} name={t.name}>
-                <span style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>{t.accountId}</span>
-              </TalentLink>,
-              <TalentLink key={`n-${t.id}`} accountId={t.accountId} name={t.name} />,
-              t.role,
-              t.niches.join(', '),
-              t.available ? <Badge color={T.green}>Available</Badge> : <Badge color={T.amber}>Booked</Badge>,
-              t.bankReady ? 'Ready' : 'Missing',
-              t.taxFormsReady ? 'Ready' : 'Missing',
-            ])}
-        />
-      </Card>
-    </Panel>
-  )
-}
-
-function ProspectTrackingModule() {
-  const { prospects } = useAgencyData()
-  const stages = ['new', 'screening', 'interview', 'offer', 'signed'] as const
-  return (
-    <Panel title="Prospect Tracking Board" subtitle="Kanban view of the applicant pipeline.">
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${stages.length}, minmax(140px, 1fr))`, gap: 10 }}>
-        {stages.map((stage) => (
-          <Card key={stage} style={{ minHeight: 220, background: '#fafbfc' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.t3, textTransform: 'uppercase', marginBottom: 10 }}>
-              {stage} · {prospects.filter((p) => p.stage === stage).length}
-            </div>
-            {prospects
-              .filter((p) => p.stage === stage)
-              .map((p) => (
-                <div
-                  key={p.id}
-                  style={{
-                    background: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 8,
-                    padding: 10,
-                    marginBottom: 8,
-                    fontSize: 12,
-                  }}
-                >
-                  <div style={{ fontWeight: 600 }}><TalentLink accountId={p.accountId} name={p.name} /></div>
-                  <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, fontWeight: 700, color: T.t1, marginTop: 3 }}>{p.accountId}</div>
-                  <div style={{ color: T.t3, marginTop: 2 }}>{p.workArea} · {p.source}</div>
-                </div>
-              ))}
-          </Card>
-        ))}
-      </div>
     </Panel>
   )
 }
@@ -1814,7 +1588,7 @@ function ReportRosterScorecard() {
   return (
     <Panel title="Roster Performance Scorecard" subtitle="Active bookings and revenue across the roster.">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
-        <Card><div style={{ fontSize: 22, fontWeight: 800 }}>{talent.filter((t) => t.status === 'active').length}</div><div style={{ color: T.t3, fontSize: 12 }}>Active roster</div></Card>
+        <Card><div style={{ fontSize: 22, fontWeight: 800 }}>{talent.filter((t) => t.status === 'active' || t.status === 'current').length}</div><div style={{ color: T.t3, fontSize: 12 }}>Active roster</div></Card>
         <Card><div style={{ fontSize: 22, fontWeight: 800 }}><Money value={revenue} /></div><div style={{ color: T.t3, fontSize: 12 }}>Paid bookings</div></Card>
         <Card><div style={{ fontSize: 22, fontWeight: 800 }}><Money value={commission} /></div><div style={{ color: T.t3, fontSize: 12 }}>Agency commission</div></Card>
       </div>
@@ -1905,7 +1679,7 @@ function ReportOnboarding() {
               .filter((t) => t.status === 'offboarding')
               .map((t) => [<TalentLink key={t.id} accountId={t.accountId} name={t.name} />, 'Offboarding', t.status]),
             ...talent
-              .filter((t) => t.status === 'active')
+              .filter((t) => t.status === 'active' || t.status === 'current')
               .slice(0, 1)
               .map((t) => [<TalentLink key={`rs-${t.id}`} accountId={t.accountId} name={t.name} />, 'Recently signed', 'active']),
           ]}

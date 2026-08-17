@@ -44,50 +44,152 @@ async function rest(path, { method = 'GET', body, key } = {}) {
 
 const DOC = 'data:application/pdf;base64,JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoK'
 const DOC_META = { name: 'placeholder.pdf', type: 'application/pdf' }
+const PHOTO = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k='
+
+const ALL_SECTIONS = [
+  'personal',
+  'interests',
+  'general',
+  'modeling',
+  'acting',
+  'sports',
+  'influencing',
+  'conflicts',
+  'availability',
+  'social',
+  'id_verification',
+  'final',
+]
+
+function mapNichesToInterests(nichesCsv) {
+  return nichesCsv
+    .split(',')
+    .map((s) => s.trim())
+    .map((n) =>
+      n === 'Model'
+        ? 'Modeling'
+        : n === 'Actor'
+          ? 'Acting'
+          : n === 'Athlete'
+            ? 'Sports & Athletics'
+            : n === 'Influencer'
+              ? 'Influencing / Content Creation'
+              : n,
+    )
+    .filter(Boolean)
+}
+
+function padChars(text, min = 200, max = 500) {
+  let out = String(text || '').trim()
+  const filler =
+    ' I am building a professional career and want clear representation support for bookings, brand work, and long-term growth with Nzinga.'
+  while (out.length < min) out += filler
+  return out.slice(0, max)
+}
 
 function completeAppData(p) {
-  return {
+  const interests = mapNichesToInterests(p.niches)
+  const interestCsv = interests.join(',') || 'Influencing / Content Creation'
+  const data = {
     legal_first: p.first,
     legal_last: p.last,
+    preferred_name: `${p.first} ${p.last}`,
     dob: p.dob,
     phone: p.phone,
     email: p.email,
-    address: p.address,
     city: p.city,
     state: p.state,
-    zip: p.zip,
-    primary_handle: p.handle,
-    primary_platform: p.platform,
-    follower_count: p.followers,
-    er_pct: p.er || '4.5',
-    niches: p.niches,
-    bio: p.bio,
-    achievements: p.achievements,
-    collab_brands: p.brands || '',
-    goals_90day: p.goals90,
-    goals_1year: p.goals1y || '',
-    rep_type_pref: p.rep || 'Open to Discussion',
-    referred_by: p.referred || 'Scout outreach',
+    country: 'USA',
+    current_market: `${p.city}, ${p.state}`,
+    doc_profile_photo: PHOTO,
+    doc_profile_photo_name: 'profile.jpg',
+    doc_profile_photo_type: 'image/jpeg',
+    representation_interests: interestCsv,
+    experience_level: 'Experienced',
+    about_yourself: padChars(p.bio),
+    career_goals: padChars(p.goals90),
+    proud_accomplishments: padChars(p.achievements),
+    why_nzinga_interest: padChars('I want professional representation with Nzinga and a team that can open doors.'),
+    currently_represented: 'No',
+    has_conflicting_obligations: 'No',
+    work_markets: 'Local,National',
+    willing_to_travel: 'Yes',
+    currently_available: 'Yes',
+    link_instagram: `https://instagram.com/${String(p.handle || '').replace('@', '')}`,
     doc_gov_id: DOC,
     doc_gov_id_name: 'Government_ID.pdf',
     doc_gov_id_type: DOC_META.type,
-    doc_tax: DOC,
-    doc_tax_name: 'W9.pdf',
-    doc_tax_type: DOC_META.type,
-    doc_banking: DOC,
-    doc_banking_name: 'Voided_Check.pdf',
-    doc_banking_type: DOC_META.type,
-    doc_proof_income: DOC,
-    doc_proof_income_name: 'Proof_of_Income.pdf',
-    doc_proof_income_type: DOC_META.type,
-    consent_data: true,
-    consent_contact: true,
-    consent_truth: true,
+    why_represent: 'I believe Nzinga is the right partner for my career.',
+    goals_1_2_years: p.goals1y || p.goals90,
+    consent_truth: 'yes',
+    consent_contact: 'yes',
     signature: `${p.first} ${p.last}`,
+    signature_date: '2026-07-18',
   }
+
+  if (interests.includes('Influencing / Content Creation') || interests.length === 0) {
+    Object.assign(data, {
+      influencer_primary_platform: p.platform,
+      influencer_handle: p.handle,
+      influencer_content_categories: 'Lifestyle,Fashion',
+      influencer_followers: p.followers,
+      influencer_content_desc: p.bio,
+      influencer_brand_experience: p.brands || '',
+    })
+  }
+  if (interests.includes('Modeling')) {
+    Object.assign(data, {
+      model_height: "5'9\"",
+      model_clothing_size: '4',
+      model_shoe_size: '8',
+      model_hair_color: 'Brown',
+      model_eye_color: 'Brown',
+      model_experience: p.achievements,
+      model_categories: 'Commercial,Editorial',
+      doc_model_headshot: PHOTO,
+      doc_model_headshot_name: 'headshot.jpg',
+      doc_model_headshot_type: 'image/jpeg',
+      doc_model_fullbody: PHOTO,
+      doc_model_fullbody_name: 'fullbody.jpg',
+      doc_model_fullbody_type: 'image/jpeg',
+    })
+  }
+  if (interests.includes('Acting')) {
+    Object.assign(data, {
+      acting_experience_level: 'Experienced',
+      acting_categories: 'Commercial,Film',
+      acting_training: '',
+      acting_credits: p.brands || '',
+      doc_acting_headshot: PHOTO,
+      doc_acting_headshot_name: 'acting_headshot.jpg',
+      doc_acting_headshot_type: 'image/jpeg',
+    })
+  }
+  if (interests.includes('Sports & Athletics')) {
+    Object.assign(data, {
+      sport_primary: 'Basketball',
+      sport_position: 'Guard',
+      sport_level: 'Collegiate',
+      sport_years: '8',
+      sport_highlights: p.achievements,
+      doc_sport_photo: PHOTO,
+      doc_sport_photo_name: 'athletic.jpg',
+      doc_sport_photo_type: 'image/jpeg',
+    })
+  }
+
+  return data
 }
 
-const ALL_SECTIONS = ['personal', 'social', 'talent', 'business', 'documents', 'consent']
+function sectionsForProfile(p) {
+  const interests = mapNichesToInterests(p.niches)
+  const sections = ['personal', 'interests', 'general', 'conflicts', 'availability', 'social', 'id_verification', 'final']
+  if (interests.includes('Modeling')) sections.splice(3, 0, 'modeling')
+  if (interests.includes('Acting')) sections.splice(3, 0, 'acting')
+  if (interests.includes('Sports & Athletics')) sections.splice(3, 0, 'sports')
+  if (interests.includes('Influencing / Content Creation') || interests.length === 0) sections.splice(3, 0, 'influencing')
+  return [...new Set(sections)]
+}
 
 function baseTalent(overrides) {
   return {
@@ -424,31 +526,35 @@ const applicants = [
       status: 'in_progress',
       created_at: '2026-07-28T15:25:00Z',
       last_saved: '2026-08-03T18:10:00Z',
-      completed_sections: ['personal', 'social'],
+      completed_sections: ['personal', 'interests'],
       data: {
         legal_first: 'Marcus',
         legal_last: 'Nguyen',
+        preferred_name: 'Marcus Nguyen',
         dob: '1998-11-02',
         phone: '714-555-0288',
         email: 'marcus.nguyen@example.com',
-        address: '882 Harbor Blvd',
         city: 'Costa Mesa',
         state: 'CA',
-        zip: '92626',
-        primary_handle: '@marcusnguyen',
-        primary_platform: 'TikTok',
-        follower_count: '210K',
-        er_pct: '3.8',
+        country: 'USA',
+        current_market: 'Costa Mesa, CA',
+        doc_profile_photo: PHOTO,
+        doc_profile_photo_name: 'profile.jpg',
+        doc_profile_photo_type: 'image/jpeg',
+        representation_interests: 'Influencing / Content Creation',
+        influencer_handle: '@marcusnguyen',
+        influencer_primary_platform: 'TikTok',
+        influencer_followers: '210K',
       },
     },
   },
   {
-    // submitted incomplete — missing documents + consent
+    // submitted incomplete — missing final + id
     talent: baseTalent({
       id: 't10',
       name: 'Sofia Ramirez',
       stage: 'holding_entry',
-      niches: ['Model', 'Influencer'],
+      niches: ['Modeling', 'Influencing / Content Creation'],
       created_at: '2026-07-20T11:00:00Z',
       phone: '312-555-0344',
       email: 'sofia.ramirez@example.com',
@@ -459,7 +565,8 @@ const applicants = [
       location: 'Chicago, IL',
       application_id: 'app_sofia',
       application_status: 'submitted',
-      scout_summary: 'Fashion/lifestyle creator — application incomplete (docs outstanding).',
+      applicant_stage_status: 'Under Review',
+      scout_summary: 'Fashion/lifestyle creator — application incomplete (signature outstanding).',
       audit_log: [
         { user: 'Sofia Ramirez', role: 'Prospect', action: 'Submitted application (incomplete)', stage: 'holding_entry', ts: '2026-07-25T20:00:00Z' },
       ],
@@ -474,26 +581,126 @@ const applicants = [
       status: 'submitted',
       created_at: '2026-07-20T11:05:00Z',
       last_saved: '2026-07-25T20:00:00Z',
-      completed_sections: ['personal', 'social', 'talent', 'business'],
+      completed_sections: ['personal', 'interests', 'general', 'modeling', 'influencing', 'conflicts', 'availability', 'social'],
       data: {
         legal_first: 'Sofia',
         legal_last: 'Ramirez',
+        preferred_name: 'Sofia Ramirez',
         dob: '1997-06-18',
         phone: '312-555-0344',
         email: 'sofia.ramirez@example.com',
-        address: '455 N Michigan Ave',
         city: 'Chicago',
         state: 'IL',
-        zip: '60611',
-        primary_handle: '@sofiaramirez',
-        primary_platform: 'Instagram',
-        follower_count: '780K',
-        er_pct: '6.2',
-        niches: 'Model,Influencer',
-        bio: 'Chicago-based fashion and lifestyle creator focused on accessible luxury and Latine culture.',
-        achievements: 'Featured in Vogue Mexico digital, 4 paid brand campaigns in 2025.',
-        goals_90day: 'Land two mid-tier fashion partnerships and grow IG Reels by 20%.',
-        // intentionally missing documents + consent
+        country: 'USA',
+        current_market: 'Chicago, IL',
+        doc_profile_photo: PHOTO,
+        doc_profile_photo_name: 'profile.jpg',
+        doc_profile_photo_type: 'image/jpeg',
+        representation_interests: 'Modeling,Influencing / Content Creation',
+        experience_level: 'Experienced',
+        about_yourself: 'Chicago-based fashion and lifestyle creator focused on accessible luxury and Latine culture.',
+        career_goals: 'Land two mid-tier fashion partnerships and grow IG Reels by 20%.',
+        proud_accomplishments: 'Featured in Vogue Mexico digital, 4 paid brand campaigns in 2025.',
+        why_nzinga_interest: 'I want professional representation with Nzinga.',
+        model_height: "5'8\"",
+        model_clothing_size: '6',
+        model_shoe_size: '8.5',
+        model_hair_color: 'Dark brown',
+        model_eye_color: 'Hazel',
+        model_experience: 'Editorial and commercial work since 2022.',
+        model_categories: 'Commercial,Editorial',
+        doc_model_headshot: PHOTO,
+        doc_model_headshot_name: 'headshot.jpg',
+        doc_model_headshot_type: 'image/jpeg',
+        doc_model_fullbody: PHOTO,
+        doc_model_fullbody_name: 'fullbody.jpg',
+        doc_model_fullbody_type: 'image/jpeg',
+        influencer_handle: '@sofiaramirez',
+        influencer_primary_platform: 'Instagram',
+        influencer_followers: '780K',
+        influencer_content_categories: 'Fashion,Lifestyle',
+        influencer_content_desc: 'Fashion and lifestyle content.',
+        currently_represented: 'No',
+        has_conflicting_obligations: 'No',
+        work_markets: 'Local,Regional,National',
+        willing_to_travel: 'Yes',
+        currently_available: 'Yes',
+        link_instagram: 'https://instagram.com/sofiaramirez',
+        // intentionally missing id_verification + final signature
+      },
+    },
+  },
+  {
+    // minor — pending guardian verification
+    talent: baseTalent({
+      id: 't16',
+      name: 'Jordan Lee',
+      stage: 'holding_entry',
+      niches: ['Acting'],
+      created_at: '2026-08-10T12:00:00Z',
+      phone: '646-555-0911',
+      email: 'jordan.lee.minor@example.com',
+      location: 'New York, NY',
+      application_id: 'app_jordan_lee',
+      application_status: 'pending_guardian',
+      applicant_stage_status: 'New / Lead',
+      audit_log: [
+        { user: 'Jordan Lee', role: 'Prospect', action: 'Submitted for guardian verification', stage: 'holding_entry', ts: '2026-08-10T14:20:00Z' },
+      ],
+    }),
+    app: {
+      id: 'app_jordan_lee',
+      talent_id: 't16',
+      access_code: 'JLEE2026',
+      company_code: 'NZG',
+      talent_name: 'Jordan Lee',
+      talent_email: 'jordan.lee.minor@example.com',
+      status: 'pending_guardian',
+      guardian_status: 'pending',
+      guardian_email: 'parent.lee@example.com',
+      created_at: '2026-08-10T12:05:00Z',
+      last_saved: '2026-08-10T14:20:00Z',
+      completed_sections: ['personal', 'interests', 'general', 'acting', 'conflicts', 'availability', 'social', 'id_verification', 'final'],
+      data: {
+        legal_first: 'Jordan',
+        legal_last: 'Lee',
+        preferred_name: 'Jordan Lee',
+        dob: '2012-05-04',
+        phone: '646-555-0911',
+        email: 'jordan.lee.minor@example.com',
+        city: 'New York',
+        state: 'NY',
+        country: 'USA',
+        current_market: 'New York, NY',
+        guardian_invite_email: 'parent.lee@example.com',
+        doc_profile_photo: PHOTO,
+        doc_profile_photo_name: 'profile.jpg',
+        doc_profile_photo_type: 'image/jpeg',
+        representation_interests: 'Acting',
+        experience_level: 'Beginner',
+        about_yourself: padChars('Middle-school actor interested in commercials and youth theater.'),
+        career_goals: padChars('Book commercial work with parent support and keep training consistently.'),
+        proud_accomplishments: padChars('School play lead; local commercial callback; youth workshop showcase.'),
+        why_nzinga_interest: padChars('My family wants professional guidance for a safe and structured path.'),
+        acting_experience_level: 'Beginner',
+        acting_categories: 'Commercial,Theater',
+        acting_training: '',
+        doc_acting_headshot: PHOTO,
+        doc_acting_headshot_name: 'headshot.jpg',
+        doc_acting_headshot_type: 'image/jpeg',
+        currently_represented: 'No',
+        has_conflicting_obligations: 'No',
+        work_markets: 'Local,Regional',
+        willing_to_travel: 'Yes',
+        currently_available: 'Yes',
+        link_instagram: 'https://instagram.com/jordanleeminor',
+        id_note_minor: true,
+        why_represent: 'I want to grow as a young actor with Nzinga.',
+        goals_1_2_years: 'Book two commercials and continue training.',
+        consent_truth: 'yes',
+        consent_contact: 'yes',
+        signature: 'Jordan Lee',
+        signature_date: '2026-08-10',
       },
     },
   },
@@ -639,7 +846,7 @@ const completeProfiles = [
 
 for (const p of completeProfiles) {
   const data = completeAppData(p)
-  const niches = p.niches.split(',').map((s) => s.trim())
+  const niches = mapNichesToInterests(p.niches)
   applicants.push({
     talent: baseTalent({
       id: p.id,
@@ -658,6 +865,7 @@ for (const p of completeProfiles) {
       scout_summary: p.bio,
       application_id: p.appId,
       application_status: 'submitted',
+      applicant_stage_status: 'New / Lead',
       compliance: {
         legal_name: true,
         gov_id: true,
@@ -670,9 +878,7 @@ for (const p of completeProfiles) {
       },
       uploaded_docs: {
         gov_id: { name: 'Government_ID.pdf', data: DOC, type: DOC_META.type },
-        tax_doc: { name: 'W9.pdf', data: DOC, type: DOC_META.type },
-        banking: { name: 'Voided_Check.pdf', data: DOC, type: DOC_META.type },
-        proof_income: { name: 'Proof_of_Income.pdf', data: DOC, type: DOC_META.type },
+        profile_photo: { name: 'profile.jpg', data: PHOTO, type: 'image/jpeg' },
       },
       audit_log: [
         {
@@ -694,7 +900,7 @@ for (const p of completeProfiles) {
       status: 'submitted',
       created_at: p.created,
       last_saved: p.submitted,
-      completed_sections: ALL_SECTIONS,
+      completed_sections: sectionsForProfile(p),
       data,
     },
   })
@@ -706,6 +912,7 @@ applicants.push({
     id: 't4',
     name: 'Kai Johnson',
     stage: 'holding_entry',
+    niches: ['Influencing / Content Creation'],
     created_at: '2026-05-18T10:00:00Z',
     phone: '312-555-0199',
     email: 'kai@example.com',
@@ -716,6 +923,7 @@ applicants.push({
     location: 'Chicago, IL',
     application_id: 'app_kai',
     application_status: 'in_progress',
+    applicant_stage_status: 'Qualification in Progress',
     last_contacted: '2026-05-18',
     audit_log: [
       { user: 'Jordan Hayes', role: 'Scout', action: 'Created holding record', stage: 'holding_entry', ts: '2026-05-18T10:00:00Z' },
@@ -731,31 +939,77 @@ applicants.push({
     status: 'in_progress',
     created_at: '2026-05-18T10:00:00Z',
     last_saved: '2026-05-19T14:30:00Z',
-    completed_sections: ['personal', 'social'],
+    completed_sections: ['personal', 'interests'],
     data: {
       legal_first: 'Kai',
       legal_last: 'Johnson',
+      preferred_name: 'Kai Johnson',
       dob: '2000-03-15',
       phone: '312-555-0199',
       email: 'kai@example.com',
-      address: '123 West Loop Dr',
       city: 'Chicago',
       state: 'IL',
-      zip: '60601',
-      primary_handle: '@kaij_music',
-      primary_platform: 'TikTok',
-      follower_count: '320K',
+      country: 'USA',
+      current_market: 'Chicago, IL',
+      doc_profile_photo: PHOTO,
+      doc_profile_photo_name: 'profile.jpg',
+      doc_profile_photo_type: 'image/jpeg',
+      representation_interests: 'Influencing / Content Creation',
+      influencer_handle: '@kaij_music',
+      influencer_primary_platform: 'TikTok',
+      influencer_followers: '320K',
     },
   },
 })
 
 async function main() {
   const key = getServiceRoleKey()
-  const talents = [...pipelineTalents, ...applicants.map((a) => a.talent)].map((t, i) => ({
+
+  // Columns that exist on remote tables (extra UI-only fields must not be posted)
+  const TALENT_COLS = new Set([
+    'id', 'account_number', 'name', 'stage', 'niches', 'scout_id', 'created_by', 'created_at',
+    'phone', 'email', 'social_handle', 'follower_count', 'er_pct', 'platform', 'location',
+    'pillar_scores', 'pillar_rationales', 'jordan_score', 'revenue_path', 'scout_summary',
+    'team1_notes', 'team1_decision', 'compliance', 'rep_type', 'commission', 'term_length',
+    'team2_notes', 'team2_decision', 'director_decision', 'portal_setup', 'technical_routing',
+    'warm_handoff', 'warm_handoff_confirmed', 'revenue_ytd', 'revenue_projected', 'last_contacted',
+    'application_id', 'application_status', 'uploaded_docs', 'audit_log',
+  ])
+  const APP_COLS = new Set([
+    'id', 'talent_id', 'access_code', 'company_code', 'talent_name', 'talent_email', 'status',
+    'created_at', 'last_saved', 'completed_sections', 'data', 'guardian_status', 'guardian_email',
+  ])
+
+  function pick(obj, cols) {
+    const row = {}
+    for (const k of cols) {
+      if (Object.prototype.hasOwnProperty.call(obj, k)) row[k] = obj[k]
+      else row[k] = null
+    }
+    return row
+  }
+
+  const existing = (await rest('talents?select=id,account_number', { key })) || []
+  const byId = Object.fromEntries(existing.map((t) => [t.id, t.account_number]))
+  const usedAccounts = new Set(existing.map((t) => t.account_number).filter(Boolean))
+
+  function nextAccount(i) {
+    let n = 200001 + i
+    let code = `NZG-${String(n).padStart(6, '0')}`
+    while (usedAccounts.has(code)) {
+      n += 1
+      code = `NZG-${String(n).padStart(6, '0')}`
+    }
+    usedAccounts.add(code)
+    return code
+  }
+
+  const talentsRaw = [...pipelineTalents, ...applicants.map((a) => a.talent)].map((t, i) => ({
     ...t,
-    account_number: t.account_number || `NZG-${String(100001 + i).padStart(6, '0')}`,
+    account_number: byId[t.id] || t.account_number || nextAccount(i),
   }))
-  const applications = applicants.map((a) => a.app)
+  const talents = talentsRaw.map((t) => pick(t, TALENT_COLS))
+  const applications = applicants.map((a) => pick(a.app, APP_COLS))
 
   console.log(`Upserting ${talents.length} talents…`)
   await rest('talents?on_conflict=id', { method: 'POST', body: talents, key })
@@ -778,7 +1032,7 @@ async function main() {
 
   console.log('\nNZG applications:')
   for (const a of appRows || []) {
-    console.log(`  ${a.status.padEnd(12)} ${a.access_code.padEnd(10)} ${a.talent_name}`)
+    console.log(`  ${String(a.status).padEnd(16)} ${String(a.access_code).padEnd(10)} ${a.talent_name}`)
   }
   console.log(`\nDone. ${talentRows?.length ?? 0} talents, ${appRows?.length ?? 0} NZG applications.`)
 }

@@ -4,47 +4,63 @@ import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { CompanyLogo } from "@/components/branding";
 import { AGENCY_SIDEBAR, filterAgencyNav, filterAgencySidebar, canAccessAgencyPath } from "@/constants/agency-nav";
-import { useTalentDirectory } from "@/hooks/useTalentDirectory";
-import { talentAccountPath } from "@/lib/talent-account";
+import { useCommandSearch } from "@/hooks/useCommandSearch";
+import { useNotifications } from "@/hooks/useNotifications";
 
 function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectTalent, tasks }) {
   const [profileOpen,setProfileOpen]=useState(false);
   const [q,setQ]=useState(""); const [qOpen,setQOpen]=useState(false);
+  const [notifOpen,setNotifOpen]=useState(false);
   const ref=useRef();
-  const directory=useTalentDirectory();
-  const results=q.length>1?directory.list.filter(t=>t.name.toLowerCase().includes(q.toLowerCase())||t.accountId.toLowerCase().includes(q.toLowerCase())||(t.socialHandle||"").toLowerCase().includes(q.toLowerCase())).slice(0,8):[];
-  const urgentTasks=tasks.filter(t=>t.assigned_to===user.id&&t.status==="open"&&t.priority==="urgent").length;
-  const openTasks=tasks.filter(t=>t.assigned_to===user.id&&t.status==="open").length;
-  useEffect(()=>{function h(e){if(ref.current&&!ref.current.contains(e.target)){setProfileOpen(false);setQOpen(false);}}document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
+  const results=useCommandSearch(q);
+  const { items: notifs, unreadCount, readIds, markRead, markAllRead } = useNotifications();
+  useEffect(()=>{function h(e){if(ref.current&&!ref.current.contains(e.target)){setProfileOpen(false);setQOpen(false);setNotifOpen(false);}}document.addEventListener("mousedown",h);return()=>document.removeEventListener("mousedown",h);},[]);
   return(
-    <div ref={ref} style={{ background:T.navBg,borderBottom:`1px solid ${T.navBorder}`,display:"flex",alignItems:"center",height:48,padding:"0 14px",gap:8,flexShrink:0,zIndex:100,position:"relative" }}>
-      <div style={{ display:"flex",alignItems:"center",gap:8,marginRight:4 }}>
+    <div ref={ref} style={{ background:T.navBg,borderBottom:`1px solid ${T.navBorder}`,display:"flex",alignItems:"center",height:52,padding:"0 14px",gap:8,flexShrink:0,zIndex:100,position:"relative" }}>
+      <button type="button" onClick={()=>onNav("workspace")} title="My Workspace" style={{ display:"flex",alignItems:"center",gap:8,marginRight:4,background:"transparent",border:"none",cursor:"pointer",padding:0 }}>
         <CompanyLogo variant="company" companyCode={companyCode} size="sm" theme="dark" showWordmark />
-      </div>
+      </button>
       <div style={{ display:"flex",gap:1,marginRight:6 }}>
         {[
           ["☰","Menu",onMenu],
-          canAccessAgencyPath(user.role, "active-roster")
-            ? ["📄","Roster",()=>onNav("active-roster")]
-            : canAccessAgencyPath(user.role, "roster")
-              ? ["📄","Roster",()=>onNav("roster")]
-              : null,
+          canAccessAgencyPath(user.role, "clients") || canAccessAgencyPath(user.role, "active-roster")
+            ? ["📄","Clients",()=>onNav("clients")]
+            : null,
           ["★","Workspace",()=>onNav("workspace")],
         ].filter(Boolean).map(([icon,tip,fn])=><button key={tip} onClick={fn} title={tip} className="transition-fast" style={{ background:"transparent",border:"none",color:"#94a3b8",padding:"6px 8px",borderRadius:5,cursor:"pointer",fontSize:14 }} onMouseEnter={e=>e.currentTarget.style.color="#fff"} onMouseLeave={e=>e.currentTarget.style.color="#94a3b8"}>{icon}</button>)}
       </div>
-      <div style={{ flex:1,maxWidth:420,position:"relative" }}>
-        <div style={{ display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:6,padding:"4px 10px" }}>
+      <div style={{ flex:1,maxWidth:520,position:"relative" }}>
+        <div style={{ display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:6,padding:"5px 10px" }}>
           <span style={{ color:"rgba(255,255,255,0.4)",fontSize:13 }}>⌕</span>
-          <input value={q} onChange={e=>{setQ(e.target.value);setQOpen(true);}} onFocus={()=>setQOpen(true)} placeholder="Command Launch" style={{ background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:12,flex:1,fontFamily:"inherit" }}/>
+          <input value={q} onChange={e=>{setQ(e.target.value);setQOpen(true);}} onFocus={()=>setQOpen(true)} placeholder="Command Launch — people, apps, pages" style={{ background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:12,flex:1,fontFamily:"inherit" }}/>
           {q&&<span onClick={()=>{setQ("");setQOpen(false);}} style={{ color:"rgba(255,255,255,0.4)",cursor:"pointer" }}>✕</span>}
         </div>
-        {qOpen&&results.length>0&&<div style={{ position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"#fff",border:"1px solid #e5e7eb",borderRadius:7,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200 }}>
-          {results.map(t=><div key={t.accountId} onClick={()=>{onNav(talentAccountPath(t.accountId).replace(/^\//,""));setQ("");setQOpen(false);}} style={{ padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f5f5f5",display:"flex",alignItems:"center",justifyContent:"space-between" }}><div><span style={{ color:T.purple,fontWeight:600,fontSize:12 }}>{t.name}</span><span style={{ color:T.t4,fontSize:11,marginLeft:6 }}>{t.accountId}</span></div><span style={{ fontSize:10,color:T.t3 }}>{t.statusLabel}</span></div>)}
+        {qOpen&&results.length>0&&<div style={{ position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"#fff",border:"1px solid #e5e7eb",borderRadius:7,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,maxHeight:360,overflowY:"auto" }}>
+          {results.map(r=><div key={r.id} onClick={()=>{onNav(r.path);setQ("");setQOpen(false);}} style={{ padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f5f5f5",display:"flex",alignItems:"center",justifyContent:"space-between" }}><div><span style={{ color:r.kind==="page"?T.blue:T.purple,fontWeight:600,fontSize:12 }}>{r.label}</span><span style={{ color:T.t4,fontSize:11,marginLeft:6 }}>{r.sublabel}</span></div><span style={{ fontSize:10,color:T.t3,textTransform:"capitalize" }}>{r.kind}</span></div>)}
         </div>}
       </div>
       <div style={{ flex:1 }}/>
       <div style={{ textAlign:"right",marginRight:4 }}><div style={{ fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.08em" }}>Company</div><div style={{ fontSize:12,color:"#fff",fontWeight:600 }}>{companyCode}</div></div>
-      {openTasks>0&&canAccessAgencyPath(user.role,"agency-tasks")&&<div onClick={()=>onNav("agency-tasks")} style={{ background:urgentTasks>0?"#dc2626":"rgba(255,255,255,0.08)",borderRadius:6,padding:"3px 8px",cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><span style={{ fontSize:13 }}>🔔</span>{urgentTasks>0&&<span style={{ fontSize:11,fontWeight:700,color:"#fff" }}>{urgentTasks}</span>}</div>}
+      <div style={{ position:"relative" }}>
+        <button type="button" onClick={()=>setNotifOpen(o=>!o)} title="Notifications" style={{ background:unreadCount>0?"#dc2626":"rgba(255,255,255,0.08)",border:"none",borderRadius:6,padding:"5px 9px",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:"#fff",fontFamily:"inherit" }}>
+          <span style={{ fontSize:13 }}>🔔</span>
+          {unreadCount>0&&<span style={{ fontSize:11,fontWeight:700 }}>{unreadCount}</span>}
+        </button>
+        {notifOpen&&(
+          <div style={{ position:"absolute",right:0,top:40,width:320,maxHeight:380,overflowY:"auto",background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",zIndex:250 }}>
+            <div style={{ padding:"10px 12px",borderBottom:"1px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <span style={{ fontSize:12,fontWeight:700,color:T.t1 }}>Notifications</span>
+              <button type="button" onClick={markAllRead} style={{ background:"none",border:"none",color:T.blue,fontSize:11,cursor:"pointer",fontFamily:"inherit" }}>Mark all read</button>
+            </div>
+            {notifs.length===0?<div style={{ padding:16,fontSize:12,color:T.t3 }}>No notifications</div>:notifs.map(n=>(
+              <div key={n.id} onClick={()=>{markRead(n.id);onNav(n.path);setNotifOpen(false);}} style={{ padding:"10px 12px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",background:readIds.has(n.id)?"#fff":"#f8fafc" }}>
+                <div style={{ fontSize:12,fontWeight:600,color:T.t1 }}>{n.title}</div>
+                <div style={{ fontSize:11,color:T.t3,marginTop:2 }}>{n.body}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"2px 8px" }}>
         <div style={{ fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.06em" }}>Role</div>
         <select value={user.role} onChange={e=>{const u=USERS.find(u=>u.role===e.target.value);if(u)onLogout(u);}} style={{ background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>
@@ -57,7 +73,10 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
           <div style={{ padding:"12px 14px",borderBottom:"1px solid #f0f0f0",background:"#fafbfc" }}>
             <div style={{ display:"flex",alignItems:"center",gap:8 }}><Av user={user} size={30}/><div><div style={{ fontSize:12,fontWeight:600,color:T.t1 }}>{user.name}</div><div style={{ fontSize:11,color:user.color,fontWeight:500 }}>{user.title}</div></div></div>
           </div>
-          <div style={{ padding:6 }}><div onClick={()=>onLogout(null)} style={{ padding:"7px 8px",cursor:"pointer",color:T.red,fontSize:12,borderRadius:4 }}>Sign Out</div></div>
+          <div style={{ padding:6 }}>
+            <div onClick={()=>{onNav("settings");setProfileOpen(false);}} style={{ padding:"7px 8px",cursor:"pointer",color:T.t1,fontSize:12,borderRadius:4 }}>Settings</div>
+            <div onClick={()=>onLogout(null)} style={{ padding:"7px 8px",cursor:"pointer",color:T.red,fontSize:12,borderRadius:4 }}>Sign Out</div>
+          </div>
         </div>}
       </div>
     </div>
@@ -149,6 +168,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
           <CompanyLogo variant="company" companyCode={companyCode} size="sm" showWordmark />
           <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>Menu</span>
           <button onClick={() => { onNav("workspace"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Workspace</button>
+          <button onClick={() => { onNav("settings"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Settings</button>
           {userRole === "director" && (
             <>
               <button onClick={() => { onNav("admin/invite"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Invite Team Member</button>

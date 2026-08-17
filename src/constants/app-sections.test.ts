@@ -68,9 +68,59 @@ describe('NZG short application', () => {
         representation_interests: 'Influencing / Content Creation',
       },
     } as Application
-    // Incomplete overall, but modeling/acting should not add missing fields
     expect(validateSection('modeling', app.data)).toEqual([])
     expect(validateSection('acting', app.data)).toEqual([])
     expect(isAppComplete(app)).toBe(false)
+  })
+
+  it('enforces 200–500 characters on About You long answers', () => {
+    const short = validateSection('general', {
+      experience_level: 'Beginner',
+      about_yourself: 'too short',
+      career_goals: 'too short',
+      proud_accomplishments: 'too short',
+      why_nzinga_interest: 'too short',
+    })
+    expect(short).toEqual(
+      expect.arrayContaining([
+        'about_yourself',
+        'career_goals',
+        'proud_accomplishments',
+        'why_nzinga_interest',
+      ]),
+    )
+
+    const okText = 'x'.repeat(220)
+    expect(
+      validateSection('general', {
+        experience_level: 'Beginner',
+        about_yourself: okText,
+        career_goals: okText,
+        proud_accomplishments: okText,
+        why_nzinga_interest: okText,
+      }),
+    ).toEqual([])
+  })
+
+  it('allows empty acting training but requires 200 chars when provided', () => {
+    const base = {
+      representation_interests: 'Acting',
+      acting_experience_level: 'Beginner',
+      acting_categories: 'Commercial',
+      doc_acting_headshot: 'data:image/png;base64,xx',
+    }
+    expect(validateSection('acting', { ...base, acting_training: '' })).toEqual([])
+    expect(validateSection('acting', { ...base, acting_training: 'short' })).toContain(
+      'acting_training',
+    )
+    expect(validateSection('acting', { ...base, acting_training: 'y'.repeat(200) })).toEqual([])
+  })
+
+  it('requires Instagram or Other link on social section', () => {
+    expect(validateSection('social', {})).toEqual(
+      expect.arrayContaining(['link_instagram', 'link_other']),
+    )
+    expect(validateSection('social', { link_instagram: 'https://instagram.com/x' })).toEqual([])
+    expect(validateSection('social', { link_other: 'https://example.com' })).toEqual([])
   })
 })

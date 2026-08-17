@@ -92,7 +92,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
             <div>
               <div style={{ fontSize:15,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>Application Review — {app.talent_name}</div>
               <div style={{ display:"flex",gap:8,marginTop:3,alignItems:"center",flexWrap:"wrap" }}>
-                <span style={{ background:isPendingGuardian?T.amberL:isSubmitted?T.greenL:T.amberL,color:isPendingGuardian?T.amber:isSubmitted?T.green:T.amber,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{isPendingGuardian?"GUARDIAN PENDING":isSubmitted?"SUBMITTED":"IN PROGRESS"}</span>
+                <span style={{ background:isPendingGuardian?T.amberL:isSubmitted?T.greenL:T.amberL,color:isPendingGuardian?T.amber:isSubmitted?T.green:T.amber,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{isPendingGuardian?"PENDING PARENT APPROVAL":isSubmitted?"SUBMITTED":"IN PROGRESS"}</span>
                 {isMinor(d.dob)&&<span style={{ background:T.purpleL,color:T.purple,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>MINOR</span>}
                 {d.currently_represented==="Yes"&&<span style={{ background:T.redL,color:T.red,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>EXISTING REP</span>}
                 {isComplete&&isSubmitted&&!isPendingGuardian&&<span style={{ background:T.greenL,color:T.green,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>100% COMPLETE</span>}

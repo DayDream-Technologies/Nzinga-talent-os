@@ -1103,6 +1103,15 @@ function completeSeedAppData(p: {
               : n,
     )
     .join(',')
+
+  const pad = (text: string, min = 200, max = 500) => {
+    let out = text.trim()
+    const filler =
+      ' I am building a professional career and want clear representation support for bookings, brand work, and long-term growth with Nzinga.'
+    while (out.length < min) out += filler
+    return out.slice(0, max)
+  }
+
   return {
     legal_first: p.first,
     legal_last: p.last,
@@ -1119,10 +1128,10 @@ function completeSeedAppData(p: {
     doc_profile_photo_type: 'image/jpeg',
     representation_interests: interests || 'Influencing / Content Creation',
     experience_level: 'Experienced',
-    about_yourself: p.bio,
-    career_goals: p.goals90,
-    proud_accomplishments: p.achievements,
-    why_nzinga_interest: 'I want professional representation with Nzinga.',
+    about_yourself: pad(p.bio),
+    career_goals: pad(p.goals90),
+    proud_accomplishments: pad(p.achievements),
+    why_nzinga_interest: pad('I want professional representation with Nzinga and a team that can open doors.'),
     influencer_primary_platform: p.platform,
     influencer_handle: p.handle,
     influencer_content_categories: 'Lifestyle,Fashion',

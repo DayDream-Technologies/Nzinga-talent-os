@@ -26,8 +26,8 @@ export function AgreementViewer({ onScrollComplete, hasScrolledToBottom }: Agree
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>📋 Talent Representation Agreement</span>
-        {!hasScrolledToBottom && <span style={{ color: '#f59e0b', fontSize: 10 }}>⚠ Scroll to bottom to enable consent</span>}
+        <span>Talent Representation Agreement</span>
+        {!hasScrolledToBottom && <span style={{ color: '#f59e0b', fontSize: 10 }}>Scroll to bottom to enable consent</span>}
         {hasScrolledToBottom && <span style={{ color: '#4ade80', fontSize: 10 }}>✓ Agreement reviewed</span>}
       </div>
       <div

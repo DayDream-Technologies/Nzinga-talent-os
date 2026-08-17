@@ -30,8 +30,8 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
           { id: 'prospects', label: 'Prospects', path: 'prospects' },
           { id: 'applications', label: 'Applications', path: 'applications' },
           { id: 'renewal-offers', label: 'Create Renewal Offers', path: 'renewal-offers' },
-          { id: 'active-roster', label: 'Active Roster', path: 'active-roster' },
-          { id: 'talent-roster', label: 'Talent Roster', path: 'roster' },
+          { id: 'clients', label: 'Clients', path: 'clients' },
+          { id: 'active-roster', label: 'Clients', path: 'active-roster' },
           { id: 'prospect-tracking', label: 'Prospect Tracking Board', path: 'prospect-tracking' },
         ],
       },
@@ -127,6 +127,23 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
       },
     ],
   },
+  {
+    id: 'admin',
+    label: 'Admin',
+    groups: [
+      {
+        label: 'Admin',
+        items: [
+          { id: 'admin-users', label: 'Team Users', path: 'admin/users' },
+          { id: 'admin-invite', label: 'Invite Team Member', path: 'admin/invite' },
+          { id: 'admin-roles', label: 'Roles', path: 'admin/roles' },
+          { id: 'admin-audit', label: 'Audit Log', path: 'admin/audit-log' },
+          { id: 'admin-settings', label: 'System Settings', path: 'admin/settings' },
+          { id: 'settings', label: 'My Settings', path: 'settings' },
+        ],
+      },
+    ],
+  },
 ]
 
 /** Agent (scout / team leads): talent ops + roster/applicant reports */
@@ -134,8 +151,8 @@ const AGENT_PATHS = [
   'prospects',
   'applications',
   'renewal-offers',
+  'clients',
   'active-roster',
-  'roster',
   'pipeline',
   'prospect-tracking',
   'send-email',
@@ -145,6 +162,7 @@ const AGENT_PATHS = [
   'appointments',
   'new-ticket',
   'calendar',
+  'settings',
   'report-roster-scorecard',
   'report-applicant-pool',
   'report-onboarding',
@@ -164,6 +182,7 @@ const ACCOUNT_MANAGER_PATHS = [
   'vendors',
   'disbursements',
   'issue-payouts',
+  'settings',
   'report-escrow-balances',
   'report-gross-bookings',
   'report-ar-aging',
@@ -189,9 +208,12 @@ export const AGENCY_MODULE_ACCESS: Record<Role, readonly string[]> = {
 export function canAccessAgencyPath(role: Role, path: string): boolean {
   const normalized = path.replace(/^\//, '').split('?')[0]
   if (!normalized || normalized === 'workspace') return true
+  if (normalized === 'settings') return true
   if (normalized === 'talent' || normalized.startsWith('talent/')) return true
   // Nested admin routes remain director-only (handled elsewhere); deny here for agency gate
   if (normalized.startsWith('admin')) return role === 'director'
+  // Legacy roster → clients
+  if (normalized === 'roster') return canAccessAgencyPath(role, 'clients')
   return (AGENCY_MODULE_ACCESS[role] || []).includes(normalized)
 }
 
@@ -201,10 +223,20 @@ export function filterAgencyNav(role: Role): AgencyNavCategory[] {
     groups: cat.groups
       .map((g) => ({
         ...g,
-        items: g.items.filter((item) => canAccessAgencyPath(role, item.path)),
+        // Prefer /clients label; hide duplicate active-roster nav item
+        items: g.items
+          .filter((item) => item.path !== 'active-roster')
+          .filter((item) => {
+            if (cat.id === 'admin' && item.path.startsWith('admin')) return role === 'director'
+            if (cat.id === 'admin' && item.path === 'settings') return true
+            return canAccessAgencyPath(role, item.path)
+          }),
       }))
       .filter((g) => g.items.length > 0),
-  })).filter((cat) => cat.groups.length > 0)
+  })).filter((cat) => {
+    if (cat.id === 'admin') return role === 'director' || cat.groups.some((g) => g.items.some((i) => i.path === 'settings'))
+    return cat.groups.length > 0
+  })
 }
 
 /** Flat lookup: path → title */
@@ -214,6 +246,9 @@ export const AGENCY_PAGE_TITLES: Record<string, string> = Object.fromEntries(
   ).concat([
     ['workspace', 'My Workspace'],
     ['reports', 'My Reports'],
+    ['clients', 'Clients'],
+    ['active-roster', 'Clients'],
+    ['settings', 'Settings'],
     ['admin/users', 'Team Users'],
     ['admin/roles', 'Role Management'],
     ['admin/audit-log', 'Audit Log'],
@@ -222,7 +257,7 @@ export const AGENCY_PAGE_TITLES: Record<string, string> = Object.fromEntries(
   ]),
 )
 
-/** Sidebar quick links (primary daily ops). */
+/** Sidebar quick links (primary daily ops) — kept for reference; shell hides sidebar. */
 export const AGENCY_SIDEBAR: { label: string; items: AgencyNavItem[] }[] = [
   {
     label: 'WORKSPACE',
@@ -233,8 +268,7 @@ export const AGENCY_SIDEBAR: { label: string; items: AgencyNavItem[] }[] = [
     items: [
       { id: 'prospects', label: 'Prospects', path: 'prospects' },
       { id: 'applications', label: 'Applications', path: 'applications' },
-      { id: 'active-roster', label: 'Active Roster', path: 'active-roster' },
-      { id: 'talent-roster', label: 'Talent Roster', path: 'roster' },
+      { id: 'clients', label: 'Clients', path: 'clients' },
       { id: 'prospect-tracking', label: 'Tracking Board', path: 'prospect-tracking' },
     ],
   },
@@ -269,6 +303,7 @@ export const AGENCY_SIDEBAR: { label: string; items: AgencyNavItem[] }[] = [
     items: [
       { id: 'admin-invite', label: 'Invite Team Member', path: 'admin/invite' },
       { id: 'admin-users', label: 'Team Users', path: 'admin/users' },
+      { id: 'settings', label: 'Settings', path: 'settings' },
     ],
   },
 ]

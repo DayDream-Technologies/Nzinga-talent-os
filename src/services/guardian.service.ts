@@ -43,7 +43,7 @@ const demoProfiles: Record<string, GuardianProfilePayload & { application_id: st
 export async function inviteGuardian(
   app: Application,
   guardianEmail: string,
-): Promise<{ invite: GuardianInvite | null; error: string | null }> {
+): Promise<{ invite: GuardianInvite | null; error: string | null; emailWarning?: string | null }> {
   const email = guardianEmail.trim().toLowerCase()
   if (!email) return { invite: null, error: 'Guardian email is required.' }
 
@@ -69,7 +69,7 @@ export async function inviteGuardian(
   if (!supabaseConfigured || !supabase) {
     demoInvites[invite.token] = invite
     demoInvites[invite.id] = invite
-    return { invite, error: null }
+    return { invite, error: null, emailWarning: null }
   }
 
   const { error: insertErr } = await supabase.from('guardian_invites').upsert({
@@ -101,7 +101,15 @@ export async function inviteGuardian(
       },
     },
   })
-  if (error) return { invite: null, error: error.message }
+  // Application is already pending_guardian — do not block minor submit if OTP email fails.
+  if (error) {
+    console.warn('[inviteGuardian] OTP email failed:', error.message)
+    return {
+      invite,
+      error: null,
+      emailWarning: error.message || 'Could not send the parent verification email automatically.',
+    }
+  }
   return { invite, error: null }
 }
 
