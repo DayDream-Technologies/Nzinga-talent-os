@@ -4,7 +4,25 @@ export const STORAGE_COMPANY_CODE = 'nto_company_code'
 export const STORAGE_LAST_PATH = 'nto_last_path'
 export const STORAGE_LAST_ACTIVITY = 'nto_last_activity'
 export const STORAGE_THEME = 'nto_theme'
+export const STORAGE_SIDEBAR = 'nto_sidebar_visible'
 export const STORAGE_NOTIF_READ = 'nto_notif_read_ids'
+export const UI_PREFS_EVENT = 'nto-ui-prefs'
+
+/** Default: sidebar visible (classic layout). */
+export function readSidebarVisible(): boolean {
+  const v = readStorage(STORAGE_SIDEBAR)
+  if (v === null) return true
+  return v !== '0' && v !== 'false'
+}
+
+export function writeSidebarVisible(visible: boolean) {
+  writeStorage(STORAGE_SIDEBAR, visible ? '1' : '0')
+  try {
+    window.dispatchEvent(new Event(UI_PREFS_EVENT))
+  } catch {
+    /* ignore */
+  }
+}
 
 export const IDLE_MS = 5 * 60 * 1000
 

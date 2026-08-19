@@ -6,6 +6,7 @@ import { supabaseConfigured } from "@/lib/supabase";
 import { prospectSignup, prospectLogin, sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
 import { checkDuplicateEmail, checkDuplicateApplicant, fetchApplicationByCode, fetchApplicationByEmail, fetchApplicationById } from "@/services/application.service";
 import { inviteGuardian } from "@/services/guardian.service";
+import { uploadApplicationFile } from "@/services/storage.service";
 import { AgreementViewer } from "@/components/application/AgreementViewer";
 
 function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }) {
@@ -483,7 +484,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                       </label>;
                     })()}
                     {field.type==="file_upload"&&<div style={{ border:`2px dashed ${isErr?"#dc2626":val?"#4ade80":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:14,background:val?"rgba(22,163,74,0.08)":isErr?"rgba(220,38,38,0.08)":"rgba(255,255,255,0.03)",cursor:"pointer",position:"relative" }} onClick={()=>document.getElementById("fu_"+field.id)?.click()}>
-                      <input id={"fu_"+field.id} type="file" accept="image/*,.pdf,video/*" onChange={e=>{const file=e.target.files?.[0];if(!file)return;const r=new FileReader();r.onload=ev=>updateField(field.id,ev.target.result,file.name,file.type);r.readAsDataURL(file);}} style={{ display:"none" }}/>
+                      <input id={"fu_"+field.id} type="file" accept="image/*,.pdf,video/*" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;try{const {url}=await uploadApplicationFile(app.id,field.id,file);updateField(field.id,url,file.name,file.type);}catch{const r=new FileReader();r.onload=ev=>updateField(field.id,ev.target.result,file.name,file.type);r.readAsDataURL(file);}}} style={{ display:"none" }}/>
                       <div style={{ fontSize:12,color:isErr?"#fca5a5":"rgba(255,255,255,0.55)",fontWeight:500,marginBottom:4 }}>{field.label}{req&&<span style={{ color:"#ef4444" }}> *</span>}{!req&&<span style={{ color:"rgba(255,255,255,0.3)" }}> (optional)</span>}</div>
                       {field.note&&<div style={{ fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:6 }}>{field.note}</div>}
                       {val?<div style={{ display:"flex",alignItems:"center",gap:6,fontSize:13,color:"#4ade80",fontWeight:600 }}>Uploaded: {data[field.id+"_name"]||"File"}</div>:<div style={{ fontSize:12,color:"rgba(255,255,255,0.35)" }}>Tap to upload · PNG, JPG, PDF, video</div>}

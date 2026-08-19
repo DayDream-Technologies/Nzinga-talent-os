@@ -7,6 +7,7 @@ import type { RcConnectionStatus } from '@/lib/ringcentral-types'
 import { updatePassword } from '@/services/auth.service'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { readStorage, STORAGE_THEME, writeStorage } from '@/lib/session-storage'
+import { useSidebarPreference } from '@/hooks/useSidebarPreference'
 import { T } from '@/lib/tokens'
 
 const RC_ERROR_MESSAGES: Record<string, string> = {
@@ -49,6 +50,7 @@ export function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [pwMsg, setPwMsg] = useState('')
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (readStorage(STORAGE_THEME) === 'dark' ? 'dark' : 'light'))
+  const { sidebarVisible, setSidebarVisible } = useSidebarPreference()
   const [mfaMsg, setMfaMsg] = useState('')
   const [mfaFactorId, setMfaFactorId] = useState('')
   const [mfaQr, setMfaQr] = useState('')
@@ -218,7 +220,8 @@ export function SettingsPage() {
 
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 12 }}>Display</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>Theme</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
           {(['light', 'dark'] as const).map((t) => (
             <button
               key={t}
@@ -240,6 +243,44 @@ export function SettingsPage() {
             </button>
           ))}
         </div>
+        <div style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>Navigation sidebar</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setSidebarVisible(true)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 7,
+              border: `1px solid ${sidebarVisible ? T.blue : '#e5e7eb'}`,
+              background: sidebarVisible ? '#eff6ff' : '#fff',
+              color: sidebarVisible ? T.blue : T.t2,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Show sidebar
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarVisible(false)}
+            style={{
+              padding: '8px 14px',
+              borderRadius: 7,
+              border: `1px solid ${!sidebarVisible ? T.blue : '#e5e7eb'}`,
+              background: !sidebarVisible ? '#eff6ff' : '#fff',
+              color: !sidebarVisible ? T.blue : T.t2,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Hide sidebar
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: T.t4, marginTop: 10, lineHeight: 1.45, marginBottom: 0 }}>
+          Full Menu (☰) stays available either way. Default is show sidebar.
+        </p>
       </div>
 
       <div style={card}>

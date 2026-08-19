@@ -1,5 +1,33 @@
-import { DOCUMENTS_BUCKET, supabase, supabaseConfigured } from '@/lib/supabase'
+import { APPLICATION_DOCS_BUCKET, DOCUMENTS_BUCKET, supabase, supabaseConfigured } from '@/lib/supabase'
 import type { UploadedDoc } from '@/types'
+
+export async function uploadApplicationFile(
+  applicationId: string,
+  fieldId: string,
+  file: File,
+): Promise<{ url: string; storagePath: string }> {
+  if (!supabaseConfigured || !supabase) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        resolve({ url: ev.target?.result as string, storagePath: '' })
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const path = `${applicationId}/${fieldId}/${Date.now()}_${file.name}`
+  const { error: uploadError } = await supabase.storage
+    .from(APPLICATION_DOCS_BUCKET)
+    .upload(path, file, { upsert: true })
+  if (uploadError) throw uploadError
+
+  const { data: urlData } = supabase.storage
+    .from(APPLICATION_DOCS_BUCKET)
+    .getPublicUrl(path)
+  return { url: urlData.publicUrl, storagePath: path }
+}
 
 export async function uploadDocument(
   talentId: string,
