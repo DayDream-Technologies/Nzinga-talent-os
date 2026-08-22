@@ -367,7 +367,7 @@ export async function getProspectProfile(): Promise<ProspectProfile | null> {
       .from('prospect_profiles')
       .select('*')
       .eq('auth_uid', session.user.id)
-      .single()
+      .maybeSingle()
     return (data as ProspectProfile) ?? null
   } catch {
     await clearLocalAuthSession()
