@@ -55,7 +55,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
 
     if(supabaseConfigured&&newData.talent_password){
       const {error}=await prospectSignup(newData.talent_email.trim(),newData.talent_password,newData.talent_name);
-      if(error){setLookupErr(error);setAuthLoading(false);return;}
+      if(error){setLookupErr(friendlyAuthError(error));setAuthLoading(false);return;}
     }
 
     const id="app_"+Date.now();

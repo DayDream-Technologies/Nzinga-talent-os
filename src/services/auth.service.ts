@@ -150,7 +150,7 @@ export async function prospectSignup(
         error: 'An account with this email already exists. Log in to resume your application.',
       }
     }
-    return { profile: null, error: msg }
+    return { profile: null, error: friendlyAuthError(msg) }
   }
 
   // Email confirmation on → usually no session yet. Profile is created by DB trigger
@@ -309,7 +309,7 @@ export async function sendPasswordResetEmail(
   const redirectTo =
     typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
   const { error } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo })
-  if (error) return { error: error.message }
+  if (error) return { error: friendlyAuthError(error.message) }
   return { error: null }
 }
 
@@ -346,8 +346,15 @@ export function friendlyAuthError(raw: string): string {
   if (lower.includes('email not confirmed')) {
     return 'Your email has not been confirmed yet. Check your inbox for a verification link.'
   }
+  if (
+    lower.includes('email rate limit') ||
+    lower.includes('rate limit exceeded') ||
+    (lower.includes('rate limit') && lower.includes('email'))
+  ) {
+    return 'Too many verification emails were sent recently. Wait about an hour, or ask an admin to enable custom SMTP in Supabase Auth.'
+  }
   if (lower.includes('too many requests') || lower.includes('rate limit')) {
-    return 'Too many login attempts. Please wait a moment and try again.'
+    return 'Too many attempts. Please wait a few minutes and try again.'
   }
   if (lower.includes('user not found')) {
     return 'No account found with this email. Did you mean to create a new application?'

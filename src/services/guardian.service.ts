@@ -1,6 +1,7 @@
 import type { Application, GuardianStatus } from '@/types'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { saveApplication } from '@/services/application.service'
+import { friendlyAuthError } from '@/services/auth.service'
 import { demoStore } from '@/services/demo-store'
 
 export interface GuardianInvite {
@@ -107,7 +108,7 @@ export async function inviteGuardian(
     return {
       invite,
       error: null,
-      emailWarning: error.message || 'Could not send the parent verification email automatically.',
+      emailWarning: friendlyAuthError(error.message || 'Could not send the parent verification email automatically.'),
     }
   }
   return { invite, error: null }
