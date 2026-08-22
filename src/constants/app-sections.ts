@@ -38,14 +38,40 @@ export const APP_SECTIONS: AppSection[] = [
       { id: 'legal_last', label: 'Legal Last Name', type: 'text', required: true },
       { id: 'preferred_name', label: 'Preferred / Professional Name', type: 'text', required: true },
       { id: 'pronouns', label: 'Pronouns', type: 'text', required: false },
-      { id: 'dob', label: 'Date of Birth', type: 'date', required: true, note: 'Age is calculated automatically' },
-      { id: 'email', label: 'Email', type: 'email', required: true },
-      { id: 'phone', label: 'Phone', type: 'tel', required: true },
+      {
+        id: 'dob',
+        label: 'Date of Birth',
+        type: 'date',
+        required: true,
+        note: 'Age is calculated automatically',
+        validate: 'date_past',
+        max: 'today',
+        min: '1900-01-01',
+      },
+      { id: 'email', label: 'Email', type: 'email', required: true, inputMode: 'email' },
+      {
+        id: 'phone',
+        label: 'Phone',
+        type: 'tel',
+        required: true,
+        inputMode: 'tel',
+        placeholder: '(555) 000-0000',
+        pattern: '^[\\d\\s()+.\\-]{7,}$',
+        validate: 'phone',
+      },
       { id: 'city', label: 'City', type: 'text', required: true },
       { id: 'state', label: 'State / Province', type: 'text', required: true },
       { id: 'country', label: 'Country', type: 'text', required: true },
       { id: 'current_market', label: 'Current Market / Location', type: 'text', required: true },
-      { id: 'website', label: 'Website', type: 'url', required: false },
+      {
+        id: 'website',
+        label: 'Website',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://…',
+      },
       {
         id: 'doc_profile_photo',
         label: 'Profile Photo',
@@ -133,9 +159,21 @@ export const APP_SECTIONS: AppSection[] = [
     icon: '',
     showIf: interest('Modeling'),
     fields: [
-      { id: 'model_height', label: 'Height', type: 'text', required: true },
+      {
+        id: 'model_height',
+        label: 'Height',
+        type: 'text',
+        required: true,
+        placeholder: "e.g. 5'10\" or 178 cm",
+      },
       { id: 'model_clothing_size', label: 'Clothing Size', type: 'text', required: true },
-      { id: 'model_shoe_size', label: 'Shoe Size', type: 'text', required: true },
+      {
+        id: 'model_shoe_size',
+        label: 'Shoe Size',
+        type: 'text',
+        required: true,
+        placeholder: 'e.g. 10 or 42 EU',
+      },
       { id: 'model_hair_color', label: 'Hair Color', type: 'text', required: true },
       { id: 'model_eye_color', label: 'Eye Color', type: 'text', required: true },
       { id: 'model_experience', label: 'Modeling Experience', type: 'textarea', required: true },
@@ -150,7 +188,15 @@ export const APP_SECTIONS: AppSection[] = [
       { id: 'doc_model_fullbody', label: 'Full-body photo', type: 'file_upload', required: true },
       { id: 'doc_model_portfolio', label: 'Portfolio', type: 'file_upload', required: false },
       { id: 'doc_model_comp', label: 'Comp Card', type: 'file_upload', required: false },
-      { id: 'model_website', label: 'Modeling Website', type: 'url', required: false },
+      {
+        id: 'model_website',
+        label: 'Modeling Website',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://…',
+      },
     ],
   },
   {
@@ -191,7 +237,15 @@ export const APP_SECTIONS: AppSection[] = [
       { id: 'sport_team', label: 'Current Team / Organization', type: 'text', required: false },
       { id: 'sport_level', label: 'Current Competitive Level', type: 'text', required: true },
       { id: 'sport_school', label: 'School / University', type: 'text', required: false },
-      { id: 'sport_years', label: 'Years Competing', type: 'text', required: true },
+      {
+        id: 'sport_years',
+        label: 'Years Competing',
+        type: 'text',
+        required: true,
+        inputMode: 'numeric',
+        validate: 'positive_integer',
+        placeholder: 'e.g. 5',
+      },
       { id: 'sport_highlights', label: 'Career Highlights', type: 'textarea', required: true },
       { id: 'doc_sport_photo', label: 'Athletic Photo', type: 'file_upload', required: true },
       { id: 'doc_sport_reel', label: 'Highlight Reel', type: 'file_upload', required: false },
@@ -222,8 +276,24 @@ export const APP_SECTIONS: AppSection[] = [
         options: [...INFLUENCER_CONTENT_CATEGORIES],
         required: true,
       },
-      { id: 'influencer_followers', label: 'Approximate Follower Count', type: 'text', required: true },
-      { id: 'influencer_avg_views', label: 'Approximate Average Views', type: 'text', required: false },
+      {
+        id: 'influencer_followers',
+        label: 'Approximate Follower Count',
+        type: 'text',
+        required: true,
+        inputMode: 'numeric',
+        validate: 'positive_integer',
+        placeholder: 'e.g. 5000',
+      },
+      {
+        id: 'influencer_avg_views',
+        label: 'Approximate Average Views',
+        type: 'text',
+        required: false,
+        inputMode: 'numeric',
+        validate: 'positive_integer',
+        placeholder: 'e.g. 12000',
+      },
       { id: 'influencer_content_desc', label: 'Content Description', type: 'textarea', required: true },
       {
         id: 'influencer_brand_experience',
@@ -345,12 +415,60 @@ export const APP_SECTIONS: AppSection[] = [
     icon: '',
     requireAnyOf: [['link_instagram', 'link_other']],
     fields: [
-      { id: 'link_instagram', label: 'Instagram', type: 'url', required: false },
-      { id: 'link_tiktok', label: 'TikTok', type: 'url', required: false },
-      { id: 'link_youtube', label: 'YouTube', type: 'url', required: false },
-      { id: 'link_website', label: 'Website', type: 'url', required: false },
-      { id: 'link_portfolio', label: 'Portfolio', type: 'url', required: false },
-      { id: 'link_other', label: 'Other link', type: 'url', required: false },
+      {
+        id: 'link_instagram',
+        label: 'Instagram',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://instagram.com/…',
+      },
+      {
+        id: 'link_tiktok',
+        label: 'TikTok',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://tiktok.com/@…',
+      },
+      {
+        id: 'link_youtube',
+        label: 'YouTube',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://youtube.com/…',
+      },
+      {
+        id: 'link_website',
+        label: 'Website',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://…',
+      },
+      {
+        id: 'link_portfolio',
+        label: 'Portfolio',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://…',
+      },
+      {
+        id: 'link_other',
+        label: 'Other link',
+        type: 'url',
+        required: false,
+        validate: 'url',
+        inputMode: 'url',
+        placeholder: 'https://…',
+      },
     ],
   },
   {
@@ -422,6 +540,8 @@ export const APP_SECTIONS: AppSection[] = [
         label: 'Date',
         type: 'date',
         required: true,
+        validate: 'date_past',
+        max: 'today',
       },
     ],
   },
@@ -518,6 +638,108 @@ export function fieldLengthHint(field: AppField, data: ApplicationData): string 
   return `${len} / max ${field.maxLength} characters`
 }
 
+function todayIsoDate(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+/** Resolve field.min / field.max tokens like "today" for date inputs. */
+export function resolveFieldBound(bound: string | undefined): string | undefined {
+  if (!bound) return undefined
+  if (bound === 'today') return todayIsoDate()
+  return bound
+}
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function isPositiveIntegerString(value: string): boolean {
+  const cleaned = value.replace(/,/g, '').trim()
+  if (!/^\d+$/.test(cleaned)) return false
+  return Number(cleaned) >= 0
+}
+
+function isValidPhone(value: string): boolean {
+  const digits = value.replace(/\D/g, '')
+  return digits.length >= 7 && digits.length <= 15
+}
+
+/**
+ * Returns true when a non-empty value fails the field's semantic validate rule.
+ * Empty values are handled by required checks separately.
+ */
+export function fieldFailsValidation(field: AppField, data: ApplicationData): boolean {
+  const raw = data[field.id]
+  if (raw == null || typeof raw !== 'string') return false
+  const value = raw.trim()
+  if (!value) return false
+
+  switch (field.validate) {
+    case 'date_past': {
+      const d = new Date(value + 'T00:00:00')
+      if (Number.isNaN(d.getTime())) return true
+      const today = new Date()
+      today.setHours(23, 59, 59, 999)
+      if (d > today) return true
+      // DOB sanity: not younger than ~3 years, not older than 120
+      if (field.id === 'dob') {
+        const age = ageFromDob(value)
+        if (age === null || age < 3 || age > 120) return true
+      }
+      return false
+    }
+    case 'url':
+      return !isValidHttpUrl(value)
+    case 'phone':
+      return !isValidPhone(value)
+    case 'positive_integer':
+      return !isPositiveIntegerString(value)
+    default:
+      if (field.pattern) {
+        try {
+          return !new RegExp(field.pattern).test(value)
+        } catch {
+          return false
+        }
+      }
+      if (field.type === 'email') {
+        return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+      }
+      if (field.type === 'url') {
+        return !isValidHttpUrl(value)
+      }
+      return false
+  }
+}
+
+export function fieldValidationMessage(field: AppField, data: ApplicationData): string | null {
+  if (!fieldFailsValidation(field, data)) return null
+  switch (field.validate) {
+    case 'date_past':
+      if (field.id === 'dob') {
+        const age = ageFromDob(String(data[field.id] || ''))
+        if (age !== null && age < 3) return 'Date of birth must be at least 3 years ago'
+        if (age !== null && age > 120) return 'Enter a valid date of birth'
+      }
+      return 'Date must be today or earlier'
+    case 'url':
+      return 'Enter a valid URL starting with https://'
+    case 'phone':
+      return 'Enter a valid phone number (at least 7 digits)'
+    case 'positive_integer':
+      return 'Enter a whole number (0 or greater)'
+    default:
+      if (field.type === 'email') return 'Enter a valid email address'
+      if (field.type === 'url') return 'Enter a valid URL starting with https://'
+      return 'Invalid value'
+  }
+}
+
 export function validateSection(secId: string, data: ApplicationData): string[] {
   const sec = APP_SECTIONS.find((s) => s.id === secId)
   if (!sec || !isSectionVisible(sec, data)) return []
@@ -536,6 +758,10 @@ export function validateSection(secId: string, data: ApplicationData): string[] 
       continue
     }
     if (fieldFailsLength(f, data)) {
+      missing.add(f.id)
+      continue
+    }
+    if (fieldFailsValidation(f, data)) {
       missing.add(f.id)
     }
   }

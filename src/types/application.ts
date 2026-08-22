@@ -19,6 +19,8 @@ export type AppFieldCondition =
   | { field: string; equals: string }
   | { field: string; includes: string }
 
+export type AppFieldValidate = 'phone' | 'url' | 'date_past' | 'positive_integer'
+
 export interface AppField {
   id: string
   label: string
@@ -32,6 +34,18 @@ export interface AppField {
   minLength?: number
   /** Maximum character count. */
   maxLength?: number
+  /** HTML pattern attribute for input validation. */
+  pattern?: string
+  /** Max value (e.g. date max). Use "today" for current date at render time. */
+  max?: string
+  /** Min value (e.g. date min). */
+  min?: string
+  /** Mobile keyboard hint. */
+  inputMode?: 'text' | 'numeric' | 'tel' | 'url' | 'email' | 'decimal' | 'search'
+  /** Explicit placeholder text. */
+  placeholder?: string
+  /** Semantic validator applied when the field has a non-empty value. */
+  validate?: AppFieldValidate
 }
 
 export interface AppSection {

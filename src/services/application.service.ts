@@ -77,10 +77,10 @@ export async function saveApplication(app: Application): Promise<Application> {
     throw new Error(existingError.message)
   }
 
-  const mergedData: ApplicationData = {
+  const mergedData = sanitizeApplicationData({
     ...((existing?.data as ApplicationData | undefined) || {}),
     ...incoming,
-  }
+  })
   const payload = toApplicationRow(app, mergedData)
 
   // Prefer UPDATE so submit does not hit INSERT RLS on upsert-of-existing-row.

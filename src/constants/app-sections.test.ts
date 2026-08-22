@@ -37,7 +37,7 @@ describe('NZG short application', () => {
       preferred_name: 'A B',
       dob: '2012-01-01',
       email: 'a@example.com',
-      phone: '555',
+      phone: '555-123-4567',
       city: 'X',
       state: 'Y',
       country: 'USA',
@@ -122,5 +122,61 @@ describe('NZG short application', () => {
     )
     expect(validateSection('social', { link_instagram: 'https://instagram.com/x' })).toEqual([])
     expect(validateSection('social', { link_other: 'https://example.com' })).toEqual([])
+  })
+
+  it('rejects future dates of birth and invalid phones/urls/numbers', () => {
+    const future = new Date()
+    future.setFullYear(future.getFullYear() + 1)
+    const futureIso = future.toISOString().split('T')[0]
+
+    expect(
+      validateSection('personal', {
+        legal_first: 'A',
+        legal_last: 'B',
+        preferred_name: 'A B',
+        dob: futureIso,
+        email: 'a@example.com',
+        phone: '555-123-4567',
+        city: 'X',
+        state: 'Y',
+        country: 'USA',
+        current_market: 'X',
+        doc_profile_photo: 'storage:application-docs/x/doc_profile_photo/1.jpg',
+      }),
+    ).toContain('dob')
+
+    expect(
+      validateSection('personal', {
+        legal_first: 'A',
+        legal_last: 'B',
+        preferred_name: 'A B',
+        dob: '1990-01-01',
+        email: 'a@example.com',
+        phone: '123',
+        city: 'X',
+        state: 'Y',
+        country: 'USA',
+        current_market: 'X',
+        doc_profile_photo: 'storage:application-docs/x/doc_profile_photo/1.jpg',
+      }),
+    ).toContain('phone')
+
+    expect(
+      validateSection('social', {
+        link_instagram: 'not-a-url',
+      }),
+    ).toContain('link_instagram')
+
+    expect(
+      validateSection('sports', {
+        representation_interests: 'Sports & Athletics',
+        sport_primary: 'Soccer',
+        sport_position: 'Forward',
+        sport_level: 'College',
+        sport_years: 'abc',
+        sport_highlights: 'Wins',
+        doc_sport_photo: 'storage:application-docs/x/doc_sport_photo/1.jpg',
+      }),
+    ).toContain('sport_years')
   })
 })

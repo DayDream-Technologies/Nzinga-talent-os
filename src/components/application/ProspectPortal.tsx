@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, isFieldVisible, fieldFailsLength, fieldLengthHint, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, isFieldVisible, fieldFailsLength, fieldLengthHint, fieldFailsValidation, fieldValidationMessage, resolveFieldBound, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { supabaseConfigured } from "@/lib/supabase";
 import { prospectSignup, prospectLogin, sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
@@ -466,9 +466,11 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                 const inMissing=(missingMap[sec.id]||[]).includes(field.id);
                 const empty=!(typeof val==="boolean"?val:String(val).trim());
                 const lengthFail=fieldFailsLength(field,data);
+                const validationFail=fieldFailsValidation(field,data);
                 const isErr=touched[field.id]&&inMissing;
                 const isFull=field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload";
                 const lengthHint=fieldLengthHint(field,data);
+                const validationMsg=fieldValidationMessage(field,data);
                 const errMsg=isErr
                   ?(lengthFail
                     ?(field.minLength&&field.maxLength
@@ -476,20 +478,73 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                       :field.minLength
                         ?`Enter at least ${field.minLength} characters`
                         :`Maximum ${field.maxLength} characters`)
-                    :sec.id==="social"&&(field.id==="link_instagram"||field.id==="link_other")&&empty
-                      ?"Provide Instagram or Other link"
-                      :"Required")
+                    :validationFail&&validationMsg
+                      ?validationMsg
+                      :sec.id==="social"&&(field.id==="link_instagram"||field.id==="link_other")&&empty
+                        ?"Provide Instagram or Other link"
+                        :"Required")
                   :null;
                 const inputStyle={background:"rgba(255,255,255,0.08)",border:`1px solid ${isErr?"#dc2626":"rgba(255,255,255,0.12)"}`,borderRadius:8,color:"#fff",padding:"12px 14px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit",minHeight:44};
+                const ph=field.placeholder||field.label;
+                const dateMax=resolveFieldBound(field.max);
+                const dateMin=resolveFieldBound(field.min);
                 return (
                   <div key={field.id} style={{ gridColumn:isFull?"1/-1":"auto" }}>
                     {field.type!=="checkbox"&&field.type!=="file_upload"&&<div style={{ fontSize:12,color:isErr?"#fca5a5":"rgba(255,255,255,0.55)",fontWeight:500,marginBottom:4 }}>{field.label}{req&&<span style={{ color:"#ef4444" }}> *</span>}{!req&&<span style={{ color:"rgba(255,255,255,0.3)",fontWeight:400 }}> (optional)</span>}</div>}
                     {field.note&&field.type!=="file_upload"&&<div style={{ fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6,lineHeight:1.4 }}>{field.note}</div>}
                     {errMsg&&<div style={{ fontSize:11,color:"#fca5a5",marginBottom:3,fontWeight:600 }}>{errMsg}</div>}
-                    {(field.type==="text"||field.type==="url")&&<input value={val} onChange={e=>{updateField(field.id,e.target.value);}} placeholder={field.label} style={inputStyle}/>}
-                    {field.type==="email"&&<input type="email" value={val} onChange={e=>updateField(field.id,e.target.value)} placeholder="email@example.com" style={inputStyle}/>}
-                    {field.type==="tel"&&<input type="tel" value={val} onChange={e=>updateField(field.id,e.target.value)} placeholder="(555) 000-0000" style={inputStyle}/>}
-                    {field.type==="date"&&<input type="date" value={val} onChange={e=>updateField(field.id,e.target.value)} style={inputStyle}/>}
+                    {field.type==="text"&&(
+                      <input
+                        type="text"
+                        value={val}
+                        inputMode={field.inputMode}
+                        pattern={field.pattern}
+                        placeholder={ph}
+                        onChange={e=>{updateField(field.id,e.target.value);}}
+                        style={inputStyle}
+                      />
+                    )}
+                    {field.type==="url"&&(
+                      <input
+                        type="url"
+                        value={val}
+                        inputMode={field.inputMode||"url"}
+                        placeholder={ph}
+                        onChange={e=>{updateField(field.id,e.target.value);}}
+                        style={inputStyle}
+                      />
+                    )}
+                    {field.type==="email"&&(
+                      <input
+                        type="email"
+                        value={val}
+                        inputMode={field.inputMode||"email"}
+                        placeholder={field.placeholder||"email@example.com"}
+                        onChange={e=>updateField(field.id,e.target.value)}
+                        style={inputStyle}
+                      />
+                    )}
+                    {field.type==="tel"&&(
+                      <input
+                        type="tel"
+                        value={val}
+                        inputMode={field.inputMode||"tel"}
+                        pattern={field.pattern}
+                        placeholder={field.placeholder||"(555) 000-0000"}
+                        onChange={e=>updateField(field.id,e.target.value)}
+                        style={inputStyle}
+                      />
+                    )}
+                    {field.type==="date"&&(
+                      <input
+                        type="date"
+                        value={val}
+                        min={dateMin}
+                        max={dateMax}
+                        onChange={e=>updateField(field.id,e.target.value)}
+                        style={inputStyle}
+                      />
+                    )}
                     {field.type==="textarea"&&(
                       <>
                         <textarea
@@ -497,7 +552,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                           value={val}
                           maxLength={field.maxLength}
                           onChange={e=>updateField(field.id,e.target.value)}
-                          placeholder={field.label}
+                          placeholder={ph}
                           style={{ ...inputStyle,resize:"vertical",minHeight:110 }}
                         />
                         {lengthHint&&(

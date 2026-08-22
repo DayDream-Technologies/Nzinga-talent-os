@@ -43,12 +43,13 @@ export async function uploadApplicationFile(
     'video/quicktime',
     'video/webm',
   ])
-  const contentType = file.type && allowedTypes.has(file.type) ? file.type : undefined
+  const contentType = file.type && allowedTypes.has(file.type) ? file.type : 'application/octet-stream'
   const { error: uploadError } = await supabase.storage.from(APPLICATION_DOCS_BUCKET).upload(path, file, {
     upsert: true,
     contentType,
   })
   if (uploadError) {
+    console.error('[uploadApplicationFile]', uploadError.message, { path, contentType, size: file.size })
     throw new Error(uploadError.message || 'Could not upload file. Please try again.')
   }
 
