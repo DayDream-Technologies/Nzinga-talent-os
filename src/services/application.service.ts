@@ -1,6 +1,47 @@
-import type { Application, ApplicationsMap } from '@/types'
+import type { Application, ApplicationData, ApplicationsMap } from '@/types'
+import { isEmbeddedDataUrl } from '@/lib/application-files'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { demoStore } from './demo-store'
+
+export function sanitizeApplicationData(data: ApplicationData | undefined): ApplicationData {
+  const next: ApplicationData = {}
+  for (const [key, value] of Object.entries(data || {})) {
+    if (isEmbeddedDataUrl(value)) continue
+    next[key] = value
+  }
+  return next
+}
+
+function toApplicationRow(app: Application, data: ApplicationData) {
+  return {
+    id: app.id,
+    talent_id: app.talent_id ?? null,
+    access_code: app.access_code,
+    talent_name: app.talent_name,
+    talent_email: app.talent_email,
+    status: app.status,
+    created_at: app.created_at,
+    last_saved: app.last_saved ?? new Date().toISOString(),
+    completed_sections: app.completed_sections ?? [],
+    data,
+    company_code: app.company_code,
+    guardian_status: app.guardian_status ?? null,
+    guardian_email: app.guardian_email ?? null,
+  }
+}
+
+async function linkProspectProfile(applicationId: string) {
+  if (!supabase) return
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session?.user) return
+    await supabase.from('prospect_profiles').update({ application_id: applicationId }).eq('auth_uid', session.user.id)
+  } catch {
+    // non-fatal — application row is already saved
+  }
+}
 
 export async function fetchApplications(): Promise<ApplicationsMap> {
   if (!supabaseConfigured || !supabase) {
@@ -17,33 +58,72 @@ export async function fetchApplications(): Promise<ApplicationsMap> {
 }
 
 export async function saveApplication(app: Application): Promise<Application> {
+  const incoming = sanitizeApplicationData(app.data)
+  const local: Application = { ...app, data: incoming }
+
   if (!supabaseConfigured || !supabase) {
-    const map = { ...demoStore.getApplications(), [app.id]: app }
+    const map = { ...demoStore.getApplications(), [app.id]: local }
     demoStore.setApplications(map)
-    return app
+    return local
   }
 
-  // Strip company_code if the column might not exist yet (migration 007 pending)
-  const payload = { ...app }
-  try {
-    const { data, error } = await supabase.from('applications').upsert(payload).select().single()
-    if (error) {
-      // RLS or schema error — fall back to local store so user isn't blocked
-      console.warn('[saveApplication] Supabase error, falling back to local:', error.message)
-      const map = { ...demoStore.getApplications(), [app.id]: app }
-      demoStore.setApplications(map)
-      return app
-    }
-    return data as Application
-  } catch (e) {
-    console.warn('[saveApplication] Unexpected error, falling back to local:', e)
-    const map = { ...demoStore.getApplications(), [app.id]: app }
-    demoStore.setApplications(map)
-    return app
+  const { data: existing, error: existingError } = await supabase
+    .from('applications')
+    .select('data')
+    .eq('id', app.id)
+    .maybeSingle()
+  if (existingError) {
+    throw new Error(existingError.message)
   }
+
+  const mergedData: ApplicationData = {
+    ...((existing?.data as ApplicationData | undefined) || {}),
+    ...incoming,
+  }
+  const payload = toApplicationRow(app, mergedData)
+
+  // Prefer UPDATE so submit does not hit INSERT RLS on upsert-of-existing-row.
+  const { data: updated, error: updateError } = await supabase
+    .from('applications')
+    .update(payload)
+    .eq('id', app.id)
+    .select()
+    .maybeSingle()
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+  if (updated) {
+    await linkProspectProfile(app.id)
+    return updated as Application
+  }
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('applications')
+    .insert(payload)
+    .select()
+    .single()
+  if (insertError) {
+    if (insertError.code === '23505') {
+      const { data: retry, error: retryError } = await supabase
+        .from('applications')
+        .update(payload)
+        .eq('id', app.id)
+        .select()
+        .single()
+      if (retryError || !retry) {
+        throw new Error(retryError?.message || insertError.message)
+      }
+      await linkProspectProfile(app.id)
+      return retry as Application
+    }
+    throw new Error(insertError.message)
+  }
+
+  await linkProspectProfile(app.id)
+  return inserted as Application
 }
 
-const MATCH_STATUSES = new Set(['submitted', 'pending_guardian', 'in_progress', 'sent'])
+const MATCH_STATUSES = new Set(['submitted', 'pending_guardian'])
 
 function isDuplicateCandidate(
   a: Application,

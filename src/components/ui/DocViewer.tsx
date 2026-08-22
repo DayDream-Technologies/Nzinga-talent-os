@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import type { UploadedDoc } from '@/types'
 import { downloadUploadedDoc } from '@/lib/representation-agreement'
+import { resolveUploadedDocUrl } from '@/services/storage.service'
 
 interface DocViewerProps {
   doc: UploadedDoc | null
@@ -7,6 +9,23 @@ interface DocViewerProps {
 }
 
 export function DocViewer({ doc, onClose }: DocViewerProps) {
+  const [src, setSrc] = useState(doc?.data || '')
+
+  useEffect(() => {
+    if (!doc) {
+      setSrc('')
+      return
+    }
+    let cancelled = false
+    setSrc(doc.data)
+    void resolveUploadedDocUrl(doc).then((url) => {
+      if (!cancelled) setSrc(url)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [doc])
+
   if (!doc) return null
   const isPdf = doc.type?.includes('pdf')
   const isImage = Boolean(doc.type?.startsWith('image/'))
@@ -39,7 +58,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => downloadUploadedDoc(doc)}
+              onClick={() => downloadUploadedDoc({ ...doc, data: src || doc.data })}
               className="cursor-pointer rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-t2"
             >
               Download
@@ -56,10 +75,10 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
         </div>
         <div className="min-w-[min(100%,500px)] flex-1 overflow-auto p-4">
           {isPdf ? (
-            <iframe src={doc.data} title={doc.name} className="h-[60vh] w-full border-none" />
+            <iframe src={src} title={doc.name} className="h-[60vh] w-full border-none" />
           ) : isImage ? (
             <img
-              src={doc.data}
+              src={src}
               alt={doc.name}
               className="mx-auto block max-h-[70vh] max-w-full rounded-md"
             />
@@ -75,7 +94,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
               <p className="mb-3">Preview is not available for this file type.</p>
               <button
                 type="button"
-                onClick={() => downloadUploadedDoc(doc)}
+                onClick={() => downloadUploadedDoc({ ...doc, data: src || doc.data })}
                 className="cursor-pointer rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white"
               >
                 Download file

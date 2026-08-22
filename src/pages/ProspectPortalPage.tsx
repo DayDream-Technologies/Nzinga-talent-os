@@ -20,13 +20,9 @@ export function ProspectPortalPage() {
   }, [allowed, navigate])
 
   const saveApp = useCallback(async (app: Application) => {
-    try {
-      const saved = await saveApplication(app)
-      setApplications((prev) => ({ ...prev, [saved.id]: saved }))
-    } catch (e) {
-      console.warn('[ProspectPortalPage] saveApp error:', e)
-      setApplications((prev) => ({ ...prev, [app.id]: app }))
-    }
+    const saved = await saveApplication(app)
+    setApplications((prev) => ({ ...prev, [saved.id]: saved }))
+    return saved
   }, [])
 
   if (!allowed) return null
@@ -35,9 +31,7 @@ export function ProspectPortalPage() {
     <ProspectPortal
       applications={applications}
       companyCode={companyCode.trim().toUpperCase()}
-      onSaveApp={(app: Application) => {
-        void saveApp(app)
-      }}
+      onSaveApp={saveApp}
       onBack={() => navigate('/tmx')}
     />
   )

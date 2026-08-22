@@ -1,3 +1,4 @@
+import { parseApplicationStoragePath } from '@/lib/application-files'
 import type {
   AppField,
   AppFieldCondition,
@@ -572,10 +573,12 @@ function docFromApp(
 ): UploadedDoc | null {
   const data = d[id]
   if (!data) return null
+  const value = String(data)
   return {
     name: String(d[`${id}_name`] || fallbackName),
-    data: String(data),
+    data: value,
     type: String(d[`${id}_type`] || 'application/octet-stream'),
+    storagePath: parseApplicationStoragePath(value) || undefined,
     doc_type: id.replace(/^doc_/, ''),
     uploaded_at: new Date().toISOString(),
     uploaded_by: 'applicant',

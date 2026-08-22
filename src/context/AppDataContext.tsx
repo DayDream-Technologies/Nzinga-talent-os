@@ -97,8 +97,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const saveApp = useCallback(
     (app: Application) => {
       void (async () => {
-        await saveApplication(app)
-        const apps = { ...applicationsRef.current, [app.id]: app }
+        let saved = app
+        try {
+          saved = await saveApplication(app)
+        } catch (e) {
+          console.warn('[saveApp] Supabase save failed:', e)
+          return
+        }
+        const apps = { ...applicationsRef.current, [saved.id]: saved }
         queryClient.setQueryData(['applications'], apps)
 
         const appAlreadyLinked = talentsRef.current.find((t) => t.application_id === app.id)
