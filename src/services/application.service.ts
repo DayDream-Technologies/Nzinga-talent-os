@@ -27,6 +27,7 @@ function toApplicationRow(app: Application, data: ApplicationData) {
     company_code: app.company_code,
     guardian_status: app.guardian_status ?? null,
     guardian_email: app.guardian_email ?? null,
+    submitted_at: app.submitted_at ?? null,
   }
 }
 

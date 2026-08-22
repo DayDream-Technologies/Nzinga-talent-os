@@ -357,7 +357,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
         setSubmitted(true);
         setShowSubmitConfirm(false);
       }else{
-        const updated={...appRef.current,data,status:"submitted",guardian_status:"not_required",last_saved:new Date().toISOString(),completed_sections:visibleSections.map(s=>s.id)};
+        const updated={...appRef.current,data,status:"submitted",guardian_status:"not_required",last_saved:new Date().toISOString(),completed_sections:visibleSections.map(s=>s.id),submitted_at:new Date().toISOString()};
         await queueSave(updated,true);
         setPendingGuardian(false);
         setSubmitted(true);
