@@ -8,7 +8,7 @@ Items from the original to-do list that have NOT yet been implemented.
 
 - [x] **Create Email Template Dropdown & Email Integration**
   - Dropdown to select from pre-built email templates when sending communications
-  - Mailjet integration via Supabase Edge Function (replaced EmailJS)
+  - Auth emails (signup, reset, guardian links) are sent by Supabase Auth
   - General email compose with template selection in TalentRecord History tab
 
 - [x] **Add Phone VoIP & History**

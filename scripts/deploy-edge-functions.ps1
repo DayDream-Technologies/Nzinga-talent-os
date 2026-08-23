@@ -2,7 +2,6 @@ $ErrorActionPreference = "Stop"
 Write-Host "Deploying Supabase Edge Functions..." -ForegroundColor Cyan
 
 $functions = @(
-  "send-email",
   "ringcentral-oauth",
   "ringcentral-call",
   "ringcentral-sms",

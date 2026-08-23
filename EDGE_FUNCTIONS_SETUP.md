@@ -3,7 +3,7 @@
 Production project: **rvuchforbheotenhkxnm**  
 Production app: **https://talentmanagerx.com**
 
-This guide covers Mailjet email and RingCentral phone/SMS/webhook Edge Functions, including how to fix common **400** errors such as `Invalid action`, `Invalid JSON body`, and Supabase gateway `Invalid arguments`.
+This guide covers RingCentral phone/SMS/webhook Edge Functions, including how to fix common **400** errors such as `Invalid action`, `Invalid JSON body`, and Supabase gateway `Invalid arguments`.
 
 ---
 
@@ -33,15 +33,13 @@ talentmanagerx.com (React SPA)
   │  supabase.functions.invoke('ringcentral-oauth', { body: { action: 'status' } })
   │  supabase.functions.invoke('ringcentral-call', { body: { talent_id, phone_number } })
   │  supabase.functions.invoke('ringcentral-sms', { body: { talent_id, phone_number, message } })
-  │  supabase.functions.invoke('send-email', { body: { to_email, subject, html_body, ... } })
   ▼
 https://rvuchforbheotenhkxnm.supabase.co/functions/v1/<function-name>
   │
   ├── ringcentral-oauth   → RingCentral OAuth + token storage
   ├── ringcentral-call    → RingOut (click-to-call)
   ├── ringcentral-sms     → SMS send
-  ├── ringcentral-webhook → Inbound call events (RingCentral → Supabase)
-  └── send-email          → Mailjet transactional email
+  └── ringcentral-webhook → Inbound call events (RingCentral → Supabase)
 ```
 
 Staff must be logged in with **Supabase Auth** (not demo mode) for all functions except `ringcentral-oauth?action=callback` (browser redirect from RingCentral) and `ringcentral-webhook` (RingCentral POST).
@@ -54,7 +52,6 @@ Staff must be logged in with **Supabase Auth** (not demo mode) for all functions
 - [ ] Staff users in `auth.users` linked to `public.users.auth_uid`
 - [ ] Migrations `001`–`005` applied (especially `004_ringcentral`, `005_fix_rc_tokens_auth_uid`)
 - [ ] RingCentral app at [developers.ringcentral.com](https://developers.ringcentral.com/my-account.html#/applications)
-- [ ] Mailjet account with verified sender
 - [ ] Supabase CLI installed: `npm i -g supabase` or use project devDependency
 - [ ] Amplify env vars set and app redeployed
 
@@ -104,19 +101,12 @@ supabase secrets set RC_SERVER_URL=https://platform.ringcentral.com
 supabase secrets set RC_REDIRECT_URI=https://rvuchforbheotenhkxnm.supabase.co/functions/v1/ringcentral-oauth?action=callback
 supabase secrets set RC_WEBHOOK_VERIFICATION_TOKEN=cbc0d27c288d694bc2ec339bdbdeb3b3
 supabase secrets set APP_URL=https://talentmanagerx.com
-
-# Mailjet
-supabase secrets set MJ_APIKEY_PUBLIC=your-mailjet-api-key
-supabase secrets set MJ_APIKEY_PRIVATE=your-mailjet-secret-key
-supabase secrets set MJ_SENDER_EMAIL=discovery@nzingamamgmt.com
-supabase secrets set MJ_SENDER_NAME="Nzinga Talent Group"
 ```
 
 Or copy `.env.secrets.example` → `.env.secrets` and run:
 
 ```powershell
-.\scripts\set-supabase-secrets.ps1              # all secrets
-.\scripts\set-supabase-secrets.ps1 -MailjetOnly # Mailjet only
+.\scripts\set-supabase-secrets.ps1
 ```
 
 **Do not set:** Bearer tokens, `RC_JWT`, or `service_role` in Amplify. Supabase auto-injects `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` for Edge Functions.
@@ -169,7 +159,6 @@ npm run supabase:deploy
 Or individually:
 
 ```bash
-supabase functions deploy send-email
 supabase functions deploy ringcentral-oauth
 supabase functions deploy ringcentral-call
 supabase functions deploy ringcentral-sms
@@ -186,7 +175,7 @@ supabase functions deploy ringcentral-webhook
 |----------|----------------|-----|
 | `ringcentral-oauth` | **Off** (`verify_jwt = false`) | RingCentral OAuth callback has no user JWT |
 | `ringcentral-webhook` | **Off** | RingCentral webhook POST has no user JWT |
-| `ringcentral-call`, `ringcentral-sms`, `send-email` | **On** (default) | Staff must send Supabase session JWT |
+| `ringcentral-call`, `ringcentral-sms` | **On** (default) | Staff must send Supabase session JWT |
 
 Config files in repo:
 
@@ -341,27 +330,7 @@ curl -X POST "$env:SUPABASE_URL/functions/v1/ringcentral-sms" `
 
 ---
 
-### Test 6 — `send-email`
-
-```powershell
-curl -X POST "$env:SUPABASE_URL/functions/v1/send-email" `
-  -H "Authorization: Bearer $env:STAFF_JWT" `
-  -H "apikey: $env:SUPABASE_ANON_KEY" `
-  -H "Content-Type: application/json" `
-  -d "{\"to_email\":\"you@example.com\",\"to_name\":\"Test\",\"subject\":\"NTO test\",\"html_body\":\"<p>Hello</p>\",\"text_body\":\"Hello\"}"
-```
-
-**Expected:** `200` `{ "status": "sent", ... }`
-
-| Response | Cause |
-|----------|--------|
-| `503 Mailjet is not configured` | Missing `MJ_*` secrets |
-| `400 to_email and subject are required` | Missing required fields |
-| `400 Provide template_id, html_body, or text_body` | No email body |
-
----
-
-### Test 7 — `ringcentral-webhook`
+### Test 6 — `ringcentral-webhook`
 
 Validation handshake (RingCentral subscription setup):
 
@@ -394,7 +363,7 @@ curl -X POST "$env:SUPABASE_URL/functions/v1/ringcentral-webhook" `
 4. **Talent record** — open talent with `phone` set → Call / SMS buttons enabled.
 5. **Outbound call** — click Call → history entry with `call_direction: outbound`.
 6. **SMS** — send test message → history entry type `sms`.
-7. **Email** — History tab → Send Email, or Send Application from pipeline.
+7. **Application invite** — Send Application from pipeline saves an access code to share (Auth emails are sent by Supabase).
 8. **Webhook** — place inbound call from talent phone → history `call_direction: inbound` (after webhook subscription active).
 
 ---
@@ -416,7 +385,7 @@ curl -X POST "$env:SUPABASE_URL/functions/v1/ringcentral-webhook" `
 
 **Fix:** Always send `{}` at minimum with `Content-Type: application/json`.
 
-### `to_email and subject are required` / `talent_id and phone_number are required`
+### `talent_id and phone_number are required`
 
 **Cause:** Missing required fields — this is correct validation, not a bug.
 
@@ -426,7 +395,7 @@ curl -X POST "$env:SUPABASE_URL/functions/v1/ringcentral-webhook" `
 
 **Cause:** Function name includes `?` or `/`, or body is not a plain object.
 
-**Fix:** Use exact names: `ringcentral-oauth`, `ringcentral-call`, `ringcentral-sms`, `send-email`.
+**Fix:** Use exact names: `ringcentral-oauth`, `ringcentral-call`, `ringcentral-sms`.
 
 ### `401 Unauthorized`
 
@@ -515,22 +484,6 @@ POST body:
 }
 ```
 
-### `send-email`
-
-POST body:
-
-```json
-{
-  "to_email": "string (required)",
-  "to_name": "string",
-  "subject": "string (required)",
-  "html_body": "string (required unless template_id or text_body)",
-  "text_body": "string (optional)",
-  "template_id": "number (optional, Mailjet)",
-  "template_vars": "object (optional)"
-}
-```
-
 ### `ringcentral-webhook`
 
 POST from RingCentral only. No staff JWT. Handles Validation-Token handshake and call event payloads.
@@ -545,7 +498,6 @@ POST from RingCentral only. No staff JWT. Handles Validation-Token handshake and
 | ringcentral-call | https://rvuchforbheotenhkxnm.supabase.co/functions/v1/ringcentral-call |
 | ringcentral-sms | https://rvuchforbheotenhkxnm.supabase.co/functions/v1/ringcentral-sms |
 | ringcentral-webhook | https://rvuchforbheotenhkxnm.supabase.co/functions/v1/ringcentral-webhook |
-| send-email | https://rvuchforbheotenhkxnm.supabase.co/functions/v1/send-email |
 
 ---
 

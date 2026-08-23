@@ -101,11 +101,10 @@ Company Code: **NZG** (also: NZINGA, TCG)
 ## File Uploads
 Files are read as base64 `data:` URLs via `FileReader`. Stored in React state on the talent's `uploaded_docs` object. `DocViewer` renders images directly or PDFs in an iframe.
 
-## Email (SendApplicationModal)
-Uses EmailJS (`api.emailjs.com`). In demo mode, credentials are placeholder values so it gracefully falls back with a "demo mode" message. To enable:
-1. Create account at emailjs.com
-2. Set service ID, template ID, and public key in `SendApplicationModal`
-3. The template should accept: `to_email`, `to_name`, `access_code`, `portal_link`, `from_name`
+## Email (Supabase Auth)
+Signup confirmation, password reset, and guardian magic links are sent by **Supabase Auth**. Staff application invites save an access code to share with the prospect; there is no separate transactional mail provider.
+
+For production Auth email, enable **Confirm email** and configure **custom SMTP** in the Supabase dashboard (Project Settings → Auth → SMTP). The built-in mailer is limited to 2 messages per hour and is not for production.
 
 ## Common Claude Code Tasks
 
@@ -136,13 +135,7 @@ Uses EmailJS (`api.emailjs.com`). In demo mode, credentials are placeholder valu
 Edit `PILLAR_NAMES` in `constants.js` and the scoring UI is in `TalentRecord.jsx` under `tab==="Scoring"`.
 
 ## Environment Variables
-No `.env` required for the demo. For production email:
-```
-VITE_EMAILJS_SERVICE_ID=your_service_id
-VITE_EMAILJS_TEMPLATE_ID=your_template_id
-VITE_EMAILJS_PUBLIC_KEY=your_public_key
-```
-Then reference in `ApplicationModals.jsx` as `import.meta.env.VITE_EMAILJS_*`.
+No `.env` required for the demo. Auth emails are configured in the Supabase dashboard (Auth → SMTP), not as `VITE_*` frontend variables.
 
 ## Notes for Claude Code
 - All state is managed in `App.jsx` and passed down as props — no Redux, no Context

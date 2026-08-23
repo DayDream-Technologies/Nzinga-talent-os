@@ -38,14 +38,15 @@ Production RingCentral + webhook alignment: [RINGCENTRAL_TALENTMANAGERX_SETUP.md
 
 ## Email & Phone — Supabase Secrets (NOT Amplify env vars)
 
-Email (Mailjet) and Phone (RingCentral) API keys are stored as **Supabase secrets** and accessed only by Edge Functions. They are never exposed to the frontend bundle.
+Phone (RingCentral) API keys are stored as **Supabase secrets** and accessed only by Edge Functions. They are never exposed to the frontend bundle.
+
+Auth emails are sent by **Supabase Auth** (configure custom SMTP in the dashboard for production).
 
 See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for the full list of secrets to configure.
 
 **Complete setup & testing guide:** [EDGE_FUNCTIONS_SETUP.md](./EDGE_FUNCTIONS_SETUP.md)
 
-The frontend communicates with these services through Supabase Edge Functions:
-- `send-email` — Mailjet transactional email
+The frontend communicates with phone/SMS through Supabase Edge Functions:
 - `ringcentral-oauth` — RingCentral account linking
 - `ringcentral-call` — Click-to-call via RingOut
 - `ringcentral-sms` — SMS messaging
@@ -91,10 +92,10 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 3. Private `documents` storage bucket created.
 4. Amplify env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DEMO_MODE=false`.
 5. Amplify env: `VITE_APP_URL=https://talentmanagerx.com` (or your custom domain).
-6. Supabase secrets: Mailjet keys, RingCentral credentials (see SUPABASE_SETUP.md).
-7. Deploy Edge Functions: `supabase functions deploy --all`.
+6. Supabase secrets: RingCentral credentials (see SUPABASE_SETUP.md).
+7. Deploy Edge Functions: `npm run supabase:deploy`.
 8. Redeploy Amplify after saving env vars.
-9. Smoke test: company code → staff login → pipeline → send application (email sent via Mailjet).
+9. Smoke test: company code → staff login → pipeline → send application (access code saved).
 10. Smoke test: `/portal` prospect flow with Supabase auth.
 11. Smoke test: Settings → Connect RingCentral → click-to-call from talent record.
 
@@ -106,7 +107,7 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 |--|----------------|---------|
 | File | `.env` in repo root (gitignored) | Console → Environment variables |
 | Reload | Restart `npm run dev` | New build / redeploy |
-| Email/Phone | Edge Functions use Supabase secrets (same whether local or deployed) | Same |
+| Phone | Edge Functions use Supabase secrets (same whether local or deployed) | Same |
 
 ---
 
@@ -119,9 +120,9 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 | `RINGCENTRAL_TALENTMANAGERX_SETUP.md` | Production RC webhook + secrets for talentmanagerx.com |
 | `scripts/set-supabase-secrets.ps1` | Apply secrets from `.env.secrets` (Windows) |
 | `src/lib/supabase.ts` | Supabase client; demo mode detection |
-| `src/lib/email.ts` | Email via Supabase Edge Function (Mailjet) |
+| `src/lib/email.ts` | Staff invite/compose helpers (Auth emails via Supabase) |
 | `src/lib/phone.ts` | Phone/SMS via Supabase Edge Function (RingCentral) |
 | `src/lib/edge-functions.ts` | Typed wrapper for Edge Function invocation |
 | `src/lib/utils.ts` | `isDemoMode()` |
-| `supabase/functions/` | All Edge Functions (email, call, sms, oauth, webhook) |
+| `supabase/functions/` | Edge Functions (call, sms, oauth, webhook) |
 | `SUPABASE_SETUP.md` | Database, auth, Edge Functions, and secrets setup |

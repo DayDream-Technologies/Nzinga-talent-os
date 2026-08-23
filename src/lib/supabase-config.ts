@@ -7,7 +7,6 @@ export function getSupabaseUrl(): string {
 export function getSupabaseFunctionUrls() {
   const base = getSupabaseUrl()
   return {
-    sendEmail: `${base}/functions/v1/send-email`,
     ringcentralOauth: `${base}/functions/v1/ringcentral-oauth`,
     ringcentralCall: `${base}/functions/v1/ringcentral-call`,
     ringcentralSms: `${base}/functions/v1/ringcentral-sms`,

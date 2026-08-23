@@ -2,28 +2,19 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
-import { isEmailConfigured, sendApplicationInviteEmail } from "@/lib/email";
 
 function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) {
   const [email,setEmail]=useState("");
   const [sent,setSent]=useState(false);
-  const [sending,setSending]=useState(false);
   const [sendErr,setSendErr]=useState("");
   const [code]=useState(talent.name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999));
   const method="email";
   const tenantCode=String(companyCode||"NZG").trim().toUpperCase();
 
-  async function send(){
+  function send(){
     const app={id:"app_"+talent.id+"_"+Date.now(),talent_id:talent.id,access_code:code,company_code:tenantCode,talent_name:talent.name,talent_email:email||"",status:"sent",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{},delivery_method:method};
     if(method==="email"&&email){
-      setSending(true);setSendErr("");
-      const result=await sendApplicationInviteEmail({toEmail:email,toName:talent.name,accessCode:code});
-      if(result.status==="skipped"){
-        setSendErr("Email delivery is not configured yet. Share the access code below with the prospect.");
-      }else if(result.status==="failed"){
-        setSendErr(`${result.message} Application and access code were saved.`);
-      }
-      setSending(false);
+      setSendErr("Share the access code below with the prospect. Auth emails (signup, reset, guardian links) are sent by Supabase.");
     }
     onSend(app);setSent(true);
   }
@@ -55,12 +46,12 @@ function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) 
           <button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>
         </div>
         <div style={{ padding:18 }}>
-          <div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:isEmailConfigured()?"#f0fdf4":"#fffbeb",border:`1px solid ${isEmailConfigured()?"#bbf7d0":"#fde68a"}`,borderRadius:6,fontSize:11,color:isEmailConfigured()?"#15803d":"#b45309" }}>{isEmailConfigured()?"📧 Will email invitation via Mailjet":"📋 Will save application — email delivery available in production"} <strong>{code}</strong></div>}</div>
+          <div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:6,fontSize:11,color:"#b45309" }}>📋 Invitation will be saved. Share access code <strong>{code}</strong> with the prospect.</div>}</div>
           <div style={{ padding:"8px 10px",background:"#f8f9fb",border:"1px solid #e5e7eb",borderRadius:6,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
             <span style={{ fontSize:11,color:T.t3 }}>Generated code:</span>
             <span style={{ fontSize:13,fontWeight:800,color:T.purple,letterSpacing:"0.12em" }}>{code}</span>
           </div>
-          <div style={{ display:"flex",gap:8 }}><Btn variant="purple" onClick={send} disabled={sending} full>{sending?"⟳ Sending…":"📧 Send Invitation"}</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div>
+          <div style={{ display:"flex",gap:8 }}><Btn variant="purple" onClick={send} full>Save Invitation</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></div>
         </div>
       </div>
     </div>

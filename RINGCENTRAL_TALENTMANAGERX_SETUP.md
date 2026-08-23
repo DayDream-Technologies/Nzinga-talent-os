@@ -26,7 +26,7 @@ Set in **AWS Amplify → Hosting → Environment variables**, then redeploy:
 | `VITE_DEMO_MODE` | `false` |
 | `VITE_APP_URL` | `https://talentmanagerx.com` |
 
-No Mailjet or RingCentral keys in Amplify.
+No RingCentral keys in Amplify.
 
 Local dev: copy [`.env.example`](./.env.example) → `.env`.
 
@@ -36,7 +36,7 @@ Local dev: copy [`.env.example`](./.env.example) → `.env`.
 
 Set in **Dashboard → Edge Functions → Secrets** or via CLI.
 
-Copy [`.env.secrets.example`](./.env.secrets.example) → `.env.secrets`, fill `RC_CLIENT_ID`, `RC_CLIENT_SECRET`, `MJ_*`, and `SUPABASE_PROJECT_REF`, then:
+Copy [`.env.secrets.example`](./.env.secrets.example) → `.env.secrets`, fill `RC_CLIENT_ID`, `RC_CLIENT_SECRET`, and `SUPABASE_PROJECT_REF`, then:
 
 ```powershell
 # Windows
@@ -66,7 +66,6 @@ chmod +x scripts/set-supabase-secrets.sh
 |--------|--------|
 | `RC_CLIENT_ID` | [RingCentral Developer Console](https://developers.ringcentral.com/my-account.html#/applications) |
 | `RC_CLIENT_SECRET` | Same app |
-| `MJ_APIKEY_PUBLIC` / `MJ_APIKEY_PRIVATE` | Mailjet |
 
 ---
 
@@ -122,7 +121,6 @@ Deployed Edge Functions (production):
 | `ringcentral-call` | `https://rvuchforbheotenhkxnm.supabase.co/functions/v1/ringcentral-call` |
 | `ringcentral-sms` | `https://rvuchforbheotenhkxnm.supabase.co/functions/v1/ringcentral-sms` |
 | `ringcentral-webhook` | `https://rvuchforbheotenhkxnm.supabase.co/functions/v1/ringcentral-webhook` |
-| `send-email` | `https://rvuchforbheotenhkxnm.supabase.co/functions/v1/send-email` |
 
 The SPA calls these via `supabase.functions.invoke()` when `VITE_SUPABASE_URL=https://rvuchforbheotenhkxnm.supabase.co` is set in Amplify.
 
@@ -190,7 +188,6 @@ curl -H "Authorization: Bearer $RC_ACCESS_TOKEN" \
 - [ ] Outbound call from talent record → history `call_direction: outbound`
 - [ ] Inbound call from talent phone → history `call_direction: inbound`
 - [ ] Old `talentmanagerx.com/api/webhook` subscription removed
-- [ ] Application invite email sends via Mailjet
 
 ---
 

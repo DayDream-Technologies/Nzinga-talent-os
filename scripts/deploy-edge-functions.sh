@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "Deploying Supabase Edge Functions..."
-for fn in send-email ringcentral-oauth ringcentral-call ringcentral-sms ringcentral-webhook; do
+for fn in ringcentral-oauth ringcentral-call ringcentral-sms ringcentral-webhook; do
   echo "  $fn"
   supabase functions deploy "$fn"
 done

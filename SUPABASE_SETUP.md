@@ -138,7 +138,7 @@ Optional: apply storage RLS policies (commented at the bottom of `002_auth_and_f
 
 ## Step 5 — Environment variables
 
-For **AWS Amplify**, use the same variable names in the Amplify console (see [AMPLIFY_SETUP.md](./AMPLIFY_SETUP.md)). EmailJS variables are optional and can be omitted until you configure email delivery.
+For **AWS Amplify**, use the same variable names in the Amplify console (see [AMPLIFY_SETUP.md](./AMPLIFY_SETUP.md)).
 
 Copy `.env.example` to `.env` in the project root for local development:
 
@@ -233,9 +233,11 @@ Use separate anon keys per project. Do not point staging builds at production.
 
 ---
 
-## Edge Functions — Email (Mailjet) & Phone (RingCentral)
+## Edge Functions — Phone (RingCentral)
 
-API keys for third-party services are stored as **Supabase secrets** (never exposed to the frontend). Edge Functions act as secure proxies.
+API keys for RingCentral are stored as **Supabase secrets** (never exposed to the frontend). Edge Functions act as secure proxies.
+
+Auth emails (signup confirmation, password reset, guardian magic links) are sent by **Supabase Auth**. Configure custom SMTP in the dashboard for production. There is no transactional email Edge Function.
 
 ### Deploy Edge Functions
 
@@ -247,7 +249,6 @@ npm i -g supabase
 supabase link --project-ref <your-project-ref>
 
 # Deploy all functions
-supabase functions deploy send-email
 supabase functions deploy ringcentral-oauth
 supabase functions deploy ringcentral-call
 supabase functions deploy ringcentral-sms
@@ -257,12 +258,6 @@ supabase functions deploy ringcentral-webhook
 ### Set Supabase Secrets
 
 ```bash
-# Mailjet (email)
-supabase secrets set MJ_APIKEY_PUBLIC=<your-mailjet-api-key>
-supabase secrets set MJ_APIKEY_PRIVATE=<your-mailjet-secret-key>
-supabase secrets set MJ_SENDER_EMAIL=discovery@nzingamamgmt.com
-supabase secrets set MJ_SENDER_NAME="Nzinga Talent Group"
-
 # RingCentral (phone/SMS)
 supabase secrets set RC_CLIENT_ID=<your-ringcentral-client-id>
 supabase secrets set RC_CLIENT_SECRET=<your-ringcentral-client-secret>
@@ -270,7 +265,7 @@ supabase secrets set RC_SERVER_URL=https://platform.ringcentral.com
 supabase secrets set RC_REDIRECT_URI=https://<project-ref>.supabase.co/functions/v1/ringcentral-oauth?action=callback
 supabase secrets set RC_WEBHOOK_VERIFICATION_TOKEN=<your-chosen-token>
 
-# App URL (used in email templates for portal link)
+# App URL
 supabase secrets set APP_URL=https://your-app-url.amplifyapp.com
 ```
 
@@ -300,7 +295,6 @@ Migration 005 drops and recreates `user_rc_tokens`. Existing RC connections will
 
 | Function | Purpose |
 |----------|---------|
-| `send-email` | Sends email via Mailjet API v3.1 (application invites + general email) |
 | `ringcentral-oauth` | OAuth 2.0 flow for per-user RC account linking |
 | `ringcentral-call` | Initiates outbound RingOut call |
 | `ringcentral-sms` | Sends SMS via RC API |
@@ -323,7 +317,6 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 | `supabase/migrations/004_ringcentral.sql` | RingCentral tokens table + telephony history fields |
 | `supabase/migrations/005_fix_rc_tokens_auth_uid.sql` | Fix token table to use auth_uid + subscription id |
 | `supabase/seed.sql` | Staff users + company codes |
-| `supabase/functions/send-email/` | Mailjet email Edge Function |
 | `supabase/functions/ringcentral-oauth/` | RC OAuth Edge Function |
 | `supabase/functions/ringcentral-call/` | RC outbound call Edge Function |
 | `supabase/functions/ringcentral-sms/` | RC SMS Edge Function |
@@ -332,7 +325,7 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 | `supabase/functions/shared/phone.ts` | Phone normalization for webhook talent matching |
 | `.env.example` | Env var template |
 | `src/lib/supabase.ts` | Client and demo-mode detection |
-| `src/lib/email.ts` | Email via Edge Function (Mailjet) |
+| `src/lib/email.ts` | Staff invite/compose helpers (no transactional sender; Auth emails via Supabase) |
 | `src/lib/phone.ts` | Phone/SMS via Edge Function (RingCentral) |
 | `src/lib/edge-functions.ts` | Typed Edge Function invocation wrapper |
 | `src/services/auth.service.ts` | Staff and prospect auth |
@@ -347,8 +340,8 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 3. Create `documents` bucket (private).
 4. Create Auth users for staff; link `auth_uid`.
 5. Configure `.env` with URL, anon key, `VITE_DEMO_MODE=false`.
-6. Set Supabase secrets for Mailjet and RingCentral (see above).
-7. Deploy Edge Functions: `supabase functions deploy --all`.
+6. Set Supabase secrets for RingCentral (see above).
+7. Deploy Edge Functions: `npm run supabase:deploy`.
 8. `npm run dev` and smoke-test staff + prospect flows.
-9. Test: send application email, click-to-call, SMS from talent record.
-10. For production: separate project, SMTP, strong passwords, backups enabled in Supabase dashboard.
+9. Test: send application (access code saved), click-to-call, SMS from talent record.
+10. For production: separate project, Auth custom SMTP, strong passwords, backups enabled in Supabase dashboard.
