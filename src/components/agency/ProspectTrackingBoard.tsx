@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -8,6 +8,7 @@ import {
   normalizeProspectStage,
 } from '@/constants/prospect-stages'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
+import { talentAccountPath } from '@/lib/talent-account'
 import { useUnsavedClose } from '@/components/ui/ConfirmDialog'
 import { Badge, Btn, Field, Panel, inputStyle } from '@/components/agency/AgencyUI'
 import { T } from '@/lib/tokens'
@@ -82,6 +83,26 @@ function ProspectDetailDrawer({
             <div style={{ fontSize: 12, color: T.t3, marginTop: 4 }}>
               Account {formatAccountDisplay(prospect.accountId)}
             </div>
+            {prospect.accountId ? (
+              <Link
+                to={talentAccountPath(prospect.accountId)}
+                style={{
+                  display: 'inline-block',
+                  marginTop: 10,
+                  padding: '8px 14px',
+                  borderRadius: 7,
+                  background: '#f3f4f6',
+                  color: T.t1,
+                  border: '1px solid #e5e7eb',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Open full profile
+              </Link>
+            ) : null}
           </div>
           <button
             type="button"

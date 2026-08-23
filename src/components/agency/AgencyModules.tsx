@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -402,17 +402,23 @@ function SendEmailModule() {
   const [toName, setToName] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
-  const [replyTo, setReplyTo] = useState(user?.email || '')
+  const [replyTo, setReplyTo] = useState('')
   const [fromName, setFromName] = useState('')
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<{ type: 'ok' | 'err' | 'skip'; msg: string } | null>(null)
 
-  const canPickFrom = user?.role === 'director' || user?.role === 'success_manager'
+  useEffect(() => {
+    if (!user) return
+    setReplyTo((prev) => prev || user.email)
+    setFromName((prev) => prev || user.name)
+  }, [user])
 
   async function handleSend() {
     if (!to || !subject || !body) return
     setSending(true)
     setResult(null)
+    const resolvedReplyTo = replyTo || user?.email
+    const resolvedFromName = fromName || user?.name
     try {
       const { sendGeneralEmail } = await import('@/lib/email')
       const res = await sendGeneralEmail({
@@ -421,8 +427,8 @@ function SendEmailModule() {
         subject,
         htmlBody: body.replace(/\n/g, '<br>'),
         textBody: body,
-        replyTo: replyTo || undefined,
-        fromName: fromName || undefined,
+        replyTo: resolvedReplyTo || undefined,
+        fromName: resolvedFromName || undefined,
       })
       if (res.status === 'sent') {
         sendMessage({ channel: 'email', to, subject, preview: body.slice(0, 80) })
@@ -465,15 +471,9 @@ function SendEmailModule() {
             <Field label="Reply-To">
               <input style={inputStyle} value={replyTo} onChange={(e) => setReplyTo(e.target.value)} placeholder={user?.email || 'your@email.com'} type="email" />
             </Field>
-            {canPickFrom ? (
-              <Field label="Sender display name">
-                <input style={inputStyle} value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="Nzinga Talent Group" />
-              </Field>
-            ) : (
-              <Field label="Sending as">
-                <div style={{ ...inputStyle, background: '#f8f9fb', color: T.t3, cursor: 'default' }}>{user?.name || 'Staff'} (via platform)</div>
-              </Field>
-            )}
+            <Field label="Sender display name">
+              <input style={inputStyle} value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder={user?.name || 'Your name'} />
+            </Field>
           </div>
           <Btn onClick={handleSend} disabled={sending || !to || !subject || !body}>
             {sending ? '⟳ Sending…' : 'Send email'}

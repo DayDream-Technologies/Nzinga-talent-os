@@ -1,14 +1,5 @@
-import { ApplicationsPanel } from '@/components/dashboard/Dashboard'
-import { useAppData } from '@/context/AppDataContext'
+import { ApplicationsModule } from '@/components/agency/ApplicationsModule'
 
 export function ApplicationsPage() {
-  const { applications, talents, setReviewingApp, importAppToPipeline } = useAppData()
-  return (
-    <ApplicationsPanel
-      applications={applications}
-      talents={talents}
-      onViewApp={setReviewingApp}
-      onImportApp={importAppToPipeline}
-    />
-  )
+  return <ApplicationsModule />
 }
