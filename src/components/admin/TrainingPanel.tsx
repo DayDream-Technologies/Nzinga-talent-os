@@ -1,6 +1,7 @@
 import type { Role } from '@/types'
 import { ROLE_LABELS } from '@/constants/roles'
 import { T } from '@/lib/tokens'
+import { PageContent } from '@/components/layout/PageContent'
 
 const TRAINING_BY_ROLE: Record<
   Role,
@@ -102,7 +103,7 @@ export function TrainingPanel({ role }: TrainingPanelProps) {
   const content = TRAINING_BY_ROLE[role]
 
   return (
-    <div style={{ padding: '22px 26px', flex: 1, overflowY: 'auto' }}>
+    <PageContent>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
         <div style={{ fontSize: 26, fontWeight: 700, color: T.t1, fontFamily: "'Syne', sans-serif" }}>
           My Training
@@ -118,8 +119,6 @@ export function TrainingPanel({ role }: TrainingPanelProps) {
           border: '1px solid #e5e7eb',
           borderRadius: 10,
           padding: '18px 22px',
-          maxWidth: 640,
-          margin: '0 auto',
         }}
       >
         <div style={{ fontSize: 15, fontWeight: 700, color: T.t1, marginBottom: 14 }}>
@@ -151,6 +150,6 @@ export function TrainingPanel({ role }: TrainingPanelProps) {
       >
         Contact your director for live training sessions or updated SOP documents.
       </div>
-    </div>
+    </PageContent>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { readStorage, STORAGE_LAST_PATH, writeStorage } from '@/lib/session-storage'
+import { isPublicAuthPath, readStorage, STORAGE_LAST_PATH, writeStorage } from '@/lib/session-storage'
 
 /** Wraps protected routes: wait for session restore; restore last path after login settle. */
 export function SessionGate({ children }: { children: React.ReactNode }) {
@@ -12,7 +12,7 @@ export function SessionGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isRestoringSession || !user) return
     const path = location.pathname + location.search
-    if (!path.startsWith('/tmx') && path !== '/login' && path !== '/') {
+    if (!isPublicAuthPath(location.pathname)) {
       writeStorage(STORAGE_LAST_PATH, path)
     }
   }, [location.pathname, location.search, user, isRestoringSession])
@@ -23,11 +23,8 @@ export function SessionGate({ children }: { children: React.ReactNode }) {
       setCompanyCode(user.company_code)
     }
     const last = readStorage(STORAGE_LAST_PATH)
-    const onAuthLanding =
-      location.pathname === '/tmx' ||
-      location.pathname === '/login' ||
-      location.pathname === '/'
-    if (last && onAuthLanding && last.startsWith('/') && !last.startsWith('/tmx') && last !== '/login') {
+    const onAuthLanding = isPublicAuthPath(location.pathname)
+    if (last && onAuthLanding && last.startsWith('/') && !isPublicAuthPath(last.split('?')[0])) {
       navigate(last, { replace: true })
     }
   }, [isRestoringSession, user, companyCode, setCompanyCode, location.pathname, navigate])

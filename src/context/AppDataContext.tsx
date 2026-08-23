@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Application, ApplicationsMap, HistoryEntry, Talent, Task } from '@/types'
-import { isAppComplete, talentFromApp } from '@/constants/app-sections'
+import { applyApplicationToTalent, isAppComplete, talentFromApp } from '@/constants/app-sections'
 import { assignAccountNumber, nextAccountNumber } from '@/lib/account-number'
 import { fetchTalents, updateTalents, upsertTalent } from '@/services/talent.service'
 import { fetchApplications, saveApplication } from '@/services/application.service'
@@ -113,64 +113,40 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           !appAlreadyLinked &&
           (app.status === 'in_progress' || app.status === 'sent')
         ) {
-          const stub: Talent = {
+          const stub = {
+            ...talentFromApp(saved, nextAccountNumber(talentsRef.current.map((t) => t.account_number))),
             id: 't_stub_' + app.id,
-            account_number: nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
-            name: app.talent_name,
-            stage: 'holding_entry',
-            niches: [],
-            scout_id: null,
-            created_by: null,
-            created_at: app.created_at || new Date().toISOString(),
-            social_handle: '',
-            follower_count: '',
-            er_pct: '',
-            platform: '',
-            location: '',
-            pillar_scores: [0, 0, 0, 0, 0],
-            pillar_rationales: ['', '', '', '', ''],
-            jordan_score: 0,
-            revenue_path: '',
-            scout_summary: '',
-            team1_notes: '',
-            team1_decision: null,
-            compliance: {},
-            rep_type: '',
-            commission: '',
-            term_length: '',
-            team2_notes: '',
-            team2_decision: null,
-            director_decision: null,
-            portal_setup: false,
-            technical_routing: false,
-            warm_handoff: '',
-            warm_handoff_confirmed: false,
-            revenue_ytd: '0',
-            revenue_projected: '0',
-            last_contacted: new Date().toISOString().split('T')[0],
+            stage: 'holding_entry' as const,
             application_id: app.id,
-            application_status: 'in_progress',
-            uploaded_docs: {},
+            application_status: saved.status,
             audit_log: [
               {
-                user: app.talent_name,
+                user: saved.talent_name,
                 role: 'Prospect',
-                action: 'Started application — stub profile auto-created',
+                action: 'Started application — profile auto-created from questionnaire',
                 stage: 'holding_entry',
                 ts: new Date().toISOString(),
               },
             ],
           }
-          await persistTalents([...talentsRef.current, stub])
-          await saveApplication({ ...app, talent_id: stub.id })
+          try {
+            await persistTalents([...talentsRef.current, stub])
+            await saveApplication({ ...saved, talent_id: stub.id })
+          } catch (e) {
+            console.warn('[saveApp] Talent stub persist failed:', e)
+          }
           return
         }
 
         if (appAlreadyLinked) {
           const next = talentsRef.current.map((t) =>
-            t.application_id === app.id ? { ...t, application_status: app.status } : t,
+            t.application_id === app.id ? applyApplicationToTalent(t, saved) : t,
           )
-          await persistTalents(next)
+          try {
+            await persistTalents(next)
+          } catch (e) {
+            console.warn('[saveApp] Talent update from application failed:', e)
+          }
         }
 
         // Minor submitted — keep holding stub with pending parent approval (do not upgrade to full lead yet)
@@ -198,11 +174,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               application_id: app.id,
               application_status: 'submitted',
             }
-            await upsertTalent(upgraded)
-            const next = talentsRef.current.map((t) =>
-              t.id === existingFull.id ? upgraded : t,
-            )
-            await persistTalents(next)
+            try {
+              await upsertTalent(upgraded)
+              const next = talentsRef.current.map((t) =>
+                t.id === existingFull.id ? upgraded : t,
+              )
+              await persistTalents(next)
+            } catch (e) {
+              console.warn('[saveApp] Talent upgrade on submit failed:', e)
+            }
             const hist: HistoryEntry = {
               id: 'h' + Date.now(),
               talent_id: existingFull.id,

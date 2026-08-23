@@ -97,7 +97,7 @@ export function EmailConfirmedPage() {
             Email confirmed
           </h1>
           <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.55, marginBottom: 28 }}>
-            Your email is verified. Sign in to continue your talent application or access your account.
+            Thank you. Your email is confirmed. Sign in to continue your talent application or access your Nzinga Management Agency account.
           </p>
           <button
             type="button"

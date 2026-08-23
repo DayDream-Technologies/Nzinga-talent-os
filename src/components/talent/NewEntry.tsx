@@ -16,6 +16,7 @@ import {
   MEDIA_UPLOAD_TYPES,
 } from '@/constants'
 import { T, Btn, Lbl, FInput, FTextarea, FSelect, FileUpload } from '@/components/ui-compat'
+import { PageContent } from '@/components/layout/PageContent'
 
 const EMPTY_FORM = {
   first_name: '',
@@ -236,8 +237,8 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
   const grid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 4 }
 
   return (
-    <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
-      <div style={{ maxWidth: 720 }}>
+    <PageContent>
+      <div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: T.t1, marginBottom: 4 }}>
             Add New Talent Applicant
@@ -645,7 +646,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
           </div>
         </div>
       </div>
-    </div>
+    </PageContent>
   )
 }
 

@@ -8,6 +8,7 @@ import {
   fetchGuardianInviteByToken,
   type GuardianProfilePayload,
 } from '@/services/guardian.service'
+import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import type { Application } from '@/types'
 
@@ -122,7 +123,10 @@ export function GuardianVerifyPage() {
       return
     }
     setError('')
-    const redirectTo = `${window.location.origin}/guardian/verify?app=${encodeURIComponent(appId)}&token=${encodeURIComponent(token)}`
+    const redirectTo = getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.guardianVerify, {
+      app: appId,
+      token,
+    })
     const { error: otpErr } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -132,7 +136,7 @@ export function GuardianVerifyPage() {
     })
     if (otpErr) setError(otpErr.message)
     else setError('')
-    alert('Check your email for a secure verification link, then return here.')
+    alert('A verification message was sent. Check your inbox and follow the Verify Account button, then return here. If you did not request this, you can ignore the email.')
   }
 
   function setField<K extends keyof GuardianProfilePayload>(key: K, value: GuardianProfilePayload[K]) {
@@ -182,7 +186,7 @@ export function GuardianVerifyPage() {
       return
     }
     if (supabaseConfigured && !authReady) {
-      setError('Authenticate with the magic link emailed to you before submitting.')
+      setError('Confirm your identity using the verification message emailed to you before submitting.')
       return
     }
 

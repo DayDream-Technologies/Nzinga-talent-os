@@ -102,7 +102,7 @@ export function TalentLoginPage() {
         setError(TALENT_LOGIN_DEMO_MESSAGE)
         return
       }
-      setInfo('Password reset email sent. Check your inbox.')
+      setInfo('If an account exists for that email, we sent a password reset message. Check your inbox and follow the Reset Password button. If you did not request this, you can ignore the email.')
     } finally {
       setResetting(false)
     }
@@ -300,6 +300,11 @@ export function TalentLoginPage() {
             Still applying?{' '}
             <Link to="/portal" style={{ color: 'rgba(232,238,244,0.85)' }}>
               Open application portal
+            </Link>
+          </p>
+          <p style={{ marginTop: 10, fontSize: 12, textAlign: 'center' }}>
+            <Link to="/tmx" style={{ color: 'rgba(232,238,244,0.65)' }}>
+              ← Back to company code
             </Link>
           </p>
         </div>

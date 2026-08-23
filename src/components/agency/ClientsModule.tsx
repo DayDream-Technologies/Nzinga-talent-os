@@ -225,7 +225,7 @@ export function ClientsModule() {
           </button>
         ))}
       </div>
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'auto' }}>
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'auto', padding: '0 4px' }}>
         <Table
           headers={[
             '',

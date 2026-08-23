@@ -169,7 +169,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
               <input type="password" value={newData.talent_password||""} onChange={e=>setNewData(p=>({...p,talent_password:e.target.value}))} placeholder="Your password" style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
             </div>
             {lookupErr&&<div style={{ color:"#fca5a5",fontSize:12,marginBottom:8,lineHeight:1.5 }}>{lookupErr}</div>}
-            {resetSent&&<div style={{ color:"#4ade80",fontSize:12,marginBottom:8,lineHeight:1.5 }}>Password reset email sent. Check your inbox and follow the link to set a new password.</div>}
+            {resetSent&&<div style={{ color:"#4ade80",fontSize:12,marginBottom:8,lineHeight:1.5 }}>If an account exists for that email, we sent a password reset message. Check your inbox and follow the Reset Password button. If you did not request this, you can ignore the email.</div>}
             <button onClick={loginAndResume} disabled={authLoading} style={{ width:"100%",padding:"11px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",opacity:authLoading?0.6:1 }}>{authLoading?"Logging in…":"Log In →"}</button>
             <div style={{ marginTop:12,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
               <button onClick={()=>setMode("lookup")} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.3)",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Use access code instead</button>
@@ -215,8 +215,15 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   const autoRef=useRef(null);
   const pendingSaveRef=useRef(null);
   const savingRef=useRef(false);
+  const savePromiseRef=useRef(null);
   const appRef=useRef(app);
+  const dataRef=useRef(data);
+  dataRef.current=data;
   useEffect(()=>{ appRef.current=app; },[app]);
+  useEffect(()=>()=>{
+    const pending=pendingSaveRef.current;
+    if(pending) void onSave(pending).catch(()=>{});
+  },[onSave]);
 
   const visibleSections=getVisibleSections(data);
   const total=visibleSections.length;
@@ -236,27 +243,42 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   },[visibleSections.length,currentSection]);
 
   async function flushSave(){
-    if(savingRef.current) return;
+    if(savingRef.current){
+      if(savePromiseRef.current){
+        await savePromiseRef.current.catch(()=>{});
+        return flushSave();
+      }
+      return;
+    }
     const toSave=pendingSaveRef.current;
     if(!toSave) return;
     pendingSaveRef.current=null;
     savingRef.current=true;
     setSaveStatus("saving");
+    let resolve;
+    savePromiseRef.current=new Promise(r=>{resolve=r;});
     try{
       await onSave(toSave);
       savingRef.current=false;
+      resolve();
+      savePromiseRef.current=null;
       if(pendingSaveRef.current) return flushSave();
       setSaveStatus("saved");
     }catch(e){
-      pendingSaveRef.current=toSave;
+      if(!pendingSaveRef.current) pendingSaveRef.current=toSave;
       setSaveStatus("error");
       savingRef.current=false;
+      resolve();
+      savePromiseRef.current=null;
       throw e;
     }
   }
 
   function queueSave(updated,immediate){
-    pendingSaveRef.current=updated;
+    const prev=pendingSaveRef.current;
+    pendingSaveRef.current=prev
+      ? {...updated,data:{...(prev.data||{}),...(updated.data||{})}}
+      : updated;
     setSaveStatus("unsaved");
     clearTimeout(autoRef.current);
     if(immediate) return flushSave();
@@ -268,6 +290,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
       const next={...prev,[fieldId]:value};
       if(fileName) next[fieldId+"_name"]=fileName;
       if(fileType) next[fieldId+"_type"]=fileType;
+      dataRef.current=next;
       const updated={...appRef.current,data:next,last_saved:new Date().toISOString(),completed_sections:Array.from(completedSections)};
       queueSave(updated);
       return next;
@@ -278,12 +301,13 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   function completeSection(idx){
     const sec=visibleSections[idx];
     if(!sec) return;
-    const missing=validateSection(sec.id,data);
+    const latest=dataRef.current;
+    const missing=validateSection(sec.id,latest);
     if(missing.length>0){setTouched(t=>{const n={...t};missing.forEach(id=>{n[id]=true;});return n;});return;}
     const nextCompleted=new Set(completedSections);
     nextCompleted.add(sec.id);
     setCompletedSections(nextCompleted);
-    const updated={...appRef.current,data,last_saved:new Date().toISOString(),completed_sections:Array.from(nextCompleted)};
+    const updated={...appRef.current,data:latest,last_saved:new Date().toISOString(),completed_sections:Array.from(nextCompleted)};
     void queueSave(updated,true);
     if(idx<total-1){
       setCurrentSection(idx+1);
@@ -293,8 +317,9 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   }
 
   function requestSubmit(){
+    const latest=dataRef.current;
     const allMissing={};
-    visibleSections.forEach(s=>{allMissing[s.id]=validateSection(s.id,data);});
+    visibleSections.forEach(s=>{allMissing[s.id]=validateSection(s.id,latest);});
     const hasAny=Object.values(allMissing).some(arr=>arr.length>0);
     if(hasAny){
       const allFields={};
@@ -309,19 +334,20 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   }
 
   async function submitApp(){
+    const latest=dataRef.current;
     const allMissing={};
-    visibleSections.forEach(s=>{allMissing[s.id]=validateSection(s.id,data);});
+    visibleSections.forEach(s=>{allMissing[s.id]=validateSection(s.id,latest);});
     const hasAny=Object.values(allMissing).some(arr=>arr.length>0);
     if(hasAny){const allFields={};Object.values(allMissing).flat().forEach(id=>{allFields[id]=true;});setTouched(allFields);return;}
 
-    const emailToCheck=String(data.email||app.talent_email||"").trim().toLowerCase();
+    const emailToCheck=String(latest.email||app.talent_email||"").trim().toLowerCase();
     try{
       const dup=await checkDuplicateApplicant({
         email:emailToCheck,
-        phone:String(data.phone||""),
-        first:String(data.legal_first||""),
-        last:String(data.legal_last||""),
-        dob:String(data.dob||""),
+        phone:String(latest.phone||""),
+        first:String(latest.legal_first||""),
+        last:String(latest.legal_last||""),
+        dob:String(latest.dob||""),
         excludeAppId:app.id,
         companyCode:app.company_code||"NZG",
       });
@@ -336,11 +362,11 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
     setSubmitting(true);
     try{
       if(minorApplicant){
-        const gEmail=String(data.guardian_invite_email||"").trim();
+        const gEmail=String(latest.guardian_invite_email||"").trim();
         if(!gEmail){setSubmitErr("Parent/guardian email is required for applicants under 18.");setSubmitting(false);return;}
         const draft={
           ...app,
-          data,
+          data:latest,
           last_saved:new Date().toISOString(),
           completed_sections:visibleSections.map(s=>s.id),
           status:"pending_guardian",
@@ -357,7 +383,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
         setSubmitted(true);
         setShowSubmitConfirm(false);
       }else{
-        const updated={...appRef.current,data,status:"submitted",guardian_status:"not_required",last_saved:new Date().toISOString(),completed_sections:visibleSections.map(s=>s.id),submitted_at:new Date().toISOString()};
+        const updated={...appRef.current,data:latest,status:"submitted",guardian_status:"not_required",last_saved:new Date().toISOString(),completed_sections:visibleSections.map(s=>s.id),submitted_at:new Date().toISOString()};
         await queueSave(updated,true);
         setPendingGuardian(false);
         setSubmitted(true);
@@ -416,7 +442,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
           <div style={{ fontSize:11,color:saveStatus==="saved"?"#4ade80":saveStatus==="saving"?"#fbbf24":saveStatus==="error"?"#fca5a5":"rgba(255,255,255,0.35)" }}>
             {saveStatus==="saved"&&"Saved"}{saveStatus==="saving"&&"Saving…"}{saveStatus==="unsaved"&&"Unsaved"}{saveStatus==="error"&&"Save failed — retrying…"}
           </div>
-          <button onClick={onExit} style={{ background:"transparent",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.6)",borderRadius:6,padding:"8px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Exit & Save</button>
+          <button onClick={async ()=>{ try{ await flushSave(); }catch{ /* still exit */ } onExit(); }} style={{ background:"transparent",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.6)",borderRadius:6,padding:"8px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Exit & Save</button>
         </div>
       </div>
 
@@ -573,7 +599,21 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                       </label>;
                     })()}
                     {field.type==="file_upload"&&<div style={{ border:`2px dashed ${isErr?"#dc2626":val?"#4ade80":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:14,background:val?"rgba(22,163,74,0.08)":isErr?"rgba(220,38,38,0.08)":"rgba(255,255,255,0.03)",cursor:"pointer",position:"relative" }} onClick={()=>document.getElementById("fu_"+field.id)?.click()}>
-                      <input id={"fu_"+field.id} type="file" accept="image/*,.pdf,video/*" onChange={async e=>{const file=e.target.files?.[0];if(!file)return;setUploading(u=>({...u,[field.id]:true}));setUploadErr(u=>({...u,[field.id]:""}));try{const {url}=await uploadApplicationFile(app.id,field.id,file);updateField(field.id,url,file.name,file.type);}catch(err){setUploadErr(u=>({...u,[field.id]:err?.message||"Upload failed. Log in and try again."}));}finally{setUploading(u=>({...u,[field.id]:false}));e.target.value="";}} style={{ display:"none" }}/>
+                      <input id={"fu_"+field.id} type="file" accept="image/*,.pdf,video/*" onChange={async (e)=>{
+                        const file=e.target.files?.[0];
+                        if(!file)return;
+                        setUploading(u=>({...u,[field.id]:true}));
+                        setUploadErr(u=>({...u,[field.id]:""}));
+                        try{
+                          const {url}=await uploadApplicationFile(app.id,field.id,file);
+                          updateField(field.id,url,file.name,file.type);
+                        }catch(err){
+                          setUploadErr(u=>({...u,[field.id]:err?.message||"Upload failed. Log in and try again."}));
+                        }finally{
+                          setUploading(u=>({...u,[field.id]:false}));
+                          e.target.value="";
+                        }
+                      }} style={{ display:"none" }}/>
                       <div style={{ fontSize:12,color:isErr?"#fca5a5":"rgba(255,255,255,0.55)",fontWeight:500,marginBottom:4 }}>{field.label}{req&&<span style={{ color:"#ef4444" }}> *</span>}{!req&&<span style={{ color:"rgba(255,255,255,0.3)" }}> (optional)</span>}</div>
                       {field.note&&<div style={{ fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:6 }}>{field.note}</div>}
                       {uploading[field.id]?<div style={{ fontSize:13,color:"#fbbf24",fontWeight:600 }}>Uploading…</div>:val?<div style={{ display:"flex",alignItems:"center",gap:6,fontSize:13,color:"#4ade80",fontWeight:600 }}>Uploaded: {data[field.id+"_name"]||"File"}</div>:<div style={{ fontSize:12,color:"rgba(255,255,255,0.35)" }}>Tap to upload · PNG, JPG, PDF, video</div>}
@@ -612,7 +652,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
             </div>
             <p style={{ fontSize:14,color:"rgba(255,255,255,0.65)",lineHeight:1.55,marginBottom:22 }}>
               {minorApplicant
-                ? "You’ve finished every section. Submit now to send your parent/guardian a verification link, or take more time to review your answers."
+                ? "You’ve finished every section. Submit now to email your parent/guardian a verification message, or take more time to review your answers."
                 : "You’ve finished every section. Submit now, or take more time to review your answers before sending."}
             </p>
             <div style={{ display:"flex",flexDirection:"column",gap:10 }}>

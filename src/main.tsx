@@ -69,39 +69,46 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 })
 
+function RootLayout() {
+  return <Outlet />
+}
+
 const router = createBrowserRouter([
-  { path: '/', element: <HomePage /> },
-  { path: '/auth/confirmed', element: <EmailConfirmedPage /> },
-  { path: '/reset-password', element: <ResetPasswordPage /> },
-  { path: '/tmx', element: <CompanyCodePage /> },
-  { path: '/login', element: <LoginPage /> },
   {
-    path: '/portal',
-    element: (
-      <Suspense fallback={<PageLoader />}>
-        <ProspectPortalPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: '/guardian/verify',
-    element: <GuardianVerifyPage />,
-  },
-  {
-    path: '/talent',
-    element: <TalentPortalLayout />,
+    path: '/',
+    element: <RootLayout />,
     children: [
-      { path: 'login', element: <TalentLoginPage /> },
-      { path: 'home', element: <TalentHomePage /> },
+      { index: true, element: <HomePage /> },
+      { path: 'auth/confirmed', element: <EmailConfirmedPage /> },
+      { path: 'reset-password', element: <ResetPasswordPage /> },
+      { path: 'tmx', element: <CompanyCodePage /> },
+      { path: 'login', element: <LoginPage /> },
+      {
+        path: 'portal',
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ProspectPortalPage />
+          </Suspense>
+        ),
+      },
+      { path: 'guardian/verify', element: <GuardianVerifyPage /> },
+      {
+        path: 'talent',
+        element: <TalentPortalLayout />,
+        children: [
+          { path: 'login', element: <TalentLoginPage /> },
+          { path: 'home', element: <TalentHomePage /> },
+        ],
+      },
+      {
+        element: (
+          <Suspense fallback={<PageLoader />}>
+            <ProtectedApp />
+          </Suspense>
+        ),
+        children: [{ path: '*', element: null }],
+      },
     ],
-  },
-  {
-    path: '/*',
-    element: (
-      <Suspense fallback={<PageLoader />}>
-        <ProtectedApp />
-      </Suspense>
-    ),
   },
 ])
 

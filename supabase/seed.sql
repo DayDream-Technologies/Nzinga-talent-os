@@ -36,3 +36,30 @@ ON CONFLICT (code) DO NOTHING;
 --   node scripts/seed-test-applicants.mjs
 -- Covers application statuses (sent / in_progress / submitted incomplete+complete)
 -- and pipeline stages including scout_complete and team2_audit.
+
+-- Sample global audit events (skipped if the migration already inserted them)
+INSERT INTO audit_log (user_id, action, entity_type, entity_id, details, created_at)
+SELECT
+  actor.id,
+  v.action,
+  v.entity_type,
+  COALESCE(v.entity_id, actor.id),
+  v.details || jsonb_build_object('seed', true),
+  now() - (v.hours_ago * interval '1 hour')
+FROM (
+  VALUES
+    ('user_invited'::text, 'user'::text, 'u1'::text, '{"target_name":"Jordan Hayes","email":"jordan@nzinga.co","role":"scout"}'::jsonb, 96),
+    ('role_change', 'user', 'u2', '{"target_name":"Marcus Bell","previous_role":"scout","new_role":"team1_lead"}'::jsonb, 72),
+    ('settings_change', 'system_settings', 'app_name', '{"key":"app_name","value":"Nzinga Talent OS"}'::jsonb, 48),
+    ('company_code_added', 'company_code', 'NZG', '{"code":"NZG"}'::jsonb, 36),
+    ('company_code_toggled', 'company_code', 'TCG', '{"code":"TCG","active":true}'::jsonb, 24),
+    ('user_deactivated', 'user', 'u6', '{"target_name":"Alexis Grant","email":"alexis@nzinga.co"}'::jsonb, 12),
+    ('user_reactivated', 'user', 'u6', '{"target_name":"Alexis Grant","email":"alexis@nzinga.co"}'::jsonb, 6),
+    ('login', 'session', NULL, '{"method":"password"}'::jsonb, 1)
+) AS v(action, entity_type, entity_id, details, hours_ago)
+CROSS JOIN LATERAL (
+  SELECT id FROM users WHERE role = 'director' ORDER BY id DESC LIMIT 1
+) AS actor
+WHERE NOT EXISTS (
+  SELECT 1 FROM audit_log a WHERE a.details->>'seed' = 'true'
+);

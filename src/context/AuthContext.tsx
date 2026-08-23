@@ -12,13 +12,20 @@ import {
   IDLE_MS,
   STORAGE_COMPANY_CODE,
   STORAGE_LAST_PATH,
+  clearFreshLoginMark,
+  clearIdleTimer,
+  isFreshLoginActive,
   isIdleExpired,
+  isPublicAuthPath,
+  markFreshLogin,
   readStorage,
   removeStorage,
+  shouldRequireIdleReauthOnRestore,
   touchActivity,
   writeStorage,
 } from '@/lib/session-storage'
 import { IdleReauthModal } from '@/components/auth/IdleReauthModal'
+import { writeAuditEvent } from '@/services/audit.service'
 
 interface AuthContextValue {
   user: User | null
@@ -63,10 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCompanyCodeState(code)
           writeStorage(STORAGE_COMPANY_CODE, code)
         }
-        if (isIdleExpired()) {
+        if (shouldRequireIdleReauthOnRestore()) {
           setNeedsReauth(true)
         } else {
           touchActivity()
+          setNeedsReauth(false)
         }
       }
       setIsRestoringSession(false)
@@ -98,8 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         finish(u)
       })
       .catch(async () => {
-        await clearLocalAuthSession()
         clearTimeout(timeout)
+        if (!isFreshLoginActive() && !userRef.current) {
+          await clearLocalAuthSession()
+        }
         finish(null)
       })
 
@@ -125,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user || typeof window === 'undefined') return
     const path = window.location.pathname + window.location.search
-    if (path.startsWith('/tmx') || path === '/login' || path === '/') return
+    if (isPublicAuthPath(window.location.pathname)) return
     writeStorage(STORAGE_LAST_PATH, path)
   })
 
@@ -155,14 +165,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const u = await loginWithCredentials(email, password, companyCode)
     if (u) {
+      markFreshLogin()
+      setNeedsReauth(false)
       setUser(u)
       const code = (u.company_code || companyCode || '').toUpperCase()
       if (code) {
         setCompanyCodeState(code)
         writeStorage(STORAGE_COMPANY_CODE, code)
       }
-      touchActivity()
-      setNeedsReauth(false)
       if (!supabaseConfigured) {
         try {
           sessionStorage.setItem('nto_demo_user_id', u.id)
@@ -188,10 +198,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    const actor = userRef.current
+    if (actor) {
+      await writeAuditEvent({
+        action: 'logout',
+        entity_type: 'session',
+        entity_id: actor.id,
+        user_id: actor.id,
+        details: { email: actor.email },
+      })
+    }
     await authLogout()
     setUser(null)
     setCompanyCodeState('')
     setNeedsReauth(false)
+    clearIdleTimer()
+    clearFreshLoginMark()
     removeStorage(STORAGE_COMPANY_CODE)
     removeStorage(STORAGE_LAST_PATH)
     try {

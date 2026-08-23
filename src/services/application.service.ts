@@ -12,6 +12,21 @@ export function sanitizeApplicationData(data: ApplicationData | undefined): Appl
   return next
 }
 
+/** Merge questionnaire blobs. A newer last_saved wins on overlapping keys; never drop keys the other side still has. */
+export function mergeApplicationData(
+  existing: ApplicationData | undefined,
+  incoming: ApplicationData | undefined,
+  opts?: { incomingSavedAt?: string; existingSavedAt?: string },
+): ApplicationData {
+  const current = sanitizeApplicationData(existing)
+  const next = sanitizeApplicationData(incoming)
+  const incomingTs = opts?.incomingSavedAt ? Date.parse(opts.incomingSavedAt) : NaN
+  const existingTs = opts?.existingSavedAt ? Date.parse(opts.existingSavedAt) : NaN
+  const incomingIsStale =
+    Number.isFinite(incomingTs) && Number.isFinite(existingTs) && incomingTs < existingTs
+  return incomingIsStale ? { ...next, ...current } : { ...current, ...next }
+}
+
 function toApplicationRow(app: Application, data: ApplicationData) {
   return {
     id: app.id,
@@ -63,24 +78,35 @@ export async function saveApplication(app: Application): Promise<Application> {
   const local: Application = { ...app, data: incoming }
 
   if (!supabaseConfigured || !supabase) {
-    const map = { ...demoStore.getApplications(), [app.id]: local }
-    demoStore.setApplications(map)
-    return local
+    const prev = demoStore.getApplications()[app.id]
+    const merged: Application = {
+      ...local,
+      data: mergeApplicationData(prev?.data, incoming, {
+        incomingSavedAt: app.last_saved,
+        existingSavedAt: prev?.last_saved,
+      }),
+    }
+    demoStore.setApplications({ ...demoStore.getApplications(), [app.id]: merged })
+    return merged
   }
 
   const { data: existing, error: existingError } = await supabase
     .from('applications')
-    .select('data')
+    .select('data, last_saved')
     .eq('id', app.id)
     .maybeSingle()
   if (existingError) {
     throw new Error(existingError.message)
   }
 
-  const mergedData = sanitizeApplicationData({
-    ...((existing?.data as ApplicationData | undefined) || {}),
-    ...incoming,
-  })
+  const mergedData = mergeApplicationData(
+    (existing?.data as ApplicationData | undefined) || {},
+    incoming,
+    {
+      incomingSavedAt: app.last_saved,
+      existingSavedAt: existing?.last_saved ?? undefined,
+    },
+  )
   const payload = toApplicationRow(app, mergedData)
 
   // Prefer UPDATE so submit does not hit INSERT RLS on upsert-of-existing-row.

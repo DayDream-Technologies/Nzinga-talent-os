@@ -1,3 +1,25 @@
+/** Paths used in Auth emails. Must be listed under Authentication → URL Configuration → Redirect URLs. */
+export const AUTH_EMAIL_PATHS = {
+  confirmed: '/auth/confirmed',
+  resetPassword: '/reset-password',
+  guardianVerify: '/guardian/verify',
+} as const
+
+/** Absolute redirect for Auth emails (signup confirm, reset, magic link). */
+export function getAuthEmailRedirectUrl(
+  path: string,
+  search?: Record<string, string>,
+): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  const url = new URL(path, window.location.origin)
+  if (search) {
+    for (const [key, value] of Object.entries(search)) {
+      url.searchParams.set(key, value)
+    }
+  }
+  return url.toString()
+}
+
 /** Auth confirmation types Supabase may put in the redirect URL. */
 const CONFIRM_TYPES = new Set(['signup', 'email', 'invite', 'magiclink', 'email_change'])
 

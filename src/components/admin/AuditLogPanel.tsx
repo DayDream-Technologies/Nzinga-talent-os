@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AuditEntry } from '@/services/admin.service'
-import { queryAuditLog } from '@/services/admin.service'
+import { queryAuditLog, listUsers } from '@/services/admin.service'
 import { USERS } from '@/constants'
+import { useAuth } from '@/hooks/useAuth'
 import { T } from '@/lib/tokens'
 import { Btn, TH, TD } from '@/components/ui-compat'
 
 const EVENT_TYPES = [
   '',
+  'login',
+  'logout',
   'role_change',
   'user_deactivated',
   'user_reactivated',
@@ -17,6 +20,7 @@ const EVENT_TYPES = [
 ]
 
 export function AuditLogPanel() {
+  const { companyCode } = useAuth()
   const [entries, setEntries] = useState<AuditEntry[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -24,7 +28,14 @@ export function AuditLogPanel() {
   const [eventType, setEventType] = useState('')
   const [userId, setUserId] = useState('')
   const [offset, setOffset] = useState(0)
+  const [staff, setStaff] = useState<{ id: string; name: string }[]>(USERS)
   const limit = 25
+
+  useEffect(() => {
+    void listUsers(companyCode || 'NZG').then(({ users }) => {
+      if (users.length > 0) setStaff(users.map((u) => ({ id: u.id, name: u.name })))
+    })
+  }, [companyCode])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -46,10 +57,10 @@ export function AuditLogPanel() {
   }, [load])
 
   function formatDetails(details: Record<string, unknown>) {
-    if (!details || Object.keys(details).length === 0) return '—'
-    return Object.entries(details)
-      .map(([k, v]) => `${k}: ${String(v)}`)
-      .join(' · ')
+    if (!details) return '—'
+    const entries = Object.entries(details).filter(([k]) => k !== 'seed')
+    if (entries.length === 0) return '—'
+    return entries.map(([k, v]) => `${k}: ${String(v)}`).join(' · ')
   }
 
   return (
@@ -86,7 +97,7 @@ export function AuditLogPanel() {
           style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${T.inputBorder}`, fontSize: 12 }}
         >
           <option value="">All users</option>
-          {USERS.map((u) => (
+          {staff.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
             </option>
@@ -117,7 +128,7 @@ export function AuditLogPanel() {
             fontSize: 13,
           }}
         >
-          No audit entries found
+          No audit entries found. Role changes, invites, settings updates, and staff sign-in appear here.
         </div>
       ) : (
         <>

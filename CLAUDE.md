@@ -102,9 +102,9 @@ Company Code: **NZG** (also: NZINGA, TCG)
 Files are read as base64 `data:` URLs via `FileReader`. Stored in React state on the talent's `uploaded_docs` object. `DocViewer` renders images directly or PDFs in an iframe.
 
 ## Email (Supabase Auth)
-Signup confirmation, password reset, and guardian magic links are sent by **Supabase Auth**. Staff application invites save an access code to share with the prospect; there is no separate transactional mail provider.
+Signup confirmation, password reset, and guardian magic links are sent by **Supabase Auth** using the project's custom SMTP (Google). Staff application invites save an access code to share with the prospect; there is no separate transactional mail provider.
 
-For production Auth email, enable **Confirm email** and configure **custom SMTP** in the Supabase dashboard (Project Settings → Auth → SMTP). The built-in mailer is limited to 2 messages per hour and is not for production.
+Redirect paths for those emails are in `src/lib/auth-redirect.ts` (`AUTH_EMAIL_PATHS`). Hosted Site URL and Redirect URLs must allow them.
 
 ## Common Claude Code Tasks
 

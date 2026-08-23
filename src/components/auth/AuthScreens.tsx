@@ -41,7 +41,7 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
 }
 
 // ─── EMPLOYEE LOGIN ───────────────────────────────────────────────────────────
-function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) {
+function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCode, onHome }) {
   const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
   const [resetSent,setResetSent]=useState(false);
   async function go(){
@@ -64,6 +64,12 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) 
     setResetSent(true);
   }
   const goHome = onHome || onBack;
+  const changeCode = onChangeCode || onBack;
+  const [navReady, setNavReady] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setNavReady(true), 400);
+    return () => window.clearTimeout(t);
+  }, []);
   const fieldStyle={
     background:"rgba(255,255,255,0.04)",
     border:"1px solid rgba(255,255,255,0.12)",
@@ -112,8 +118,9 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) 
           <TMXMark size="sm"/>
           <span style={{ fontSize:15,fontWeight:700,color:"#e8eef4",letterSpacing:"0.02em" }}>{PLATFORM_BRAND.name}</span>
         </button>
-        <button type="button" className="mh-link-underline" onClick={onBack} style={{
-          background:"none",border:"none",color:"#8fa3b5",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit",
+        <button type="button" className="mh-link-underline" onClick={onBack} disabled={!navReady} style={{
+          background:"none",border:"none",color:"#8fa3b5",fontSize:13,fontWeight:500,cursor:navReady?"pointer":"default",fontFamily:"inherit",
+          opacity: navReady ? 1 : 0.45,
         }}>
           ← Company code
         </button>
@@ -126,8 +133,9 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) 
           boxShadow:"0 12px 40px rgba(0,0,0,0.35)",overflow:"hidden",backdropFilter:"blur(12px)",
         }}>
           <div className="animate-fade-in-up" style={{ flex:1,padding:"36px 32px" }}>
-            <button type="button" className="mh-link-underline" onClick={onBack} style={{
-              background:"none",border:"none",color:"#8fa3b5",fontSize:12,cursor:"pointer",marginBottom:18,fontFamily:"inherit",padding:0,
+            <button type="button" className="mh-link-underline" onClick={onBack} disabled={!navReady} style={{
+              background:"none",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",marginBottom:18,fontFamily:"inherit",padding:0,
+              opacity: navReady ? 1 : 0.45,
             }}>← Back to company code</button>
 
             <div style={{ fontSize:11,color:"#8fa3b5",marginBottom:14 }}>
@@ -182,7 +190,7 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) 
               )}
             </div>
             {err&&<div style={{ color:"#f87171",fontSize:12,marginBottom:10,lineHeight:1.5 }}>{err}</div>}
-            {resetSent&&<div style={{ color:"#4ade80",fontSize:12,marginBottom:10,lineHeight:1.5 }}>Password reset email sent. Check your inbox for a link to set a new password.</div>}
+            {resetSent&&<div style={{ color:"#4ade80",fontSize:12,marginBottom:10,lineHeight:1.5 }}>If an account exists for that email, we sent a password reset message. Check your inbox and follow the Reset Password button. If you did not request this, you can ignore the email.</div>}
             <button
               type="button"
               className="mh-cta"
@@ -196,8 +204,9 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onHome }) 
               {loading?"Signing in…":"Sign In"}
             </button>
             <div style={{ marginTop:14,textAlign:"center" }}>
-              <button type="button" className="mh-link-underline" onClick={onBack} style={{
-                background:"transparent",border:"none",color:"#8fa3b5",fontSize:12,cursor:"pointer",fontFamily:"inherit",
+              <button type="button" className="mh-link-underline" onClick={changeCode} disabled={!navReady} style={{
+                background:"transparent",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",fontFamily:"inherit",
+                opacity: navReady ? 1 : 0.45,
               }}>Use a different company code</button>
             </div>
           </div>

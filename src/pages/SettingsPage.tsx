@@ -4,10 +4,12 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuthContext } from '@/context/AuthContext'
 import { getRcConnectionStatus, getRcAuthUrl, disconnectRc } from '@/lib/phone'
 import type { RcConnectionStatus } from '@/lib/ringcentral-types'
-import { updatePassword } from '@/services/auth.service'
+import { sendPasswordResetEmail } from '@/services/auth.service'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { readStorage, STORAGE_THEME, writeStorage } from '@/lib/session-storage'
 import { useSidebarPreference } from '@/hooks/useSidebarPreference'
+import { useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
+import { PageContent } from '@/components/layout/PageContent'
 import { T } from '@/lib/tokens'
 
 const RC_ERROR_MESSAGES: Record<string, string> = {
@@ -36,7 +38,7 @@ function applyTheme(theme: 'light' | 'dark') {
 }
 
 export function SettingsPage() {
-  const { user } = useAuthContext()
+  const { user, switchUser } = useAuthContext()
   const [searchParams, setSearchParams] = useSearchParams()
   const [rcStatus, setRcStatus] = useState<RcConnectionStatus>({ connected: false })
   const [loading, setLoading] = useState(true)
@@ -46,9 +48,9 @@ export function SettingsPage() {
 
   const [displayName, setDisplayName] = useState(user?.name || '')
   const [displayTitle, setDisplayTitle] = useState(user?.title || '')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [profileMsg, setProfileMsg] = useState('')
   const [pwMsg, setPwMsg] = useState('')
+  const [pwSending, setPwSending] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (readStorage(STORAGE_THEME) === 'dark' ? 'dark' : 'light'))
   const { sidebarVisible, setSidebarVisible } = useSidebarPreference()
   const [mfaMsg, setMfaMsg] = useState('')
@@ -113,29 +115,25 @@ export function SettingsPage() {
     }
   }
 
-  async function handleChangePassword() {
+  async function handleSendPasswordReset() {
     setPwMsg('')
-    if (newPassword.length < 8) {
-      setPwMsg('Password must be at least 8 characters.')
+    const email = user?.email?.trim()
+    if (!email) {
+      setPwMsg('No email is on file for this account.')
       return
     }
-    if (newPassword !== confirmPassword) {
-      setPwMsg('Passwords do not match.')
+    setPwSending(true)
+    const { error, demo } = await sendPasswordResetEmail(email)
+    setPwSending(false)
+    if (error) {
+      setPwMsg(error)
       return
     }
-    const result = await updatePassword(newPassword)
-    if (!supabaseConfigured) {
-      setPwMsg('Demo mode: password change simulated for this session.')
-      setNewPassword('')
-      setConfirmPassword('')
-      return
-    }
-    if (result?.error) setPwMsg(result.error)
-    else {
-      setPwMsg('Password updated.')
-      setNewPassword('')
-      setConfirmPassword('')
-    }
+    setPwMsg(
+      demo
+        ? `Demo mode: password reset simulated for ${email}.`
+        : `We sent a password reset message to ${email}. Check your inbox and follow the Reset Password button. If you did not request this, you can ignore the email.`,
+    )
   }
 
   async function startMfaEnroll() {
@@ -170,19 +168,41 @@ export function SettingsPage() {
       challengeId: challenge.id,
       code: mfaCode,
     })
-    setMfaMsg(error ? error.message : 'Two-factor authentication enabled.')
+    if (error) {
+      setMfaMsg(error.message)
+      return
+    }
+    setMfaMsg('Two-factor authentication enabled.')
+    setMfaQr('')
+    setMfaCode('')
+    setMfaFactorId('')
   }
+
+  function handleSaveProfile() {
+    if (!user) return
+    const name = displayName.trim()
+    const title = displayTitle.trim()
+    switchUser({ ...user, name, title })
+    setDisplayName(name)
+    setDisplayTitle(title)
+    setProfileMsg('Profile saved for this session.')
+  }
+
+  const dirty =
+    displayName !== (user?.name || '') ||
+    displayTitle !== (user?.title || '') ||
+    Boolean(mfaQr)
+  const unsavedDialog = useUnsavedNavigation(dirty)
 
   const card = {
     background: 'var(--color-card-bg, #fff)',
     border: '1px solid #e5e7eb',
     borderRadius: 10,
     padding: 20,
-    marginBottom: 16,
   }
 
   return (
-    <div style={{ padding: 28, maxWidth: 720, overflow: 'auto', height: '100%' }}>
+    <PageContent>
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, fontFamily: "'Syne', sans-serif" }}>Settings</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Profile, security, display, and integrations.</p>
 
@@ -200,6 +220,13 @@ export function SettingsPage() {
         </div>
       )}
 
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 420px), 1fr))',
+          gap: 16,
+        }}
+      >
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 12 }}>Profile</div>
         <label style={{ display: 'block', fontSize: 11, color: T.t3, marginBottom: 4 }}>Display name</label>
@@ -207,15 +234,53 @@ export function SettingsPage() {
         <label style={{ display: 'block', fontSize: 11, color: T.t3, marginBottom: 4 }}>Title</label>
         <input value={displayTitle} onChange={(e) => setDisplayTitle(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', marginBottom: 10, fontFamily: 'inherit' }} />
         <div style={{ fontSize: 12, color: T.t3 }}>Email: <strong style={{ color: T.t1 }}>{user?.email}</strong></div>
+        <button
+          type="button"
+          onClick={handleSaveProfile}
+          disabled={!user || (displayName === (user?.name || '') && displayTitle === (user?.title || ''))}
+          style={{
+            background: T.blue,
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            padding: '8px 14px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            marginTop: 12,
+            opacity: !user || (displayName === (user?.name || '') && displayTitle === (user?.title || '')) ? 0.5 : 1,
+          }}
+        >
+          Save profile
+        </button>
+        {profileMsg && <div style={{ marginTop: 8, fontSize: 12, color: T.t3 }}>{profileMsg}</div>}
         <div style={{ fontSize: 11, color: T.t4, marginTop: 8 }}>Name/title updates apply to this session display. Persist to staff profile when DB profile update is available.</div>
       </div>
 
       <div style={card}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 12 }}>Change password</div>
-        <input type="password" placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', marginBottom: 8, fontFamily: 'inherit' }} />
-        <input type="password" placeholder="Confirm password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', marginBottom: 10, fontFamily: 'inherit' }} />
-        <button type="button" onClick={() => void handleChangePassword()} style={{ background: T.blue, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Update password</button>
-        {pwMsg && <div style={{ marginTop: 8, fontSize: 12, color: T.t3 }}>{pwMsg}</div>}
+        <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 8 }}>Password</div>
+        <p style={{ fontSize: 12, color: T.t3, marginBottom: 12, lineHeight: 1.5 }}>
+          To change your password, we email a Reset Password link to <strong style={{ color: T.t1 }}>{user?.email || 'your account email'}</strong>. Use that message to set a new password.
+        </p>
+        <button
+          type="button"
+          onClick={() => void handleSendPasswordReset()}
+          disabled={pwSending || !user?.email}
+          style={{
+            background: T.blue,
+            color: '#fff',
+            border: 'none',
+            borderRadius: 6,
+            padding: '8px 14px',
+            fontWeight: 600,
+            cursor: pwSending || !user?.email ? 'wait' : 'pointer',
+            fontFamily: 'inherit',
+            opacity: pwSending || !user?.email ? 0.7 : 1,
+          }}
+        >
+          {pwSending ? 'Sending…' : 'Send password reset email'}
+        </button>
+        {pwMsg && <div style={{ marginTop: 8, fontSize: 12, color: T.t3, lineHeight: 1.5 }}>{pwMsg}</div>}
       </div>
 
       <div style={card}>
@@ -302,7 +367,7 @@ export function SettingsPage() {
         {mfaMsg && <div style={{ fontSize: 12, color: T.t3 }}>{mfaMsg}</div>}
       </div>
 
-      <div style={card}>
+      <div style={{ ...card, gridColumn: '1 / -1' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 700 }}>
             RC
@@ -367,6 +432,8 @@ export function SettingsPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+      {unsavedDialog}
+    </PageContent>
   )
 }

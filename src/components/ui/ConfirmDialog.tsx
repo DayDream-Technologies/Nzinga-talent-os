@@ -1,4 +1,5 @@
-import { useEffect, useId, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react'
+import { useBlocker, type BlockerFunction } from 'react-router-dom'
 import { T } from '@/lib/tokens'
 
 export interface ConfirmDialogProps {
@@ -130,4 +131,54 @@ export function useUnsavedClose(dirty: boolean, onClose: () => void) {
     />
   )
   return { requestClose, dialog }
+}
+
+/**
+ * Blocks in-app navigation and tab close when `dirty` is true.
+ * Search-param-only updates on the same path are allowed (e.g. OAuth return).
+ */
+export function useUnsavedNavigation(dirty: boolean) {
+  const shouldBlock = useCallback<BlockerFunction>(
+    ({ currentLocation, nextLocation }) =>
+      dirty && currentLocation.pathname !== nextLocation.pathname,
+    [dirty],
+  )
+  const blocker = useBlocker(shouldBlock)
+
+  useEffect(() => {
+    if (blocker.state === 'blocked' && !dirty) {
+      blocker.reset()
+    }
+  }, [blocker, dirty])
+
+  useEffect(() => {
+    if (!dirty) return
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [dirty])
+
+  const onCancel = useCallback(() => {
+    if (blocker.state === 'blocked') blocker.reset()
+  }, [blocker])
+
+  const onConfirm = useCallback(() => {
+    if (blocker.state === 'blocked') blocker.proceed()
+  }, [blocker])
+
+  return (
+    <ConfirmDialog
+      open={blocker.state === 'blocked'}
+      title="Leave without saving?"
+      message="You have unsaved changes. If you leave now, they will be lost."
+      confirmLabel="Leave"
+      cancelLabel="Stay on page"
+      danger
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
+  )
 }

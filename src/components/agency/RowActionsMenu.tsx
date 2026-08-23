@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { T } from '@/lib/tokens'
 
+const dotStyle = {
+  display: 'block',
+  width: 4,
+  height: 4,
+  borderRadius: 999,
+  background: 'currentColor',
+  flexShrink: 0,
+} as const
+
 export type ActionItem = {
   id: string
   label: string
@@ -57,28 +66,56 @@ export function RowActionsMenu({
   }, [])
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
       <button
         type="button"
         aria-label="Row actions"
+        aria-expanded={open}
+        aria-haspopup="menu"
         onClick={(e) => {
           e.stopPropagation()
           setOpen((o) => !o)
         }}
         style={{
-          background: open ? '#f3f4f6' : 'transparent',
-          border: '1px solid #e5e7eb',
-          borderRadius: 6,
-          width: 28,
-          height: 28,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+          width: 32,
+          height: 32,
+          minWidth: 32,
+          minHeight: 32,
+          padding: 0,
+          boxSizing: 'border-box',
+          flexShrink: 0,
+          background: open ? '#eff6ff' : '#fff',
+          border: `1px solid ${open ? T.blue : '#d1d5db'}`,
+          borderRadius: 8,
           cursor: 'pointer',
-          fontSize: 16,
-          lineHeight: 1,
-          color: T.t2,
-          fontFamily: 'inherit',
+          color: open ? T.blue : T.t2,
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.06)',
+          lineHeight: 0,
+        }}
+        onMouseEnter={(e) => {
+          if (!open) e.currentTarget.style.background = '#f3f4f6'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = open ? '#eff6ff' : '#fff'
         }}
       >
-        ⋯
+        <span
+          aria-hidden
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            pointerEvents: 'none',
+          }}
+        >
+          <span style={dotStyle} />
+          <span style={dotStyle} />
+          <span style={dotStyle} />
+        </span>
       </button>
       {open && (
         <div
@@ -164,7 +201,7 @@ export function BulkActionsMenu({
   }, [])
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block', zIndex: open ? 50 : undefined }}>
       <button
         type="button"
         disabled={disabled}
@@ -197,7 +234,7 @@ export function BulkActionsMenu({
             border: '1px solid #e5e7eb',
             borderRadius: 8,
             boxShadow: '0 10px 28px rgba(0,0,0,0.12)',
-            zIndex: 400,
+            zIndex: 1000,
             padding: 6,
           }}
         >

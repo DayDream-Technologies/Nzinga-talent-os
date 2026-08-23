@@ -237,7 +237,33 @@ Use separate anon keys per project. Do not point staging builds at production.
 
 API keys for RingCentral are stored as **Supabase secrets** (never exposed to the frontend). Edge Functions act as secure proxies.
 
-Auth emails (signup confirmation, password reset, guardian magic links) are sent by **Supabase Auth**. Configure custom SMTP in the dashboard for production. There is no transactional email Edge Function.
+Auth emails (signup confirmation, password reset, guardian magic links) are sent by **Supabase Auth** via **custom SMTP** (Google). There is no transactional email Edge Function.
+
+### Google SMTP (hosted)
+
+Configured in [Authentication → SMTP](https://supabase.com/dashboard/project/rvuchforbheotenhkxnm/auth/smtp). Expected values:
+
+| Setting | Value |
+|---------|--------|
+| Host | `smtp.gmail.com` |
+| Port | `587` (STARTTLS) |
+| Username | Full Google address |
+| Password | Google **App Password** (not the account password) |
+| Sender email | Same Google address (or a verified alias of it) |
+| Sender name | Nzinga Talent Group (or your brand) |
+
+Also required in [URL Configuration](https://supabase.com/dashboard/project/rvuchforbheotenhkxnm/auth/url-configuration):
+
+- **Site URL:** `https://talentmanagerx.com`
+- **Redirect URLs:**
+  - `https://talentmanagerx.com/auth/confirmed`
+  - `https://talentmanagerx.com/reset-password`
+  - `https://talentmanagerx.com/guardian/verify`
+  - `https://talentmanagerx.com/**`
+
+Rate limit for Auth emails is under [Rate Limits](https://supabase.com/dashboard/project/rvuchforbheotenhkxnm/auth/rate-limits) (raised from 2/hour to 60/hour after enabling custom SMTP). Gmail consumer accounts cap around 500 sends/day; Google Workspace is higher.
+
+Auth email wording is in `supabase/templates/` (recovery, confirmation, magic link, invite, email change, reauthentication, password-changed). For production, paste each HTML file into [Authentication → Email Templates](https://supabase.com/dashboard/project/rvuchforbheotenhkxnm/auth/templates). Local Auth uses the same files via `config.toml`.
 
 ### Deploy Edge Functions
 

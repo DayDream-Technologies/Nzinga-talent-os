@@ -14,16 +14,33 @@ export function Panel({
 }) {
   return (
     <div style={{ padding: 20, overflow: 'auto', height: '100%', background: T.pageBg }}>
-      <div className="animate-fade-in-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16 }}>
+      <div
+        className="animate-fade-in-up"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 16,
+          marginBottom: 16,
+          position: 'relative',
+          zIndex: 2,
+        }}
+      >
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: T.t1, margin: 0 }}>{title}</h1>
           {subtitle && (
             <p style={{ fontSize: 13, color: T.t3, marginTop: 4, lineHeight: 1.45, maxWidth: 640 }}>{subtitle}</p>
           )}
         </div>
-        {actions && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{actions}</div>}
+        {actions && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', position: 'relative', zIndex: 2 }}>
+            {actions}
+          </div>
+        )}
       </div>
-      <div className="animate-fade-in-up stagger-2">{children}</div>
+      <div className="animate-fade-in-up stagger-2" style={{ position: 'relative', zIndex: 0 }}>
+        {children}
+      </div>
     </div>
   )
 }
@@ -153,20 +170,24 @@ export function Table({
             {headers.map((h, i) => {
               const sortable = Boolean(onSort && h)
               const active = sortable && sortIndex === i
+              const isCompactCol = !h
+              const isLast = i === headers.length - 1
               return (
                 <th
                   key={`${h}-${i}`}
                   onClick={sortable ? () => onSort?.(i) : undefined}
                   title={sortable ? `Sort by ${h}` : undefined}
                   style={{
-                    textAlign: 'left',
+                    textAlign: isLast && isCompactCol ? 'right' : 'left',
                     padding: '8px 10px',
+                    paddingRight: isLast ? 14 : 10,
                     borderBottom: '1px solid #e5e7eb',
                     color: active ? T.blue : T.t3,
                     fontWeight: 600,
                     whiteSpace: 'nowrap',
                     cursor: sortable ? 'pointer' : 'default',
                     userSelect: sortable ? 'none' : undefined,
+                    width: isCompactCol ? '1%' : undefined,
                   }}
                 >
                   {h}
@@ -184,19 +205,27 @@ export function Table({
               key={i}
               className={`ui-table-row animate-fade-in-up stagger-${Math.min(i + 1, 8)}`}
             >
-              {row.map((cell, j) => (
-                <td
-                  key={j}
-                  style={{
-                    padding: '10px',
-                    borderBottom: '1px solid #f3f4f6',
-                    color: T.t1,
-                    verticalAlign: 'top',
-                  }}
-                >
-                  {cell}
-                </td>
-              ))}
+              {row.map((cell, j) => {
+                const isCompactCol = !headers[j]
+                const isLast = j === row.length - 1
+                return (
+                  <td
+                    key={j}
+                    style={{
+                      padding: '10px',
+                      paddingRight: isLast ? 14 : 10,
+                      borderBottom: '1px solid #f3f4f6',
+                      color: T.t1,
+                      verticalAlign: isCompactCol ? 'middle' : 'top',
+                      whiteSpace: isCompactCol ? 'nowrap' : undefined,
+                      width: isCompactCol ? '1%' : undefined,
+                      textAlign: isLast && isCompactCol ? 'right' : 'left',
+                    }}
+                  >
+                    {cell}
+                  </td>
+                )
+              })}
             </tr>
           ))}
         </tbody>

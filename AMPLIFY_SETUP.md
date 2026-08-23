@@ -40,7 +40,7 @@ Production RingCentral + webhook alignment: [RINGCENTRAL_TALENTMANAGERX_SETUP.md
 
 Phone (RingCentral) API keys are stored as **Supabase secrets** and accessed only by Edge Functions. They are never exposed to the frontend bundle.
 
-Auth emails are sent by **Supabase Auth** (configure custom SMTP in the dashboard for production).
+Auth emails are sent by **Supabase Auth** through Google SMTP (configured in the dashboard).
 
 See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for the full list of secrets to configure.
 

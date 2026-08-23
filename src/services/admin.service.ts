@@ -73,15 +73,26 @@ export async function queryAuditLog(params: {
     ...params,
   })
   if (result.ok) {
-    return { entries: result.data.entries, total: result.data.total, error: null }
+    return {
+      entries: result.data.entries ?? [],
+      total: result.data.total ?? 0,
+      error: null,
+    }
   }
 
   if (supabaseConfigured && supabase) {
-    const { data, count, error } = await supabase
+    const from = params.offset ?? 0
+    const to = from + (params.limit ?? 25) - 1
+    let query = supabase
       .from('audit_log')
-      .select('*', { count: 'exact' })
+      .select('*, users(name, email)', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(params.offset ?? 0, (params.offset ?? 0) + (params.limit ?? 50) - 1)
+      .range(from, to)
+    if (params.event_type) query = query.eq('action', params.event_type)
+    if (params.user_id) query = query.eq('user_id', params.user_id)
+    if (params.from) query = query.gte('created_at', params.from)
+    if (params.to) query = query.lte('created_at', params.to)
+    const { data, count, error } = await query
     if (!error) {
       return { entries: (data ?? []) as AuditEntry[], total: count ?? 0, error: null }
     }

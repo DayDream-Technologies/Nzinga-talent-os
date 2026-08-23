@@ -1,7 +1,9 @@
 import type { ProspectProfile, Talent, TalentStage, User } from '@/types'
 import { USERS } from '@/constants/seed-data'
 import { COMPANY_CODES } from '@/constants/roles'
+import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { clearLocalAuthSession, supabase, supabaseConfigured } from '@/lib/supabase'
+import { isFreshLoginActive } from '@/lib/session-storage'
 import { fetchTalentByEmailOrApplication } from '@/services/talent.service'
 
 /** Director-approved talent may use the talent portal (signed onboarding and beyond). */
@@ -52,6 +54,14 @@ export async function loginWithCredentials(
       await supabase.auth.signOut()
       return null
     }
+    const { writeAuditEvent } = await import('@/services/audit.service')
+    await writeAuditEvent({
+      action: 'login',
+      entity_type: 'session',
+      entity_id: profile.id,
+      user_id: profile.id,
+      details: { email: profile.email, method: 'password' },
+    })
     return profile as User
   }
   return USERS.find((u) => u.email === email && u.password === password) ?? null
@@ -62,7 +72,7 @@ export async function restoreSession(): Promise<User | null> {
   try {
     const { data: { session }, error } = await supabase.auth.getSession()
     if (error) {
-      await clearLocalAuthSession()
+      if (!isFreshLoginActive()) await clearLocalAuthSession()
       return null
     }
     if (!session?.user) return null
@@ -75,7 +85,7 @@ export async function restoreSession(): Promise<User | null> {
     return (profile as User) ?? null
   } catch {
     // Stale refresh tokens often surface as CORS/network Failed to fetch
-    await clearLocalAuthSession()
+    if (!isFreshLoginActive()) await clearLocalAuthSession()
     return null
   }
 }
@@ -130,8 +140,7 @@ export async function prospectSignup(
     return { profile: null, error: 'Database not configured (demo mode).' }
   }
 
-  const emailRedirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/auth/confirmed` : undefined
+  const emailRedirectTo = getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.confirmed)
 
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
@@ -306,8 +315,7 @@ export async function sendPasswordResetEmail(
     // Demo / local mode: treat as sent so staff workflows are testable
     return { error: null, demo: true }
   }
-  const redirectTo =
-    typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined
+  const redirectTo = getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.resetPassword)
   const { error } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo })
   if (error) return { error: friendlyAuthError(error.message) }
   return { error: null }
@@ -344,14 +352,14 @@ export function friendlyAuthError(raw: string): string {
     return 'Incorrect email or password. Please try again or reset your password below.'
   }
   if (lower.includes('email not confirmed')) {
-    return 'Your email has not been confirmed yet. Check your inbox for a verification link.'
+    return 'Your email has not been confirmed yet. Check your inbox for a confirmation message from Nzinga Management Agency and follow the Confirm Email button.'
   }
   if (
     lower.includes('email rate limit') ||
     lower.includes('rate limit exceeded') ||
     (lower.includes('rate limit') && lower.includes('email'))
   ) {
-    return 'Too many verification emails were sent recently. Wait about an hour, or ask an admin to enable custom SMTP in Supabase Auth.'
+    return 'Too many verification emails were sent recently. Please wait a few minutes and try again. If you already received a message from Nzinga Management Agency, you can use that link or ignore extra copies.'
   }
   if (lower.includes('too many requests') || lower.includes('rate limit')) {
     return 'Too many attempts. Please wait a few minutes and try again.'

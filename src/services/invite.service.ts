@@ -1,4 +1,5 @@
 import type { Role, User } from '@/types'
+import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 
 export interface InvitePayload {
@@ -14,6 +15,17 @@ export async function inviteUser(payload: InvitePayload): Promise<{ user: User |
     return { user: null, error: 'Database not configured.' }
   }
 
+  const { data: actorAuth } = await supabase.auth.getUser()
+  let actorId: string | null = null
+  if (actorAuth.user) {
+    const { data: me } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_uid', actorAuth.user.id)
+      .maybeSingle()
+    actorId = me?.id ?? null
+  }
+
   const tempPassword = generateTempPassword()
 
   const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -21,6 +33,7 @@ export async function inviteUser(payload: InvitePayload): Promise<{ user: User |
     password: tempPassword,
     options: {
       data: { name: payload.name, role: payload.role },
+      emailRedirectTo: getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.confirmed),
     },
   })
 
@@ -60,6 +73,19 @@ export async function inviteUser(payload: InvitePayload): Promise<{ user: User |
   if (insertError) {
     return { user: null, error: insertError.message }
   }
+
+  const { writeAuditEvent } = await import('@/services/audit.service')
+  await writeAuditEvent({
+    action: 'user_invited',
+    entity_type: 'user',
+    entity_id: profile.id,
+    user_id: actorId,
+    details: {
+      target_name: payload.name,
+      email: payload.email,
+      role: payload.role,
+    },
+  })
 
   return { user: profile as User, error: null }
 }

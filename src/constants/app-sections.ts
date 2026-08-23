@@ -84,7 +84,7 @@ export const APP_SECTIONS: AppSection[] = [
         label: 'Parent / Legal Guardian Email',
         type: 'email',
         requiredIf: { field: 'dob', condition: 'minor' },
-        note: 'We will email your parent/guardian a secure verification link. Do not fill out their information for them.',
+        note: 'We will email your parent/guardian a verification message. Do not complete their information for them.',
       },
     ],
   },
@@ -563,12 +563,34 @@ export function isMinor(dob: string | undefined): boolean {
   return age !== null && age < 18
 }
 
+/** Legacy interest labels stored on older applications. */
+const INTEREST_ALIASES: Record<string, string[]> = {
+  'Sports & Athletics': ['Sports & Athletics', 'Sports / Athletics', 'Athletics'],
+  'Influencing / Content Creation': [
+    'Influencing / Content Creation',
+    'Influencing / Content',
+    'Influencer',
+    'Content Creation',
+  ],
+}
+
+function interestGroup(label: string): Set<string> {
+  const group = new Set<string>([label])
+  for (const [canonical, aliases] of Object.entries(INTEREST_ALIASES)) {
+    const all = [canonical, ...aliases]
+    if (all.includes(label)) all.forEach((item) => group.add(item))
+  }
+  return group
+}
+
 function csvIncludes(value: string | boolean | undefined, needle: string): boolean {
-  return String(value || '')
+  const parts = String(value || '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-    .includes(needle)
+  if (parts.includes(needle)) return true
+  const group = interestGroup(needle)
+  return parts.some((p) => group.has(p))
 }
 
 export function matchesCondition(
@@ -828,6 +850,7 @@ export function talentFromApp(app: Application, accountNumber = ''): Talent {
   return {
     id: 't_app_' + app.id,
     account_number: accountNumber,
+    application_data: { ...d },
     name: preferred || legalName,
     first_name: String(d.legal_first || ''),
     last_name: String(d.legal_last || ''),
@@ -938,5 +961,48 @@ export function talentFromApp(app: Application, accountNumber = ''): Talent {
         ts: new Date().toISOString(),
       },
     ],
+  }
+}
+
+/** Overlay latest application answers onto an existing talent without resetting pipeline state. */
+export function applyApplicationToTalent(existing: Talent, app: Application): Talent {
+  const mapped = talentFromApp(app, existing.account_number)
+  return {
+    ...existing,
+    application_data: { ...(app.data || {}) },
+    name: mapped.name || existing.name,
+    first_name: mapped.first_name || existing.first_name,
+    last_name: mapped.last_name || existing.last_name,
+    stage_name: mapped.stage_name || existing.stage_name,
+    niches: mapped.niches.length ? mapped.niches : existing.niches,
+    roster_division: mapped.roster_division || existing.roster_division,
+    secondary_specialization: mapped.secondary_specialization || existing.secondary_specialization,
+    phone: mapped.phone || existing.phone,
+    email: mapped.email || existing.email,
+    dob: mapped.dob || existing.dob,
+    location: mapped.location || existing.location,
+    height: mapped.height || existing.height,
+    shoe_size: mapped.shoe_size || existing.shoe_size,
+    eye_color: mapped.eye_color || existing.eye_color,
+    social_handle: mapped.social_handle || existing.social_handle,
+    follower_count: mapped.follower_count || existing.follower_count,
+    platform: mapped.platform || existing.platform,
+    link_instagram: mapped.link_instagram || existing.link_instagram,
+    link_tiktok: mapped.link_tiktok || existing.link_tiktok,
+    link_youtube: mapped.link_youtube || existing.link_youtube,
+    link_website: mapped.link_website || existing.link_website,
+    link_portfolio: mapped.link_portfolio || existing.link_portfolio,
+    link_other: mapped.link_other || existing.link_other,
+    scout_notes: mapped.scout_notes || existing.scout_notes,
+    scout_summary: mapped.scout_summary || existing.scout_summary,
+    revenue_path: mapped.revenue_path || existing.revenue_path,
+    current_agency: mapped.current_agency || existing.current_agency,
+    legal_minor_status: mapped.legal_minor_status || existing.legal_minor_status,
+    parent_guardian_required: mapped.parent_guardian_required || existing.parent_guardian_required,
+    travel_logistics: mapped.travel_logistics || existing.travel_logistics,
+    compliance: { ...existing.compliance, ...mapped.compliance },
+    uploaded_docs: { ...existing.uploaded_docs, ...mapped.uploaded_docs },
+    application_id: app.id,
+    application_status: app.status,
   }
 }

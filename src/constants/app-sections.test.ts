@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   ageFromDob,
+  applyApplicationToTalent,
   getVisibleSections,
   isAppComplete,
   isMinor,
+  talentFromApp,
   validateSection,
 } from '@/constants/app-sections'
 import { STAGE_LABELS } from '@/types/stages'
@@ -178,5 +180,47 @@ describe('NZG short application', () => {
         doc_sport_photo: 'storage:application-docs/x/doc_sport_photo/1.jpg',
       }),
     ).toContain('sport_years')
+  })
+
+  it('copies acting, modeling, and sports answers onto the talent record', () => {
+    const app = {
+      id: 'app_specialty',
+      talent_id: null,
+      access_code: 'SPEC1',
+      company_code: 'NZG',
+      talent_name: 'Jordan Lee',
+      talent_email: 'j@example.com',
+      status: 'in_progress' as const,
+      created_at: new Date().toISOString(),
+      data: {
+        legal_first: 'Jordan',
+        legal_last: 'Lee',
+        preferred_name: 'Jordan',
+        representation_interests: 'Acting,Modeling,Sports & Athletics',
+        acting_experience_level: 'Working',
+        acting_categories: 'Film',
+        acting_training: 'BFA Acting',
+        model_height: '5\'11"',
+        model_categories: 'Editorial',
+        sport_primary: 'Track',
+        sport_position: 'Sprinter',
+        sport_highlights: 'Conference champion',
+      },
+    }
+    const talent = talentFromApp(app as Application, 'NZG-100010')
+    expect(talent.application_data?.acting_training).toBe('BFA Acting')
+    expect(talent.application_data?.model_categories).toBe('Editorial')
+    expect(talent.application_data?.sport_primary).toBe('Track')
+    expect(talent.niches).toEqual(expect.arrayContaining(['Acting', 'Modeling', 'Sports & Athletics']))
+    expect(talent.height).toBe('5\'11"')
+
+    const existing = talentFromApp(
+      { ...app, data: { legal_first: 'Jordan', legal_last: 'Lee' } } as Application,
+      'NZG-100010',
+    )
+    const updated = applyApplicationToTalent(existing, app as Application)
+    expect(updated.application_data?.acting_categories).toBe('Film')
+    expect(updated.application_data?.sport_highlights).toBe('Conference champion')
+    expect(updated.stage).toBe(existing.stage)
   })
 })

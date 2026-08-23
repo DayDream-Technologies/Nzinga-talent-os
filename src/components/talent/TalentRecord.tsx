@@ -729,12 +729,65 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
           {linkedApp && (
             <Section title="Linked application" accent={appHasIncomplete ? T.amber : T.green}>
-              <div style={{ fontSize: 12, color: T.t2 }}>
+              <div style={{ fontSize: 12, color: T.t2, marginBottom: 10 }}>
                 Status: <strong>{linkedApp.status}</strong> · Code {linkedApp.access_code}
                 {appHasIncomplete && " · Incomplete fields present"}
               </div>
             </Section>
           )}
+          {(() => {
+            const answers = (linkedApp && linkedApp.data) || local.application_data || {};
+            const detailSections = getVisibleSections(answers).filter((s) =>
+              ["modeling", "acting", "sports", "influencing", "general", "conflicts", "availability", "social"].includes(s.id),
+            );
+            if (detailSections.length === 0) return null;
+            return (
+              <Section title="Application details" accent={T.purple}>
+                <div style={{ fontSize: 12, color: T.t3, marginBottom: 10 }}>
+                  Acting, modeling, sports, and other questionnaire answers saved with this application.
+                </div>
+                {detailSections.map((sec) => (
+                  <div key={sec.id} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.t1, marginBottom: 6 }}>{sec.label}</div>
+                    {sec.fields.map((field) => {
+                      const raw = answers[field.id];
+                      const empty = raw == null || String(raw).trim() === "" || raw === false;
+                      const display =
+                        field.type === "checkbox"
+                          ? raw
+                            ? "Yes"
+                            : "—"
+                          : field.type === "file_upload"
+                            ? raw
+                              ? answers[field.id + "_name"] || "Uploaded"
+                              : "—"
+                            : empty
+                              ? "—"
+                              : String(raw);
+                      return (
+                        <div
+                          key={field.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            gap: 12,
+                            padding: "4px 0",
+                            borderBottom: "1px solid #f5f5f5",
+                            fontSize: 12,
+                          }}
+                        >
+                          <span style={{ color: T.t3 }}>{field.label}</span>
+                          <span style={{ color: empty ? T.t4 : T.t1, textAlign: "right", maxWidth: "58%", whiteSpace: "pre-wrap" }}>
+                            {display}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </Section>
+            );
+          })()}
         </div>
       </div>
     </div>

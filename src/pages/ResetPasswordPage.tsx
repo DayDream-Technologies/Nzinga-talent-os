@@ -307,10 +307,10 @@ export function ResetPasswordPage() {
                   letterSpacing: '-0.02em',
                 }}
               >
-                Set new password
+                Reset your password
               </h2>
               <p style={{ fontSize: 13, color: '#8fa3b5', textAlign: 'center', marginBottom: 24, lineHeight: 1.5 }}>
-                Choose a strong password for your account.
+                Choose a strong, unique password that you do not use for other accounts.
               </p>
 
               <form onSubmit={handleSubmit}>
@@ -415,7 +415,7 @@ export function ResetPasswordPage() {
                 Password updated
               </h2>
               <p style={{ fontSize: 13, color: '#8fa3b5', lineHeight: 1.6, marginBottom: 20 }}>
-                Your password has been changed successfully. You can now sign in with your new password.
+                Your password has been changed. You can now sign in with your new password. If you did not make this change, contact your supervisor or manager.
               </p>
               <button
                 type="button"

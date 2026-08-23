@@ -137,7 +137,7 @@ function TalentHomeInner() {
         </button>
       </header>
 
-      <main style={{ flex: 1, maxWidth: 880, width: '100%', margin: '0 auto', padding: '36px 20px 64px' }}>
+      <main style={{ flex: 1, maxWidth: 1100, width: '100%', margin: '0 auto', padding: '36px 32px 64px' }}>
         <div style={{ marginBottom: 28 }}>
           <TMXLogo size="sm" theme="dark" />
         </div>

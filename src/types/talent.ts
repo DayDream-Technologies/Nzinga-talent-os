@@ -1,3 +1,4 @@
+import type { ApplicationData } from './application'
 import type { TalentStage } from './stages'
 
 export interface Compliance {
@@ -120,6 +121,8 @@ export interface Talent extends ApplicantProfile {
   last_contacted: string
   application_id: string | null
   application_status: string | null
+  /** Full questionnaire answers from the talent application (acting, modeling, sports, etc.). */
+  application_data?: ApplicationData
   uploaded_docs: UploadedDocs
   audit_log: AuditLogEntry[]
 }

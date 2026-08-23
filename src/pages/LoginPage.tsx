@@ -18,14 +18,12 @@ export function LoginPage() {
       companyCode={companyCode}
       onSignIn={(email: string, password: string) => login(email, password)}
       onLoginSuccess={() => navigate('/workspace')}
-      onBack={() => {
+      onBack={() => navigate('/tmx')}
+      onChangeCode={() => {
         setCompanyCode('')
         navigate('/tmx')
       }}
-      onHome={() => {
-        setCompanyCode('')
-        navigate('/')
-      }}
+      onHome={() => navigate('/')}
     />
   )
 }

@@ -1,4 +1,5 @@
 import type { Application, GuardianStatus } from '@/types'
+import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { saveApplication } from '@/services/application.service'
 import { friendlyAuthError } from '@/services/auth.service'
@@ -86,10 +87,10 @@ export async function inviteGuardian(
     console.warn('[inviteGuardian] insert failed, continuing with OTP:', insertErr.message)
   }
 
-  const redirectTo =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/guardian/verify?app=${encodeURIComponent(app.id)}&token=${encodeURIComponent(invite.token)}`
-      : undefined
+  const redirectTo = getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.guardianVerify, {
+    app: app.id,
+    token: invite.token,
+  })
 
   const { error } = await supabase.auth.signInWithOtp({
     email,

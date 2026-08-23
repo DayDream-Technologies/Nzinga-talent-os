@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { COMPANY_CODES } from '@/constants/roles'
@@ -72,6 +72,11 @@ export function CompanyCodePage() {
   const [code, setCode] = useState(companyCode || '')
   const [error, setError] = useState('')
   const [step, setStep] = useState<'code' | 'choice'>(companyCode ? 'choice' : 'code')
+
+  // Keep the choice screen if a code is already stored (don't ask again after nav).
+  useEffect(() => {
+    if (companyCode) setStep('choice')
+  }, [companyCode])
 
   const activeCode = (companyCode || code).trim().toUpperCase()
   const brand = activeCode ? getCompanyBrand(activeCode) : null

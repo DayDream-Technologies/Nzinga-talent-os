@@ -9,6 +9,7 @@ import {
 } from '@/services/admin.service'
 import { T } from '@/lib/tokens'
 import { Btn, TH, TD } from '@/components/ui-compat'
+import { useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
 
 export function SystemSettingsPanel() {
   const [settings, setSettings] = useState<SystemSetting[]>([])
@@ -74,6 +75,9 @@ export function SystemSettingsPanel() {
     if (typeof value === 'string') return value
     return JSON.stringify(value)
   }
+
+  const dirty = editingKey !== null || newCode.trim().length > 0
+  const unsavedDialog = useUnsavedNavigation(dirty)
 
   return (
     <div style={{ padding: '14px 18px', flex: 1, overflowY: 'auto' }}>
@@ -205,9 +209,14 @@ export function SystemSettingsPanel() {
                     <TD muted>{s.updated_at ? new Date(s.updated_at).toLocaleDateString() : '—'}</TD>
                     <TD>
                       {editingKey === s.key ? (
-                        <Btn sm onClick={() => void saveSetting(s.key)}>
-                          Save
-                        </Btn>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <Btn sm onClick={() => void saveSetting(s.key)}>
+                            Save
+                          </Btn>
+                          <Btn sm variant="ghost" onClick={() => setEditingKey(null)}>
+                            Cancel
+                          </Btn>
+                        </div>
                       ) : (
                         <Btn
                           sm
@@ -228,6 +237,7 @@ export function SystemSettingsPanel() {
           </div>
         </>
       )}
+      {unsavedDialog}
     </div>
   )
 }

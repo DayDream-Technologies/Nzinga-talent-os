@@ -200,7 +200,7 @@ export function TalentAccountPage() {
     setResetMessage(
       demo
         ? `Demo mode: password reset simulated for ${talentEmail}.`
-        : `Password reset email sent to ${talentEmail}.`,
+        : `A password reset message was sent to ${talentEmail}. They should check their inbox and follow the Reset Password button. If they did not request this, they can ignore the email.`,
     )
   }
   const relatedTickets = tickets.filter((t) => t.talentName && t.talentName === name)
