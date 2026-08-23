@@ -2,7 +2,10 @@ export type HistoryType = 'note' | 'call' | 'email' | 'sms' | 'task' | 'document
 
 export interface HistoryEntry {
   id: string
-  talent_id: string
+  /** Pipeline talents.id. Null for CRM notes on prospects/clients who are not in the pipeline yet. */
+  talent_id: string | null
+  /** Agency/pipeline account number so notes still attach when talent_id is null. */
+  account_number?: string | null
   user_id: string | null
   type: HistoryType
   text: string

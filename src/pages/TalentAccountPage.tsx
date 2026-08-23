@@ -208,7 +208,11 @@ export function TalentAccountPage() {
   const relatedEvents = calendar.filter((e) => e.talentName === name)
   const relatedPayouts = expenseLogs.filter((e) => e.talentName === name)
   const relatedDisbursements = disbursements.filter((d) => d.payee === name)
-  const relatedHistory = history.filter((h) => h.talent_id && (h.talent_id === pipeline?.id))
+  const relatedHistory = history.filter(
+    (h) =>
+      (pipeline?.id && h.talent_id === pipeline.id) ||
+      (accountId && h.account_number === accountId),
+  )
   const relatedTasks = tasks.filter((tk) => tk.related_talent && tk.related_talent === pipeline?.id)
   const relatedAppointments = appointments.filter((a) => {
     const talentHit = a.talentNames?.includes(name)

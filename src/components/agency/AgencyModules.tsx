@@ -31,6 +31,7 @@ import {
   Money,
   Panel,
   StatusColor,
+  SelectAllCheckbox,
   Table,
   TicketTypeColor,
   inputStyle,
@@ -396,16 +397,63 @@ function RenewalOffersModule() {
 
 function SendEmailModule() {
   const { sendMessage, messages, clients } = useAgencyData()
+  const { user } = useAuth()
   const [to, setTo] = useState(clients[0]?.email || '')
+  const [toName, setToName] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
-  const [ok, setOk] = useState('')
+  const [replyTo, setReplyTo] = useState(user?.email || '')
+  const [fromName, setFromName] = useState('')
+  const [sending, setSending] = useState(false)
+  const [result, setResult] = useState<{ type: 'ok' | 'err' | 'skip'; msg: string } | null>(null)
+
+  const canPickFrom = user?.role === 'director' || user?.role === 'success_manager'
+
+  async function handleSend() {
+    if (!to || !subject || !body) return
+    setSending(true)
+    setResult(null)
+    try {
+      const { sendGeneralEmail } = await import('@/lib/email')
+      const res = await sendGeneralEmail({
+        toEmail: to,
+        toName: toName || undefined,
+        subject,
+        htmlBody: body.replace(/\n/g, '<br>'),
+        textBody: body,
+        replyTo: replyTo || undefined,
+        fromName: fromName || undefined,
+      })
+      if (res.status === 'sent') {
+        sendMessage({ channel: 'email', to, subject, preview: body.slice(0, 80) })
+        setResult({ type: 'ok', msg: 'Email sent successfully.' })
+        setSubject('')
+        setBody('')
+        setToName('')
+      } else if (res.status === 'skipped') {
+        sendMessage({ channel: 'email', to, subject, preview: body.slice(0, 80) })
+        setResult({ type: 'skip', msg: 'Email service not configured — message logged locally.' })
+        setSubject('')
+        setBody('')
+      } else {
+        setResult({ type: 'err', msg: res.message || 'Failed to send.' })
+      }
+    } catch (err) {
+      setResult({ type: 'err', msg: (err as Error).message || 'Unexpected error.' })
+    } finally {
+      setSending(false)
+    }
+  }
+
   return (
     <Panel title="Send Email" subtitle="Compose client or talent email from the agency desk.">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <Card>
-          <Field label="To">
-            <input style={inputStyle} value={to} onChange={(e) => setTo(e.target.value)} />
+          <Field label="To (email)">
+            <input style={inputStyle} value={to} onChange={(e) => setTo(e.target.value)} placeholder="recipient@email.com" type="email" />
+          </Field>
+          <Field label="Recipient name (optional)">
+            <input style={inputStyle} value={toName} onChange={(e) => setToName(e.target.value)} placeholder="Jane Doe" />
           </Field>
           <Field label="Subject">
             <input style={inputStyle} value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -413,18 +461,26 @@ function SendEmailModule() {
           <Field label="Message">
             <textarea style={{ ...inputStyle, minHeight: 120 }} value={body} onChange={(e) => setBody(e.target.value)} />
           </Field>
-          <Btn
-            onClick={() => {
-              if (!to || !subject) return
-              sendMessage({ channel: 'email', to, subject, preview: body.slice(0, 80) })
-              setOk('Email queued and logged.')
-              setSubject('')
-              setBody('')
-            }}
-          >
-            Send email
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
+            <Field label="Reply-To">
+              <input style={inputStyle} value={replyTo} onChange={(e) => setReplyTo(e.target.value)} placeholder={user?.email || 'your@email.com'} type="email" />
+            </Field>
+            {canPickFrom ? (
+              <Field label="Sender display name">
+                <input style={inputStyle} value={fromName} onChange={(e) => setFromName(e.target.value)} placeholder="Nzinga Talent Group" />
+              </Field>
+            ) : (
+              <Field label="Sending as">
+                <div style={{ ...inputStyle, background: '#f8f9fb', color: T.t3, cursor: 'default' }}>{user?.name || 'Staff'} (via platform)</div>
+              </Field>
+            )}
+          </div>
+          <Btn onClick={handleSend} disabled={sending || !to || !subject || !body}>
+            {sending ? '⟳ Sending…' : 'Send email'}
           </Btn>
-          {ok && <div style={{ marginTop: 8, color: T.green, fontSize: 12 }}>{ok}</div>}
+          {result?.type === 'ok' && <div style={{ marginTop: 8, color: T.green, fontSize: 12, fontWeight: 600 }}>✓ {result.msg}</div>}
+          {result?.type === 'skip' && <div style={{ marginTop: 8, color: T.amber, fontSize: 12 }}>{result.msg}</div>}
+          {result?.type === 'err' && <div style={{ marginTop: 8, color: T.red, fontSize: 12 }}>{result.msg}</div>}
         </Card>
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Recent email</div>
@@ -1073,12 +1129,26 @@ function BatchReceiptsModule() {
     <Panel title="Batch Client Receipts" subtitle="Apply one client payment across multiple open invoices. Edit or delete individual invoices from this list.">
       <Card>
         <Table
+          selectAll={
+            <SelectAllCheckbox
+              checked={open.length > 0 && open.every((inv) => selected.includes(inv.id))}
+              indeterminate={
+                open.some((inv) => selected.includes(inv.id)) &&
+                !open.every((inv) => selected.includes(inv.id))
+              }
+              disabled={open.length === 0}
+              onChange={(checked) => setSelected(checked ? open.map((inv) => inv.id) : [])}
+            />
+          }
+          rowSelected={open.map((inv) => selected.includes(inv.id))}
           headers={['', 'Client', 'Project', 'Amount', 'Status', '']}
           rows={open.map((inv) => [
             <input
               key={`c-${inv.id}`}
               type="checkbox"
+              aria-label={`Select ${inv.clientName} invoice`}
               checked={selected.includes(inv.id)}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) =>
                 setSelected((prev) =>
                   e.target.checked ? [...prev, inv.id] : prev.filter((id) => id !== inv.id),

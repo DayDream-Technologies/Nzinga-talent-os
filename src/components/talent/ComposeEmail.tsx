@@ -80,7 +80,7 @@ export function ComposeEmail({ talentName, talentEmail, talentId, onEmailSent }:
         setTemplate('custom')
       }, 1500)
     } else if (res.status === 'skipped') {
-      setResult('Transactional email is not enabled. Confirmation and magic-link emails are sent by Supabase Auth.')
+      setResult('Email service is not configured yet. Set RESEND_API_KEY in Supabase secrets to enable sending.')
     } else {
       setResult(res.message || 'Failed to send.')
     }

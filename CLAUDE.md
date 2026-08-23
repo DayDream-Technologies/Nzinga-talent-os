@@ -101,10 +101,16 @@ Company Code: **NZG** (also: NZINGA, TCG)
 ## File Uploads
 Files are read as base64 `data:` URLs via `FileReader`. Stored in React state on the talent's `uploaded_docs` object. `DocViewer` renders images directly or PDFs in an iframe.
 
-## Email (Supabase Auth)
-Signup confirmation, password reset, and guardian magic links are sent by **Supabase Auth** using the project's custom SMTP (Google). Staff application invites save an access code to share with the prospect; there is no separate transactional mail provider.
+## Email (Supabase Auth + Resend)
+Signup confirmation, password reset, and guardian magic links are sent by **Supabase Auth** using the project's custom SMTP (Google).
 
-Redirect paths for those emails are in `src/lib/auth-redirect.ts` (`AUTH_EMAIL_PATHS`). Hosted Site URL and Redirect URLs must allow them.
+Staff compose emails (Send Email page, talent record compose) are sent by the `send-email` **Edge Function** via **Resend** (`resend.com`). The platform always sends from `hello@talentmanagerx.com` with a configurable display name and Reply-To per message. This avoids cross-domain SPF/DKIM issues when serving multiple client organizations.
+
+- `src/lib/email.ts` — frontend helper that calls the Edge Function
+- `supabase/functions/send-email/index.ts` — authenticates staff, sends via Resend, logs to `sent_emails`
+- Secrets: `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`
+
+Redirect paths for Auth emails are in `src/lib/auth-redirect.ts` (`AUTH_EMAIL_PATHS`). Hosted Site URL and Redirect URLs must allow them.
 
 ## Common Claude Code Tasks
 

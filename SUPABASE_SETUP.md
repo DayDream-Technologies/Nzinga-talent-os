@@ -237,7 +237,7 @@ Use separate anon keys per project. Do not point staging builds at production.
 
 API keys for RingCentral are stored as **Supabase secrets** (never exposed to the frontend). Edge Functions act as secure proxies.
 
-Auth emails (signup confirmation, password reset, guardian magic links) are sent by **Supabase Auth** via **custom SMTP** (Google). There is no transactional email Edge Function.
+Auth emails (signup confirmation, password reset, guardian magic links) are sent by **Supabase Auth** via **custom SMTP** (Google). Staff compose emails (Send Email page, talent record compose) are sent by the `send-email` Edge Function via **Resend** (`resend.com`).
 
 ### Google SMTP (hosted)
 
@@ -275,6 +275,7 @@ npm i -g supabase
 supabase link --project-ref <your-project-ref>
 
 # Deploy all functions
+supabase functions deploy send-email
 supabase functions deploy ringcentral-oauth
 supabase functions deploy ringcentral-call
 supabase functions deploy ringcentral-sms
@@ -284,6 +285,11 @@ supabase functions deploy ringcentral-webhook
 ### Set Supabase Secrets
 
 ```bash
+# Email (Resend — transactional email for staff compose)
+supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+supabase secrets set EMAIL_FROM_ADDRESS=hello@talentmanagerx.com
+supabase secrets set EMAIL_FROM_NAME="Nzinga Talent Group"
+
 # RingCentral (phone/SMS)
 supabase secrets set RC_CLIENT_ID=<your-ringcentral-client-id>
 supabase secrets set RC_CLIENT_SECRET=<your-ringcentral-client-secret>

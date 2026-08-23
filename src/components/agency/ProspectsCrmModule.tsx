@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { CreateProspectModal } from '@/components/agency/CreateProspectModal'
 import { BulkActionsMenu, RowActionsMenu, stubGroups } from '@/components/agency/RowActionsMenu'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Badge, Btn, Field, ModalShell, Panel, Table, inputStyle } from '@/components/agency/AgencyUI'
+import { Badge, Btn, Field, ModalShell, Panel, SelectAllCheckbox, Table, inputStyle } from '@/components/agency/AgencyUI'
 import {
   PROSPECT_STAGE_LABELS,
   PROSPECT_TRACKING_STAGES,
@@ -14,6 +14,8 @@ import {
   prospectStageLabel,
 } from '@/constants/prospect-stages'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
+import { talentAccountPath } from '@/lib/talent-account'
+import { resolvePipelineTalentId } from '@/lib/resolve-history-talent'
 import { T } from '@/lib/tokens'
 import type { AgencyProspect, ProspectStage } from '@/types/agency'
 import { SendApplicationModal } from '@/components/application/ApplicationModals'
@@ -28,7 +30,7 @@ export function ProspectsCrmModule() {
     setProspectStage,
     sendMessage,
   } = useAgencyData()
-  const { handleSendApp, setHistory } = useAppData()
+  const { handleSendApp, setHistory, talents } = useAppData()
   const { user, companyCode } = useAuth()
   const navigate = useNavigate()
 
@@ -60,6 +62,18 @@ export function ProspectsCrmModule() {
       return next
     })
   }
+
+  function toggleAll(checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (checked) filtered.forEach((p) => next.add(p.id))
+      else filtered.forEach((p) => next.delete(p.id))
+      return next
+    })
+  }
+
+  const allSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id))
+  const someSelected = filtered.some((p) => selected.has(p.id))
 
   const selectedList = useMemo(
     () => prospects.filter((p) => selected.has(p.id)),
@@ -157,8 +171,32 @@ export function ProspectsCrmModule() {
         )}
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'auto', padding: '0 4px' }}>
+      <div
+        style={{
+          background: '#fff',
+          border: '1px solid #e5e7eb',
+          borderRadius: 10,
+          overflowX: 'auto',
+          overflowY: 'visible',
+          position: 'relative',
+          zIndex: 1,
+          padding: '0 4px',
+        }}
+      >
         <Table
+          selectAll={
+            <SelectAllCheckbox
+              checked={allSelected}
+              indeterminate={someSelected && !allSelected}
+              disabled={filtered.length === 0}
+              onChange={toggleAll}
+            />
+          }
+          onRowClick={(i) => {
+            const p = filtered[i]
+            if (p?.accountId) navigate(talentAccountPath(p.accountId))
+          }}
+          rowSelected={filtered.map((p) => selected.has(p.id))}
           headers={[
             '',
             'First name',
@@ -178,6 +216,8 @@ export function ProspectsCrmModule() {
               key={`c-${p.id}`}
               type="checkbox"
               checked={selected.has(p.id)}
+              aria-label={`Select ${p.name}`}
+              onClick={(e) => e.stopPropagation()}
               onChange={() => toggle(p.id)}
             />,
             p.firstName || p.name.split(' ')[0] || '—',
@@ -308,7 +348,13 @@ export function ProspectsCrmModule() {
                 setHistory((prev) => [
                   {
                     id: `h_${Date.now()}`,
-                    talent_id: noteFor.id,
+                    talent_id: resolvePipelineTalentId(talents, {
+                      id: noteFor.id,
+                      email: noteFor.email,
+                      applicationId: noteFor.linkedApplicationId,
+                      accountId: noteFor.accountId,
+                    }),
+                    account_number: noteFor.accountId || null,
                     user_id: user?.id || null,
                     type: 'note',
                     text: noteText.trim(),

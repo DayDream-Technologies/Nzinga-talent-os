@@ -1,5 +1,41 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { T } from '@/lib/tokens'
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(target.closest('a, button, input, select, textarea, label, [role="menu"], [role="menuitem"]'))
+}
+
+export function SelectAllCheckbox({
+  checked,
+  indeterminate = false,
+  onChange,
+  disabled,
+  label = 'Select all',
+}: {
+  checked: boolean
+  indeterminate?: boolean
+  onChange: (checked: boolean) => void
+  disabled?: boolean
+  label?: string
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate && !checked
+  }, [checked, indeterminate])
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.checked)}
+    />
+  )
+}
 
 export function Panel({
   title,
@@ -38,7 +74,7 @@ export function Panel({
           </div>
         )}
       </div>
-      <div className="animate-fade-in-up stagger-2" style={{ position: 'relative', zIndex: 0 }}>
+      <div className="animate-fade-in-up stagger-2" style={{ position: 'relative', zIndex: 1 }}>
         {children}
       </div>
     </div>
@@ -65,6 +101,9 @@ export function Card({
         borderRadius: 10,
         padding: 16,
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        overflow: 'visible',
+        position: 'relative',
+        zIndex: 1,
         ...style,
       }}
     >
@@ -155,28 +194,36 @@ export function Table({
   sortIndex,
   sortDir,
   onSort,
+  selectAll,
+  onRowClick,
+  rowSelected,
 }: {
-  headers: string[]
+  headers: ReactNode[]
   rows: ReactNode[][]
   sortIndex?: number
   sortDir?: 'asc' | 'desc'
   onSort?: (index: number) => void
+  selectAll?: ReactNode
+  onRowClick?: (index: number) => void
+  rowSelected?: boolean[]
 }) {
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+    <div style={{ overflowX: 'auto', overflowY: 'visible', position: 'relative', zIndex: 1 }}>
+      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12 }}>
         <thead>
           <tr>
             {headers.map((h, i) => {
-              const sortable = Boolean(onSort && h)
+              const label = typeof h === 'string' ? h : ''
+              const sortable = Boolean(onSort && label)
               const active = sortable && sortIndex === i
-              const isCompactCol = !h
+              const isFirst = i === 0
+              const isCompactCol = !label
               const isLast = i === headers.length - 1
               return (
                 <th
-                  key={`${h}-${i}`}
+                  key={i}
                   onClick={sortable ? () => onSort?.(i) : undefined}
-                  title={sortable ? `Sort by ${h}` : undefined}
+                  title={sortable ? `Sort by ${label}` : undefined}
                   style={{
                     textAlign: isLast && isCompactCol ? 'right' : 'left',
                     padding: '8px 10px',
@@ -188,9 +235,13 @@ export function Table({
                     cursor: sortable ? 'pointer' : 'default',
                     userSelect: sortable ? 'none' : undefined,
                     width: isCompactCol ? '1%' : undefined,
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 3,
+                    background: '#fff',
                   }}
                 >
-                  {h}
+                  {isFirst && selectAll ? selectAll : h}
                   {active && (
                     <span style={{ marginLeft: 4, fontSize: 10 }}>{sortDir === 'desc' ? '▼' : '▲'}</span>
                   )}
@@ -200,34 +251,62 @@ export function Table({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr
-              key={i}
-              className={`ui-table-row animate-fade-in-up stagger-${Math.min(i + 1, 8)}`}
-            >
-              {row.map((cell, j) => {
-                const isCompactCol = !headers[j]
-                const isLast = j === row.length - 1
-                return (
-                  <td
-                    key={j}
-                    style={{
-                      padding: '10px',
-                      paddingRight: isLast ? 14 : 10,
-                      borderBottom: '1px solid #f3f4f6',
-                      color: T.t1,
-                      verticalAlign: isCompactCol ? 'middle' : 'top',
-                      whiteSpace: isCompactCol ? 'nowrap' : undefined,
-                      width: isCompactCol ? '1%' : undefined,
-                      textAlign: isLast && isCompactCol ? 'right' : 'left',
-                    }}
-                  >
-                    {cell}
-                  </td>
-                )
-              })}
-            </tr>
-          ))}
+          {rows.map((row, i) => {
+            const clickable = Boolean(onRowClick)
+            const selected = Boolean(rowSelected?.[i])
+            return (
+              <tr
+                key={i}
+                className={`ui-table-row animate-fade-in-up stagger-${Math.min(i + 1, 8)}${clickable ? ' is-clickable' : ''}${selected ? ' is-selected' : ''}`}
+                style={{ position: 'relative', zIndex: selected || clickable ? 2 : 1 }}
+                tabIndex={clickable ? 0 : undefined}
+                onClick={
+                  onRowClick
+                    ? (e: MouseEvent<HTMLTableRowElement>) => {
+                        if (isInteractiveTarget(e.target)) return
+                        onRowClick(i)
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key !== 'Enter' && e.key !== ' ') return
+                        if (isInteractiveTarget(e.target)) return
+                        e.preventDefault()
+                        onRowClick(i)
+                      }
+                    : undefined
+                }
+              >
+                {row.map((cell, j) => {
+                  const label = typeof headers[j] === 'string' ? (headers[j] as string) : ''
+                  const isCompactCol = !label
+                  const isLast = j === row.length - 1
+                  return (
+                    <td
+                      key={j}
+                      style={{
+                        padding: '10px',
+                        paddingRight: isLast ? 14 : 10,
+                        borderBottom: '1px solid #f3f4f6',
+                        color: T.t1,
+                        verticalAlign: isCompactCol ? 'middle' : 'top',
+                        whiteSpace: isCompactCol ? 'nowrap' : undefined,
+                        width: isCompactCol ? '1%' : undefined,
+                        textAlign: isLast && isCompactCol ? 'right' : 'left',
+                        position: isCompactCol ? 'relative' : undefined,
+                        zIndex: isLast && isCompactCol ? 2 : undefined,
+                        overflow: 'visible',
+                      }}
+                    >
+                      {cell}
+                    </td>
+                  )
+                })}
+              </tr>
+            )
+          })}
         </tbody>
       </table>
       {rows.length === 0 && (

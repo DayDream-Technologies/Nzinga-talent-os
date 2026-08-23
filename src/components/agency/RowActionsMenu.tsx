@@ -1,5 +1,21 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from 'react'
+import { createPortal } from 'react-dom'
 import { T } from '@/lib/tokens'
+
+/** Floats above tables, sticky headers, and scroll wrappers. */
+export const MENU_OVERLAY_Z = 5000
+
+const GAP = 4
+const VIEWPORT_PAD = 8
 
 const dotStyle = {
   display: 'block',
@@ -9,6 +25,13 @@ const dotStyle = {
   background: 'currentColor',
   flexShrink: 0,
 } as const
+
+const overlayPanelStyle: CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e5e7eb',
+  borderRadius: 8,
+  boxShadow: '0 12px 32px rgba(15, 23, 42, 0.18)',
+}
 
 export type ActionItem = {
   id: string
@@ -46,6 +69,128 @@ function ComingSoonToast({ label, onDone }: { label: string; onDone: () => void 
   )
 }
 
+function placeOverlay(
+  anchor: HTMLElement,
+  menu: HTMLElement,
+  align: 'left' | 'right',
+  minWidth: number,
+): CSSProperties {
+  const r = anchor.getBoundingClientRect()
+  const menuH = menu.offsetHeight
+  const menuW = Math.max(minWidth, menu.offsetWidth, r.width)
+  const spaceBelow = window.innerHeight - r.bottom - GAP - VIEWPORT_PAD
+  const openUp = menuH > 0 && spaceBelow < menuH && r.top > spaceBelow
+  const top = openUp
+    ? Math.max(VIEWPORT_PAD, r.top - GAP - menuH)
+    : Math.min(r.bottom + GAP, window.innerHeight - VIEWPORT_PAD - menuH)
+  let left = align === 'right' ? r.right - menuW : r.left
+  left = Math.min(Math.max(VIEWPORT_PAD, left), window.innerWidth - menuW - VIEWPORT_PAD)
+  return {
+    position: 'fixed',
+    top,
+    left,
+    minWidth: menuW,
+    zIndex: MENU_OVERLAY_Z,
+    visibility: 'visible',
+  }
+}
+
+function OverlayMenu({
+  anchorRef,
+  align,
+  minWidth,
+  maxHeight,
+  children,
+  onClose,
+}: {
+  anchorRef: RefObject<HTMLElement | null>
+  align: 'left' | 'right'
+  minWidth: number
+  maxHeight?: number
+  children: ReactNode
+  onClose: () => void
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [style, setStyle] = useState<CSSProperties>({
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    minWidth,
+    zIndex: MENU_OVERLAY_Z,
+    visibility: 'hidden',
+  })
+
+  const update = useCallback(() => {
+    const anchor = anchorRef.current
+    const menu = menuRef.current
+    if (!anchor || !menu) return
+    setStyle(placeOverlay(anchor, menu, align, minWidth))
+  }, [anchorRef, align, minWidth])
+
+  useLayoutEffect(() => {
+    update()
+    const frame = window.requestAnimationFrame(update)
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [update])
+
+  useEffect(() => {
+    function onPointer(e: MouseEvent) {
+      const t = e.target as Node
+      if (menuRef.current?.contains(t) || anchorRef.current?.contains(t)) return
+      onClose()
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [anchorRef, onClose])
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      role="menu"
+      style={{
+        ...overlayPanelStyle,
+        ...style,
+        maxHeight,
+        overflowY: maxHeight ? 'auto' : 'visible',
+        padding: 4,
+      }}
+    >
+      {children}
+    </div>,
+    document.body,
+  )
+}
+
+function actionButtonStyle(item: ActionItem): CSSProperties {
+  return {
+    display: 'block',
+    width: '100%',
+    textAlign: 'left',
+    padding: '8px 10px',
+    border: 'none',
+    background: 'transparent',
+    fontSize: 12,
+    cursor: item.disabled ? 'not-allowed' : 'pointer',
+    color: item.danger ? T.red : T.t1,
+    fontFamily: 'inherit',
+    borderRadius: 5,
+    opacity: item.disabled ? 0.5 : 1,
+  }
+}
+
 export function RowActionsMenu({
   items,
   align = 'right',
@@ -55,19 +200,12 @@ export function RowActionsMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function h(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+    <div style={{ position: 'relative', display: 'inline-flex', flexShrink: 0, zIndex: open ? MENU_OVERLAY_Z : 1 }} onClick={(e) => e.stopPropagation()}>
       <button
+        ref={triggerRef}
         type="button"
         aria-label="Row actions"
         aria-expanded={open}
@@ -118,25 +256,17 @@ export function RowActionsMenu({
         </span>
       </button>
       {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            [align === 'right' ? 'right' : 'left']: 0,
-            minWidth: 200,
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 8,
-            boxShadow: '0 10px 28px rgba(0,0,0,0.12)',
-            zIndex: 400,
-            overflow: 'hidden',
-            padding: 4,
-          }}
+        <OverlayMenu
+          anchorRef={triggerRef}
+          align={align}
+          minWidth={200}
+          onClose={() => setOpen(false)}
         >
           {items.map((item) => (
             <button
               key={item.id}
               type="button"
+              role="menuitem"
               disabled={item.disabled}
               onClick={(e) => {
                 e.stopPropagation()
@@ -147,20 +277,7 @@ export function RowActionsMenu({
                 }
                 item.onClick()
               }}
-              style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                padding: '8px 10px',
-                border: 'none',
-                background: 'transparent',
-                fontSize: 12,
-                cursor: item.disabled ? 'not-allowed' : 'pointer',
-                color: item.danger ? T.red : T.t1,
-                fontFamily: 'inherit',
-                borderRadius: 5,
-                opacity: item.disabled ? 0.5 : 1,
-              }}
+              style={actionButtonStyle(item)}
               onMouseEnter={(e) => {
                 if (!item.disabled) e.currentTarget.style.background = '#f8fafc'
               }}
@@ -172,7 +289,7 @@ export function RowActionsMenu({
               {item.stub ? <span style={{ color: T.t4, marginLeft: 6 }}>(soon)</span> : null}
             </button>
           ))}
-        </div>
+        </OverlayMenu>
       )}
       {toast && <ComingSoonToast label={toast} onDone={() => setToast(null)} />}
     </div>
@@ -190,21 +307,16 @@ export function BulkActionsMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function h(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block', zIndex: open ? 50 : undefined }}>
+    <div style={{ position: 'relative', display: 'inline-block', zIndex: open ? MENU_OVERLAY_Z : 2 }}>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
+        aria-expanded={open}
+        aria-haspopup="menu"
         onClick={() => setOpen((o) => !o)}
         style={{
           padding: '7px 12px',
@@ -222,21 +334,12 @@ export function BulkActionsMenu({
         {label} ▾
       </button>
       {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            right: 0,
-            minWidth: 240,
-            maxHeight: 360,
-            overflowY: 'auto',
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 8,
-            boxShadow: '0 10px 28px rgba(0,0,0,0.12)',
-            zIndex: 1000,
-            padding: 6,
-          }}
+        <OverlayMenu
+          anchorRef={triggerRef}
+          align="right"
+          minWidth={240}
+          maxHeight={360}
+          onClose={() => setOpen(false)}
         >
           {groups.map((g) => (
             <div key={g.label} style={{ marginBottom: 6 }}>
@@ -256,6 +359,7 @@ export function BulkActionsMenu({
                 <button
                   key={item.id}
                   type="button"
+                  role="menuitem"
                   disabled={item.disabled}
                   onClick={() => {
                     setOpen(false)
@@ -265,19 +369,7 @@ export function BulkActionsMenu({
                     }
                     item.onClick()
                   }}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '7px 10px',
-                    border: 'none',
-                    background: 'transparent',
-                    fontSize: 12,
-                    cursor: item.disabled ? 'not-allowed' : 'pointer',
-                    color: item.danger ? T.red : T.t1,
-                    fontFamily: 'inherit',
-                    borderRadius: 5,
-                  }}
+                  style={actionButtonStyle(item)}
                 >
                   {item.label}
                   {item.stub ? <span style={{ color: T.t4, marginLeft: 6 }}>(soon)</span> : null}
@@ -285,7 +377,7 @@ export function BulkActionsMenu({
               ))}
             </div>
           ))}
-        </div>
+        </OverlayMenu>
       )}
       {toast && <ComingSoonToast label={toast} onDone={() => setToast(null)} />}
     </div>

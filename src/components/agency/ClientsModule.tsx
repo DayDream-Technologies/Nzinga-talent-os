@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { BulkActionsMenu, RowActionsMenu, stubGroups } from '@/components/agency/RowActionsMenu'
-import { Badge, Btn, Field, ModalShell, Panel, Table, inputStyle } from '@/components/agency/AgencyUI'
+import { Badge, Btn, Field, ModalShell, Panel, SelectAllCheckbox, Table, inputStyle } from '@/components/agency/AgencyUI'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
+import { talentAccountPath } from '@/lib/talent-account'
+import { resolvePipelineTalentId } from '@/lib/resolve-history-talent'
 import { T } from '@/lib/tokens'
 import type { AgencyTalent, ClientLifecycleStatus } from '@/types/agency'
 
@@ -108,7 +110,7 @@ function AddClientModal({
 
 export function ClientsModule() {
   const { talent, createClient, prospects, sendMessage } = useAgencyData()
-  const { setHistory } = useAppData()
+  const { setHistory, talents } = useAppData()
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<ClientLifecycleStatus>('current')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -131,11 +133,28 @@ export function ClientsModule() {
     })
   }
 
+  function toggleAll(checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (checked) rows.forEach((r) => next.add(r.id))
+      else rows.forEach((r) => next.delete(r.id))
+      return next
+    })
+  }
+
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id))
+  const someSelected = rows.some((r) => selected.has(r.id))
+
   function addHistoryNote(t: AgencyTalent, text: string, type: 'note' | 'call') {
     setHistory((prev) => [
       {
         id: `h_${Date.now()}`,
-        talent_id: t.id,
+        talent_id: resolvePipelineTalentId(talents, {
+          id: t.id,
+          email: t.email,
+          accountId: t.accountId,
+        }),
+        account_number: t.accountId || null,
         user_id: null,
         type,
         text: `${type === 'call' ? 'Call' : 'Note'}: ${text}`,
@@ -225,8 +244,32 @@ export function ClientsModule() {
           </button>
         ))}
       </div>
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'auto', padding: '0 4px' }}>
+      <div
+        style={{
+          background: '#fff',
+          border: '1px solid #e5e7eb',
+          borderRadius: 10,
+          overflowX: 'auto',
+          overflowY: 'visible',
+          position: 'relative',
+          zIndex: 1,
+          padding: '0 4px',
+        }}
+      >
         <Table
+          selectAll={
+            <SelectAllCheckbox
+              checked={allSelected}
+              indeterminate={someSelected && !allSelected}
+              disabled={rows.length === 0}
+              onChange={toggleAll}
+            />
+          }
+          onRowClick={(i) => {
+            const t = rows[i]
+            if (t?.accountId) navigate(talentAccountPath(t.accountId))
+          }}
+          rowSelected={rows.map((t) => selected.has(t.id))}
           headers={[
             '',
             'First name',
@@ -248,6 +291,8 @@ export function ClientsModule() {
                 key={`c-${t.id}`}
                 type="checkbox"
                 checked={selected.has(t.id)}
+                aria-label={`Select ${t.name}`}
+                onClick={(e) => e.stopPropagation()}
                 onChange={() => toggle(t.id)}
               />,
               t.firstName || t.name.split(' ')[0] || '—',

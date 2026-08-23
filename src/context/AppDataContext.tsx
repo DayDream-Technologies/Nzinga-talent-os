@@ -97,6 +97,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const saveApp = useCallback(
     (app: Application) => {
       void (async () => {
+        try {
         let saved = app
         try {
           saved = await saveApplication(app)
@@ -195,7 +196,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             }
             const newHist = [hist, ...history]
             setLocalHistory(newHist)
-            await saveHistory(newHist)
+            await saveHistory([hist])
           } else {
             const newTalent = talentFromApp(
               app,
@@ -215,8 +216,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             }
             const newHist = [hist, ...history]
             setLocalHistory(newHist)
-            await saveHistory(newHist)
+            await saveHistory([hist])
           }
+        }
+        } catch (e) {
+          console.warn('[saveApp] failed:', e)
         }
       })()
     },
@@ -294,9 +298,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const setHistoryState = useCallback(
     (updater: React.SetStateAction<HistoryEntry[]>) => {
       const next = typeof updater === 'function' ? updater(history) : updater
+      const prevById = new Map(history.map((h) => [h.id, h]))
+      const changed = next.filter((h) => JSON.stringify(prevById.get(h.id)) !== JSON.stringify(h))
       setLocalHistory(next)
-      void saveHistory(next)
       queryClient.setQueryData(['history'], next)
+      if (changed.length === 0) return
+      void saveHistory(changed).catch((err) => {
+        console.error('[history] persist failed', err)
+      })
     },
     [history, queryClient],
   )

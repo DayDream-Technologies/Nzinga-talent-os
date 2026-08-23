@@ -243,10 +243,27 @@
 
 .ui-table-row {
   transition: background 0.15s ease;
+  position: relative;
+  z-index: 1;
 }
 
-.ui-table-row:hover {
+.ui-table-row.is-clickable {
+  cursor: pointer;
+}
+
+.ui-table-row:hover,
+.ui-table-row:focus-within {
   background: #f8fafc;
+  z-index: 20;
+}
+
+.ui-table-row.is-selected {
+  background: #eff6ff;
+}
+
+.ui-table-row.is-selected:hover,
+.ui-table-row.is-selected:focus-within {
+  background: #dbeafe;
 }
 
 .ui-badge-urgent {
