@@ -106,14 +106,14 @@ export function SystemSettingsPanel() {
         <>
           <div
             style={{
-              background: '#fff',
-              border: '1px solid #e5e7eb',
+              background: T.cardBg,
+              border: `1px solid ${T.cardBorder}`,
               borderRadius: 8,
               marginBottom: 16,
               overflow: 'hidden',
             }}
           >
-            <div style={{ padding: '9px 12px', borderBottom: '2px solid ' + T.blue, background: '#f8f9fb', fontWeight: 700, fontSize: 12 }}>
+            <div style={{ padding: '9px 12px', borderBottom: '2px solid ' + T.blue, background: T.mutedBg, fontWeight: 700, fontSize: 12 }}>
               Company Codes
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -172,13 +172,13 @@ export function SystemSettingsPanel() {
 
           <div
             style={{
-              background: '#fff',
-              border: '1px solid #e5e7eb',
+              background: T.cardBg,
+              border: `1px solid ${T.cardBorder}`,
               borderRadius: 8,
               overflow: 'hidden',
             }}
           >
-            <div style={{ padding: '9px 12px', borderBottom: '2px solid ' + T.purple, background: '#f8f9fb', fontWeight: 700, fontSize: 12 }}>
+            <div style={{ padding: '9px 12px', borderBottom: '2px solid ' + T.purple, background: T.mutedBg, fontWeight: 700, fontSize: 12 }}>
               Application Settings
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

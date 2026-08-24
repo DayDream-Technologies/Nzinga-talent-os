@@ -67,7 +67,7 @@ function SectionHeader({ title }) {
       style={{
         padding: '10px 14px',
         borderBottom: '2px solid ' + T.purple,
-        background: '#f8f9fb',
+        background: T.mutedBg,
         margin: '0 -14px 14px',
       }}
     >
@@ -259,8 +259,8 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
               style={{
                 padding: 12,
                 borderRadius: 8,
-                border: `2px solid ${entryType === v ? T.purple : '#e5e7eb'}`,
-                background: entryType === v ? T.purpleL : '#fff',
+                border: `2px solid ${entryType === v ? T.purple : T.cardBorder}`,
+                background: entryType === v ? T.purpleL : T.cardBg,
                 cursor: 'pointer',
               }}
             >
@@ -297,8 +297,8 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
 
         <div
           style={{
-            background: '#fff',
-            border: '1px solid #e5e7eb',
+            background: T.cardBg,
+            border: `1px solid ${T.cardBorder}`,
             borderRadius: 10,
             overflow: 'hidden',
           }}

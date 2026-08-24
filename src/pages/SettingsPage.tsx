@@ -224,26 +224,50 @@ export function SettingsPage() {
   const unsavedDialog = useUnsavedNavigation(dirty)
 
   const card = {
-    background: 'var(--color-card-bg, #fff)',
-    border: '1px solid #e5e7eb',
+    background: T.cardBg,
+    border: `1px solid ${T.cardBorder}`,
     borderRadius: 10,
     padding: 20,
+  }
+
+  const field = {
+    width: '100%',
+    padding: '8px 10px',
+    borderRadius: 6,
+    border: `1px solid ${T.inputBorder}`,
+    background: T.inputBg,
+    color: T.t1,
+    fontFamily: 'inherit',
+    marginBottom: 10,
+  }
+
+  function chipStyle(active: boolean) {
+    return {
+      padding: '8px 14px' as const,
+      borderRadius: 7,
+      border: `1px solid ${active ? T.blue : T.cardBorder}`,
+      background: active ? T.blueL : T.cardBg,
+      color: active ? T.blue : T.t2,
+      fontWeight: 600,
+      cursor: 'pointer' as const,
+      fontFamily: 'inherit',
+    }
   }
 
   return (
     <PageContent>
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, fontFamily: "'Syne', sans-serif" }}>Settings</h1>
-      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Profile, security, display, and integrations.</p>
+      <p style={{ fontSize: 13, color: T.t3, marginBottom: 24 }}>Profile, security, display, and integrations.</p>
 
       {message && (
         <div style={{
-          background: messageType === 'success' ? '#f0fdf4' : '#fef2f2',
-          border: `1px solid ${messageType === 'success' ? '#86efac' : '#fca5a5'}`,
+          background: messageType === 'success' ? T.greenL : T.redL,
+          border: `1px solid ${messageType === 'success' ? T.green : T.red}44`,
           borderRadius: 8,
           padding: '10px 14px',
           marginBottom: 16,
           fontSize: 13,
-          color: messageType === 'success' ? '#15803d' : '#dc2626',
+          color: messageType === 'success' ? T.green : T.red,
         }}>
           {message}
         </div>
@@ -259,9 +283,9 @@ export function SettingsPage() {
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 12 }}>Profile</div>
         <label style={{ display: 'block', fontSize: 11, color: T.t3, marginBottom: 4 }}>Display name</label>
-        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', marginBottom: 10, fontFamily: 'inherit' }} />
+        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} style={field} />
         <label style={{ display: 'block', fontSize: 11, color: T.t3, marginBottom: 4 }}>Title</label>
-        <input value={displayTitle} onChange={(e) => setDisplayTitle(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', marginBottom: 10, fontFamily: 'inherit' }} />
+        <input value={displayTitle} onChange={(e) => setDisplayTitle(e.target.value)} style={field} />
         <div style={{ fontSize: 12, color: T.t3 }}>Email: <strong style={{ color: T.t1 }}>{user?.email}</strong></div>
         <button
           type="button"
@@ -323,17 +347,7 @@ export function SettingsPage() {
               key={t}
               type="button"
               onClick={() => setTheme(t)}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 7,
-                border: `1px solid ${theme === t ? T.blue : '#e5e7eb'}`,
-                background: theme === t ? '#eff6ff' : '#fff',
-                color: theme === t ? T.blue : T.t2,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                textTransform: 'capitalize',
-              }}
+              style={{ ...chipStyle(theme === t), textTransform: 'capitalize' }}
             >
               {t}
             </button>
@@ -344,32 +358,14 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={() => setSidebarVisible(true)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 7,
-              border: `1px solid ${sidebarVisible ? T.blue : '#e5e7eb'}`,
-              background: sidebarVisible ? '#eff6ff' : '#fff',
-              color: sidebarVisible ? T.blue : T.t2,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
+            style={chipStyle(sidebarVisible)}
           >
             Show sidebar
           </button>
           <button
             type="button"
             onClick={() => setSidebarVisible(false)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 7,
-              border: `1px solid ${!sidebarVisible ? T.blue : '#e5e7eb'}`,
-              background: !sidebarVisible ? '#eff6ff' : '#fff',
-              color: !sidebarVisible ? T.blue : T.t2,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
+            style={chipStyle(!sidebarVisible)}
           >
             Hide sidebar
           </button>
@@ -391,7 +387,7 @@ export function SettingsPage() {
           <div style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 11, color: T.t3, marginBottom: 6 }}>Authenticator setup</div>
             <div style={{ fontSize: 11, wordBreak: 'break-all', color: T.t2, marginBottom: 8 }}>{mfaQr}</div>
-            <input value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="6-digit code" style={{ padding: '8px 10px', borderRadius: 6, border: '1px solid #d1d5db', marginRight: 8, fontFamily: 'inherit' }} />
+            <input value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} placeholder="6-digit code" style={{ ...field, width: 'auto', marginRight: 8, marginBottom: 0 }} />
             <button type="button" onClick={() => void verifyMfa()} style={{ background: T.green, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Verify</button>
           </div>
         )}
@@ -404,18 +400,18 @@ export function SettingsPage() {
             RC
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#111' }}>RingCentral</div>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Click-to-call, SMS, and call recording</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: T.t1 }}>RingCentral</div>
+            <div style={{ fontSize: 12, color: T.t3 }}>Click-to-call, SMS, and call recording</div>
           </div>
           <div style={{ marginLeft: 'auto' }}>
             {loading ? (
-              <span style={{ fontSize: 12, color: '#9ca3af' }}>Loading…</span>
+              <span style={{ fontSize: 12, color: T.t4 }}>Loading…</span>
             ) : rcStatus.connected ? (
-              <span style={{ background: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ background: T.greenL, color: T.green, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
                 ✓ Connected
               </span>
             ) : (
-              <span style={{ background: '#fef3c7', color: '#b45309', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ background: T.amberL, color: T.amber, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
                 Not Connected
               </span>
             )}
@@ -423,21 +419,21 @@ export function SettingsPage() {
         </div>
 
         {!loading && !rcStatus.connected && (
-          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 12, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 11, color: T.t3, marginBottom: 12, lineHeight: 1.5 }}>
             Connect your RingCentral extension to enable click-to-call and SMS from talent records.
           </div>
         )}
 
         {!loading && rcStatus.connected && (
-          <div style={{ background: '#f9fafb', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+          <div style={{ background: T.mutedBg, borderRadius: 8, padding: 12, marginBottom: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
               <div>
-                <span style={{ color: '#6b7280' }}>Phone Number: </span>
-                <span style={{ fontWeight: 600, color: '#111' }}>{rcStatus.phone_number || '—'}</span>
+                <span style={{ color: T.t3 }}>Phone Number: </span>
+                <span style={{ fontWeight: 600, color: T.t1 }}>{rcStatus.phone_number || '—'}</span>
               </div>
               <div>
-                <span style={{ color: '#6b7280' }}>Extension: </span>
-                <span style={{ fontWeight: 600, color: '#111' }}>{rcStatus.extension_id || '—'}</span>
+                <span style={{ color: T.t3 }}>Extension: </span>
+                <span style={{ fontWeight: 600, color: T.t1 }}>{rcStatus.extension_id || '—'}</span>
               </div>
             </div>
           </div>
@@ -456,7 +452,7 @@ export function SettingsPage() {
             <button
               onClick={() => setConfirmDisconnect(true)}
               disabled={actionLoading}
-              style={{ background: '#fff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ background: T.cardBg, color: T.red, border: `1px solid ${T.red}`, borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               {actionLoading ? '…' : 'Disconnect'}
             </button>

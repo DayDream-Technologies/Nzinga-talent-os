@@ -16,7 +16,7 @@ const variants: Record<Variant, string> = {
   danger: 'bg-brand-red text-white border-transparent shadow-sm',
   warning: 'bg-brand-amber text-white border-transparent shadow-sm',
   purple: 'bg-brand-purple text-white border-transparent shadow-sm',
-  ghost: 'bg-white text-t2 border border-input-border shadow-sm',
+  ghost: 'bg-card-bg text-t2 border border-input-border shadow-sm',
   orange: 'bg-brand-orange text-white border-transparent shadow-sm',
   link: 'bg-transparent text-brand-blue border-transparent shadow-none',
 }

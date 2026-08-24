@@ -6,6 +6,10 @@
   --color-card-border: #e2e5ea;
   --color-input-bg: #f7f8fa;
   --color-input-border: #d1d5db;
+  --color-muted-bg: #f8f9fb;
+  --color-elevated-bg: #ffffff;
+  --color-row-hover: #f8fafc;
+  --color-row-selected: #eff6ff;
   --color-nav-bg: #1a2332;
   --color-nav-border: #243044;
   --color-nav-text: #94a3b8;
@@ -16,14 +20,49 @@
   --color-t4: #9ca3af;
   --color-t5: #d1d5db;
   --color-brand-purple: #7c3aed;
+  --color-brand-purple-light: #ede9fe;
   --color-brand-blue: #2563eb;
+  --color-brand-blue-light: #dbeafe;
   --color-brand-green: #16a34a;
+  --color-brand-green-light: #dcfce7;
   --color-brand-amber: #d97706;
+  --color-brand-amber-light: #fef3c7;
   --color-brand-red: #dc2626;
+  --color-brand-red-light: #fee2e2;
   --color-brand-cyan: #0891b2;
+  --color-brand-cyan-light: #cffafe;
   --color-brand-orange: #ea580c;
+  --color-brand-orange-light: #ffedd5;
+  --color-scrollbar: #d1d5db;
+  --color-scrollbar-hover: #9ca3af;
   --font-sans: 'Outfit', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-display: 'Syne', 'Outfit', sans-serif;
+}
+
+[data-theme='dark'] {
+  --color-page-bg: #0f172a;
+  --color-card-bg: #1e293b;
+  --color-card-border: #334155;
+  --color-input-bg: #0f172a;
+  --color-input-border: #475569;
+  --color-muted-bg: #162033;
+  --color-elevated-bg: #243044;
+  --color-row-hover: #243044;
+  --color-row-selected: #1e3a5f;
+  --color-t1: #f8fafc;
+  --color-t2: #e2e8f0;
+  --color-t3: #94a3b8;
+  --color-t4: #64748b;
+  --color-t5: #475569;
+  --color-brand-purple-light: #3b0764;
+  --color-brand-blue-light: #1e3a5f;
+  --color-brand-green-light: #052e16;
+  --color-brand-amber-light: #451a03;
+  --color-brand-red-light: #450a0a;
+  --color-brand-cyan-light: #083344;
+  --color-brand-orange-light: #431407;
+  --color-scrollbar: #475569;
+  --color-scrollbar-hover: #64748b;
 }
 
 *,
@@ -40,11 +79,20 @@ body,
   height: 100%;
 }
 
+html {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-page-bg);
+  color: var(--color-t1);
 }
 
 h1,
@@ -62,9 +110,9 @@ h3,
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--color-scrollbar);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: var(--color-scrollbar-hover);
 }

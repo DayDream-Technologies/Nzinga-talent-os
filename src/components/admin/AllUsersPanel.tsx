@@ -96,7 +96,7 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
           style={{
             width: '100%',
             borderCollapse: 'collapse',
-            background: '#fff',
+            background: T.cardBg,
             borderRadius: 8,
             overflow: 'hidden',
             boxShadow: '0 1px 4px rgba(0,0,0,0.05)',

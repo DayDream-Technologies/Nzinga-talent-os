@@ -58,7 +58,8 @@ export function ConfirmDialog({
         style={{
           width: '100%',
           maxWidth: 400,
-          background: '#fff',
+          background: T.elevatedBg,
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 12,
           padding: '22px 20px',
           boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
@@ -76,8 +77,8 @@ export function ConfirmDialog({
             style={{
               padding: '8px 14px',
               borderRadius: 7,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
+              border: `1px solid ${T.cardBorder}`,
+              background: T.cardBg,
               fontSize: 13,
               cursor: 'pointer',
               fontFamily: 'inherit',

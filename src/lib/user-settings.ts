@@ -35,20 +35,8 @@ export function applyTheme(theme: ThemePreference): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
   root.setAttribute('data-theme', theme)
+  root.style.colorScheme = theme
   writeStorage(STORAGE_THEME, theme)
-  if (theme === 'dark') {
-    root.style.setProperty('--color-page-bg', '#0f172a')
-    root.style.setProperty('--color-card-bg', '#1e293b')
-    root.style.setProperty('--color-t1', '#f8fafc')
-    root.style.setProperty('--color-t2', '#e2e8f0')
-    root.style.setProperty('--color-t3', '#94a3b8')
-  } else {
-    root.style.removeProperty('--color-page-bg')
-    root.style.removeProperty('--color-card-bg')
-    root.style.removeProperty('--color-t1')
-    root.style.removeProperty('--color-t2')
-    root.style.removeProperty('--color-t3')
-  }
 }
 
 export function applyUserUiSettings(settings: UserUiSettings): void {

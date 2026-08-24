@@ -119,8 +119,8 @@ export function AuditLogPanel() {
       ) : entries.length === 0 ? (
         <div
           style={{
-            background: '#fff',
-            border: '1px solid #e5e7eb',
+            background: T.cardBg,
+            border: `1px solid ${T.cardBorder}`,
             borderRadius: 8,
             padding: 28,
             textAlign: 'center',
@@ -136,7 +136,7 @@ export function AuditLogPanel() {
             style={{
               width: '100%',
               borderCollapse: 'collapse',
-              background: '#fff',
+              background: T.cardBg,
               borderRadius: 8,
               overflow: 'hidden',
             }}

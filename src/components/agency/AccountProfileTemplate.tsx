@@ -96,7 +96,7 @@ function FieldRow({ label, value }: { label: string; value?: ReactNode }) {
         justifyContent: 'space-between',
         gap: 12,
         padding: '6px 0',
-        borderBottom: '1px solid #f3f4f6',
+        borderBottom: `1px solid ${T.cardBorder}`,
         fontSize: 13,
       }}
     >
@@ -415,7 +415,7 @@ export function AccountProfileTemplate({
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', borderBottom: `1px solid ${T.cardBorder}` }}>
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -488,7 +488,7 @@ export function AccountProfileTemplate({
             <div style={{ color: T.t3, fontSize: 13 }}>No notes yet.</div>
           ) : (
             relatedHistory.slice(0, 12).map((entry) => (
-              <div key={entry.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+              <div key={entry.id} style={{ padding: '8px 0', borderBottom: `1px solid ${T.cardBorder}`, fontSize: 13 }}>
                 <div style={{ color: T.t3, fontSize: 11 }}>{new Date(entry.ts).toLocaleString()} · {entry.type}</div>
                 <div>{entry.text}</div>
               </div>
@@ -630,7 +630,7 @@ export function AccountProfileTemplate({
         <ModalShell title="Documents" onClose={() => setModal(null)} width={640}>
           {docs.length === 0 && <div style={{ color: T.t3, fontSize: 13 }}>No documents on file.</div>}
           {docs.map((doc) => (
-            <div key={doc.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
+            <div key={doc.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${T.cardBorder}` }}>
               <span>{doc.name}</span>
               <Btn variant="ghost" onClick={() => setViewDoc(doc)}>View</Btn>
             </div>

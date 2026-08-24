@@ -115,8 +115,8 @@ export function TrainingPanel({ role }: TrainingPanelProps) {
 
       <div
         style={{
-          background: '#fff',
-          border: '1px solid #e5e7eb',
+          background: T.cardBg,
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 10,
           padding: '18px 22px',
         }}

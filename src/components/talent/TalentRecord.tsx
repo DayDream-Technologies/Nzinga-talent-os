@@ -270,7 +270,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
       <div style={{ width: 980, maxWidth: "96vw", background: T.pageBg, borderRadius: 12, overflow: "hidden", flexShrink: 0, boxShadow: "0 12px 48px rgba(0,0,0,0.18)", marginBottom: 24 }}>
         {/* Sticky header */}
-        <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px", position: "sticky", top: 0, zIndex: 2 }}>
+        <div style={{ background: T.cardBg, borderBottom: `1px solid ${T.cardBorder}`, padding: "12px 16px", position: "sticky", top: 0, zIndex: 2 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ position: "relative" }}>
@@ -297,7 +297,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                   )}
                   {local.account_number && (
                     <TalentLink accountId={local.account_number} name={local.name}>
-                      <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "ui-monospace,monospace", padding: "2px 8px", borderRadius: 6, background: "#eff6ff", color: T.blue }}>{local.account_number}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "ui-monospace,monospace", padding: "2px 8px", borderRadius: 6, background: T.blueL, color: T.blue }}>{local.account_number}</span>
                     </TalentLink>
                   )}
                   <StageBadge stage={local.stage} />
@@ -319,7 +319,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
               )}
               {canEdit && <Btn variant="primary" sm onClick={saveProfile}>{dirty ? "Save changes" : "Saved"}</Btn>}
               {role === "scout" && !scoutReadOnly && <Btn variant="orange" sm onClick={() => setShowSendApp(true)}>Send App</Btn>}
-              <button onClick={onClose} style={{ background: "transparent", border: "1px solid #e5e7eb", borderRadius: 6, color: T.t3, cursor: "pointer", padding: "5px 10px", fontSize: 12, fontFamily: "inherit" }}>✕</button>
+              <button onClick={onClose} style={{ background: "transparent", border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.t3, cursor: "pointer", padding: "5px 10px", fontSize: 12, fontFamily: "inherit" }}>✕</button>
             </div>
           </div>
         </div>
@@ -333,7 +333,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           <div style={{ background: T.redL, borderBottom: `1px solid ${T.red}44`, padding: "8px 16px", color: T.red, fontSize: 12 }}>⚠ {err}</div>
         )}
         {openFollowUps.length > 0 && (
-          <div style={{ background: "#fffbeb", borderBottom: "1px solid #fde68a", padding: "8px 16px", fontSize: 12, color: "#92400e" }}>
+          <div style={{ background: T.amberL, borderBottom: `1px solid ${T.amber}55`, padding: "8px 16px", fontSize: 12, color: T.amber }}>
             {openFollowUps.length} open follow-up{openFollowUps.length > 1 ? "s" : ""} logged
           </div>
         )}
@@ -496,7 +496,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                   </div>
                 </div>
                 {PILLAR_NAMES.map((name, i) => (
-                  <div key={i} style={{ marginBottom: 10, padding: 10, background: "#fafbfc", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                  <div key={i} style={{ marginBottom: 10, padding: 10, background: T.mutedBg, borderRadius: 8, border: `1px solid ${T.cardBorder}` }}>
                     <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Pillar {i + 1}: {name}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                       <div style={{ flex: 1 }}><ScoreBar score={local.pillar_scores[i]} /></div>
@@ -508,8 +508,8 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                             style={{
                               width: 28, height: 28, borderRadius: 5, cursor: "pointer", fontSize: 12, fontWeight: 700,
                               display: "flex", alignItems: "center", justifyContent: "center",
-                              background: local.pillar_scores[i] >= n ? (n >= 3 ? T.greenL : T.redL) : "#f3f4f6",
-                              border: `1px solid ${local.pillar_scores[i] >= n ? (n >= 3 ? T.green : T.red) : "#e5e7eb"}`,
+                              background: local.pillar_scores[i] >= n ? (n >= 3 ? T.greenL : T.redL) : T.mutedBg,
+                              border: `1px solid ${local.pillar_scores[i] >= n ? (n >= 3 ? T.green : T.red) : T.cardBorder}`,
                               color: local.pillar_scores[i] >= n ? (n >= 3 ? T.green : T.red) : T.t4,
                             }}
                           >
@@ -562,7 +562,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.t2 }}>
                 <input type="checkbox" checked={followUpNeeded} onChange={(e) => setFollowUpNeeded(e.target.checked)} /> Follow-up needed
               </label>
-              {followUpNeeded && <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: 12 }} />}
+              {followUpNeeded && <input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${T.cardBorder}`, fontSize: 12 }} />}
               <Btn sm variant="primary" onClick={postNote}>Post note</Btn>
             </div>
             <ComposeEmail
@@ -575,13 +575,13 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
             />
             <div style={{ display: "flex", gap: 4, margin: "10px 0 8px", flexWrap: "wrap" }}>
               {[["all", "All"], ["note", "Notes"], ["call", "Calls"], ["email", "Email"], ["document", "Docs"]].map(([val, label]) => (
-                <button key={val} onClick={() => setHistoryFilter(val)} style={{ padding: "3px 10px", borderRadius: 12, border: `1px solid ${historyFilter === val ? T.blue + "88" : "#e5e7eb"}`, background: historyFilter === val ? T.blueL : "#fff", color: historyFilter === val ? T.blue : T.t3, fontSize: 11, fontWeight: historyFilter === val ? 600 : 400, cursor: "pointer", fontFamily: "inherit" }}>{label}</button>
+                <button key={val} onClick={() => setHistoryFilter(val)} style={{ padding: "3px 10px", borderRadius: 12, border: `1px solid ${historyFilter === val ? T.blue + "88" : T.cardBorder}`, background: historyFilter === val ? T.blueL : T.cardBg, color: historyFilter === val ? T.blue : T.t3, fontSize: 11, fontWeight: historyFilter === val ? 600 : 400, cursor: "pointer", fontFamily: "inherit" }}>{label}</button>
               ))}
               <label style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: T.t3 }}>
                 <input type="checkbox" checked={showDocOnly} onChange={(e) => setShowDocOnly(e.target.checked)} /> Docs only
               </label>
             </div>
-            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
+            <div style={{ background: T.cardBg, border: `1px solid ${T.cardBorder}`, borderRadius: 8, overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
               {(historyFilter === "all" ? filtHistory : filtHistory.filter((h) => h.type === historyFilter)).length === 0 ? (
                 <div style={{ padding: 14, color: T.t4, fontSize: 12, textAlign: "center" }}>No history yet.</div>
               ) : (
@@ -594,7 +594,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                       <div>
                         <div style={{ fontSize: 12, color: T.t1 }}>{h.text}</div>
                         <div style={{ fontSize: 10, color: T.t4 }}>{u?.name || h.staff_name || "System"}</div>
-                        {h.follow_up_needed && <span style={{ fontSize: 10, color: "#b45309", background: "#fffbeb", padding: "0 5px", borderRadius: 4 }}>Follow-up{h.follow_up_date ? `: ${h.follow_up_date}` : ""}</span>}
+                        {h.follow_up_needed && <span style={{ fontSize: 10, color: T.amber, background: T.amberL, padding: "0 5px", borderRadius: 4 }}>Follow-up{h.follow_up_date ? `: ${h.follow_up_date}` : ""}</span>}
                         {h.is_document && h.doc_data && (
                           <button onClick={() => setViewingDoc({ name: h.doc_name || "Document", data: h.doc_data, type: h.doc_type || "image/jpeg" })} style={{ marginLeft: 6, background: T.green, color: "#fff", border: "none", borderRadius: 4, padding: "2px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>View</button>
                         )}
@@ -637,7 +637,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           {/* Role actions — inline, no tabs */}
           {role === "scout" && (local.stage === "holding_entry" || local.stage === "scout_complete") && !scoutReadOnly && (
             <Section title="Scout actions" accent={T.orange}>
-              <div style={{ fontSize: 11, color: "#9a3412", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 6, padding: "8px 10px", marginBottom: 10, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 11, color: T.amber, background: T.amberL, border: `1px solid ${T.amber}55`, borderRadius: 6, padding: "8px 10px", marginBottom: 10, lineHeight: 1.45 }}>
                 SOP: Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
               </div>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>

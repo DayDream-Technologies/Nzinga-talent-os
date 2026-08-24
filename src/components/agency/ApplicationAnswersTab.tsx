@@ -75,7 +75,7 @@ function FieldAnswer({
           <span
             key={part}
             style={{
-              background: '#eff6ff',
+              background: T.blueL,
               color: T.blue,
               borderRadius: 999,
               padding: '1px 8px',
@@ -137,7 +137,7 @@ export function ApplicationAnswersTab({ application }: { application: Applicatio
                   justifyContent: 'space-between',
                   gap: 16,
                   padding: '7px 0',
-                  borderBottom: '1px solid #f3f4f6',
+                  borderBottom: `1px solid ${T.cardBorder}`,
                   fontSize: 13,
                 }}
               >

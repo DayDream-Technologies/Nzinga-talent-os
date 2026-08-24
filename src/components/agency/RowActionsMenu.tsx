@@ -27,8 +27,8 @@ const dotStyle = {
 } as const
 
 const overlayPanelStyle: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e5e7eb',
+  background: T.elevatedBg,
+  border: `1px solid ${T.cardBorder}`,
   borderRadius: 8,
   boxShadow: '0 12px 32px rgba(15, 23, 42, 0.18)',
 }
@@ -226,8 +226,8 @@ export function RowActionsMenu({
           padding: 0,
           boxSizing: 'border-box',
           flexShrink: 0,
-          background: open ? '#eff6ff' : '#fff',
-          border: `1px solid ${open ? T.blue : '#d1d5db'}`,
+          background: open ? T.blueL : T.cardBg,
+          border: `1px solid ${open ? T.blue : T.inputBorder}`,
           borderRadius: 8,
           cursor: 'pointer',
           color: open ? T.blue : T.t2,
@@ -235,10 +235,10 @@ export function RowActionsMenu({
           lineHeight: 0,
         }}
         onMouseEnter={(e) => {
-          if (!open) e.currentTarget.style.background = '#f3f4f6'
+          if (!open) e.currentTarget.style.background = T.mutedBg
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = open ? '#eff6ff' : '#fff'
+          e.currentTarget.style.background = open ? T.blueL : T.cardBg
         }}
       >
         <span
@@ -279,7 +279,7 @@ export function RowActionsMenu({
               }}
               style={actionButtonStyle(item)}
               onMouseEnter={(e) => {
-                if (!item.disabled) e.currentTarget.style.background = '#f8fafc'
+                if (!item.disabled) e.currentTarget.style.background = T.rowHover
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent'
@@ -321,8 +321,8 @@ export function BulkActionsMenu({
         style={{
           padding: '7px 12px',
           borderRadius: 7,
-          border: '1px solid #e5e7eb',
-          background: '#fff',
+          border: `1px solid ${T.cardBorder}`,
+          background: T.cardBg,
           fontSize: 12,
           fontWeight: 600,
           cursor: disabled ? 'not-allowed' : 'pointer',

@@ -52,14 +52,14 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
       aria-modal="true"
       aria-label={doc.name}
     >
-      <div className="flex max-h-[88vh] max-w-[780px] flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 bg-[#fafbfc] px-4 py-2.5">
+      <div className="flex max-h-[88vh] max-w-[780px] flex-col overflow-hidden rounded-lg bg-elevated-bg shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-card-border bg-muted-bg px-4 py-2.5">
           <span className="truncate text-sm font-bold text-t1">{doc.name}</span>
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => downloadUploadedDoc({ ...doc, data: src || doc.data })}
-              className="cursor-pointer rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-t2"
+              className="cursor-pointer rounded-md border border-card-border bg-card-bg px-2.5 py-1 text-xs font-semibold text-t2"
             >
               Download
             </button>
@@ -84,7 +84,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
             />
           ) : isText ? (
             <pre
-              className="whitespace-pre-wrap rounded-md border border-gray-100 bg-[#fafbfc] p-4 font-serif text-xs leading-relaxed text-t1"
+              className="whitespace-pre-wrap rounded-md border border-card-border bg-muted-bg p-4 font-serif text-xs leading-relaxed text-t1"
               style={{ fontFamily: "'Syne', sans-serif" }}
             >
               {textBody}

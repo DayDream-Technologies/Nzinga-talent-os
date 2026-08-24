@@ -69,7 +69,7 @@ export function InviteUserModal({ onClose, onSuccess }: InviteUserModalProps) {
       >
         <div
           style={{
-            background: '#fff',
+            background: T.cardBg,
             borderRadius: 12,
             padding: '28px 32px',
             width: 420,
@@ -216,7 +216,7 @@ export function InviteUserModal({ onClose, onSuccess }: InviteUserModalProps) {
                   padding: '8px 16px',
                   borderRadius: 6,
                   border: `1px solid ${T.inputBorder}`,
-                  background: '#fff',
+                  background: T.cardBg,
                   fontSize: 13,
                   color: T.t2,
                   cursor: 'pointer',

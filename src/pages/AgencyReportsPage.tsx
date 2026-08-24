@@ -30,7 +30,7 @@ export function AgencyReportsPage() {
         flex: 1,
         overflowY: 'auto',
         minHeight: '100%',
-        background: '#e8eef5',
+        background: T.pageBg,
         backgroundImage:
           'radial-gradient(circle at 15% 85%, rgba(59,130,246,0.06) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(0,45,86,0.04) 0%, transparent 40%)',
       }}
@@ -45,7 +45,7 @@ export function AgencyReportsPage() {
       {groups.length === 0 ? (
         <div
           style={{
-            background: '#fff',
+            background: T.cardBg,
             border: '1px solid #dce4ed',
             borderRadius: 10,
             padding: 28,
@@ -68,7 +68,7 @@ export function AgencyReportsPage() {
             <div
               key={group.label}
               style={{
-                background: '#fff',
+                background: T.cardBg,
                 border: '1px solid #dce4ed',
                 borderRadius: 10,
                 boxShadow: '0 2px 10px rgba(0,45,86,0.07)',

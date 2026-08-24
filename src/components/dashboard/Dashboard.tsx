@@ -5,13 +5,13 @@ import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FText
 import { TalentLink } from "@/components/talent/TalentLink";
 
 const DASH = {
-  pageBg: '#e8eef5',
+  pageBg: T.pageBg,
   pagePattern: 'radial-gradient(circle at 15% 85%, rgba(59,130,246,0.06) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(0,45,86,0.04) 0%, transparent 40%)',
-  card: { bg: '#ffffff', border: '#dce4ed', radius: 10, shadow: '0 2px 10px rgba(0,45,86,0.07)' },
-  header: { bg: '#ffffff', border: '#e5e7eb' },
-  text: { primary: '#111827', secondary: '#6b7280', muted: '#9ca3af' },
-  blue: { link: '#2563eb', accent: '#2563eb', light: '#dbeafe', dark: '#002d56', mid: '#3b82f6' },
-  iconBgs: ['#dbeafe', '#bfdbfe', '#93c5fd', '#3b82f6'],
+  card: { bg: T.cardBg, border: T.cardBorder, radius: 10, shadow: '0 2px 10px rgba(15,23,42,0.08)' },
+  header: { bg: T.cardBg, border: T.cardBorder },
+  text: { primary: T.t1, secondary: T.t3, muted: T.t4 },
+  blue: { link: T.blue, accent: T.blue, light: T.blueL, dark: '#002d56', mid: '#3b82f6' },
+  iconBgs: [T.blueL, T.blueL, T.blueL, T.blue],
 };
 
 function dashPageStyle(padding) {

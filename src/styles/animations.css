@@ -229,6 +229,10 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.07);
 }
 
+[data-theme='dark'] .ui-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
 .ui-btn {
   transition: transform 0.12s ease, filter 0.15s ease, background 0.15s ease, opacity 0.15s ease;
 }
@@ -253,17 +257,17 @@
 
 .ui-table-row:hover,
 .ui-table-row:focus-within {
-  background: #f8fafc;
+  background: var(--color-row-hover);
   z-index: 20;
 }
 
 .ui-table-row.is-selected {
-  background: #eff6ff;
+  background: var(--color-row-selected);
 }
 
 .ui-table-row.is-selected:hover,
 .ui-table-row.is-selected:focus-within {
-  background: #dbeafe;
+  background: var(--color-brand-blue-light);
 }
 
 .ui-badge-urgent {

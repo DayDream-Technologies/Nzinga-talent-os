@@ -1,12 +1,14 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import type { User } from '@/types'
 import {
+  applyTheme,
   cacheKeyForUserSettings,
   hydrateUserSettings,
   initialsFromName,
   normalizeUserUiSettings,
   writeCachedUserSettings,
 } from '@/lib/user-settings'
+import { STORAGE_THEME } from '@/lib/session-storage'
 
 const baseUser: User = {
   id: 'u1',
@@ -75,5 +77,30 @@ describe('hydrateUserSettings', () => {
     expect(hydrated.title).toBe('Scout Lead')
     expect(hydrated.settings).toEqual({ theme: 'dark', sidebar_visible: false })
     expect(localStorage.getItem(cacheKeyForUserSettings('u1'))).toBeTruthy()
+  })
+})
+
+describe('applyTheme', () => {
+  beforeEach(() => {
+    document.documentElement.removeAttribute('data-theme')
+    document.documentElement.style.colorScheme = ''
+    localStorage.clear()
+  })
+
+  it('sets data-theme and color-scheme for dark without inlining palette vars', () => {
+    applyTheme('dark')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(localStorage.getItem(STORAGE_THEME)).toBe('dark')
+    expect(document.documentElement.style.getPropertyValue('--color-page-bg')).toBe('')
+    expect(document.documentElement.style.getPropertyValue('--color-t1')).toBe('')
+  })
+
+  it('sets data-theme light', () => {
+    applyTheme('dark')
+    applyTheme('light')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    expect(document.documentElement.style.colorScheme).toBe('light')
+    expect(localStorage.getItem(STORAGE_THEME)).toBe('light')
   })
 })

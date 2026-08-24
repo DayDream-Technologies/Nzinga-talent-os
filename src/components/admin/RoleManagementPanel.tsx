@@ -73,8 +73,8 @@ export function RoleManagementPanel() {
 
       <div
         style={{
-          background: '#fff',
-          border: '1px solid #e5e7eb',
+          background: T.cardBg,
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 8,
           padding: 14,
           marginBottom: 16,
@@ -112,7 +112,7 @@ export function RoleManagementPanel() {
           style={{
             width: '100%',
             borderCollapse: 'collapse',
-            background: '#fff',
+            background: T.cardBg,
             borderRadius: 8,
             overflow: 'hidden',
           }}

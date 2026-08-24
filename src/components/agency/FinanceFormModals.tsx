@@ -12,6 +12,7 @@ import type {
 } from '@/types/agency'
 import { Btn, Field, ModalShell, inputStyle } from './AgencyUI'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { T } from '@/lib/tokens'
 
 function Footer({
   isEdit,
@@ -234,8 +235,8 @@ export function InvoiceFormModal({
       </div>
       <div
         style={{
-          background: '#f8fafc',
-          border: '1px solid #e5e7eb',
+          background: T.mutedBg,
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 8,
           padding: '10px 12px',
           marginBottom: 12,
@@ -245,18 +246,18 @@ export function InvoiceFormModal({
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ color: '#6b7280' }}>Tax amount</span>
+          <span style={{ color: T.t3 }}>Tax amount</span>
           <strong>${taxAmount.toLocaleString()}</strong>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ color: '#6b7280' }}>Interest applied</span>
+          <span style={{ color: T.t3 }}>Interest applied</span>
           <span>${(Number(interestApplied) || 0).toLocaleString()}</span>
         </div>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            borderTop: '1px solid #e5e7eb',
+            borderTop: `1px solid ${T.cardBorder}`,
             paddingTop: 6,
             marginTop: 2,
           }}
@@ -301,14 +302,14 @@ export function InvoiceFormModal({
         />
       </Field>
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 6 }}>
           Supporting document
         </div>
         <label
           style={{
             display: 'block',
             border: `2px dashed ${document ? '#16a34a' : '#d1d5db'}`,
-            background: document ? '#dcfce7' : '#fafbfc',
+            background: document ? T.greenL : T.mutedBg,
             borderRadius: 8,
             padding: '12px 14px',
             cursor: 'pointer',
@@ -350,7 +351,7 @@ export function InvoiceFormModal({
           ) : (
             <>
               <div style={{ fontSize: 18, marginBottom: 4 }}>📎</div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: T.t2 }}>
                 Upload invoice PDF or supporting docs
               </div>
               <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>PDF, image, or Word</div>
@@ -663,7 +664,7 @@ export function ExpenseFormModal({
           />
         </Field>
       </div>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: T.t3, marginBottom: 12 }}>
         Agency: ${agencyCommission.toLocaleString()} · Talent share: ${talentShare.toLocaleString()}
       </div>
       <Field label="Status">

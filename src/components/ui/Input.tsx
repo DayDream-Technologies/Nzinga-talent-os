@@ -25,7 +25,7 @@ export function Input({ className, error, readOnly, ...props }: InputProps) {
       readOnly={readOnly}
       className={cn(
         'box-border w-full rounded border px-2 py-1.5 text-xs text-t1 outline-none font-sans',
-        readOnly ? 'bg-gray-50' : error ? 'border-brand-red bg-red-50' : 'border-input-border bg-input-bg',
+        readOnly ? 'bg-muted-bg' : error ? 'border-brand-red bg-brand-red-light' : 'border-input-border bg-input-bg',
         className,
       )}
       {...props}
@@ -43,7 +43,7 @@ export function Textarea({ className, error, readOnly, ...props }: TextareaProps
       readOnly={readOnly}
       className={cn(
         'box-border w-full resize-y rounded border px-2 py-1.5 text-xs text-t1 outline-none font-sans',
-        readOnly ? 'bg-gray-50' : error ? 'border-brand-red bg-red-50' : 'border-input-border bg-input-bg',
+        readOnly ? 'bg-muted-bg' : error ? 'border-brand-red bg-brand-red-light' : 'border-input-border bg-input-bg',
         className,
       )}
       {...props}

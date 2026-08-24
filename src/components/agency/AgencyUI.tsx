@@ -96,8 +96,8 @@ export function Card({
     <div
       className={`${hover ? 'ui-card' : ''} ${className}`.trim()}
       style={{
-        background: '#fff',
-        border: '1px solid #e5e7eb',
+        background: T.cardBg,
+        border: `1px solid ${T.cardBorder}`,
         borderRadius: 10,
         padding: 16,
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
@@ -127,7 +127,7 @@ export function Btn({
 }) {
   const styles: Record<string, CSSProperties> = {
     primary: { background: T.blue, color: '#fff', border: 'none' },
-    secondary: { background: '#f3f4f6', color: T.t1, border: '1px solid #e5e7eb' },
+    secondary: { background: T.mutedBg, color: T.t1, border: `1px solid ${T.cardBorder}` },
     success: { background: T.green, color: '#fff', border: 'none' },
     danger: { background: T.red, color: '#fff', border: 'none' },
     info: { background: T.purple, color: '#fff', border: 'none' },
@@ -228,7 +228,7 @@ export function Table({
                     textAlign: isLast && isCompactCol ? 'right' : 'left',
                     padding: '8px 10px',
                     paddingRight: isLast ? 14 : 10,
-                    borderBottom: '1px solid #e5e7eb',
+                    borderBottom: `1px solid ${T.cardBorder}`,
                     color: active ? T.blue : T.t3,
                     fontWeight: 600,
                     whiteSpace: 'nowrap',
@@ -238,7 +238,7 @@ export function Table({
                     position: 'sticky',
                     top: 0,
                     zIndex: 3,
-                    background: '#fff',
+                    background: T.cardBg,
                   }}
                 >
                   {isFirst && selectAll ? selectAll : h}
@@ -289,7 +289,7 @@ export function Table({
                       style={{
                         padding: '10px',
                         paddingRight: isLast ? 14 : 10,
-                        borderBottom: '1px solid #f3f4f6',
+                        borderBottom: `1px solid ${T.cardBorder}`,
                         color: T.t1,
                         verticalAlign: isCompactCol ? 'middle' : 'top',
                         whiteSpace: isCompactCol ? 'nowrap' : undefined,
@@ -356,12 +356,12 @@ export function MultiCheck({
       <div style={{ fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 6 }}>{label}</div>
       <div
         style={{
-          border: '1px solid #e5e7eb',
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 8,
           padding: '8px 10px',
           maxHeight: 120,
           overflow: 'auto',
-          background: '#fafafa',
+          background: T.inputBg,
           display: 'grid',
           gap: 6,
         }}
@@ -418,7 +418,8 @@ export function ModalShell({
     >
       <div
         style={{
-          background: '#fff',
+          background: T.elevatedBg,
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 12,
           padding: '24px 28px',
           width,
@@ -474,8 +475,8 @@ export const inputStyle: CSSProperties = {
   width: '100%',
   padding: '8px 10px',
   borderRadius: 6,
-  border: '1px solid #d1d5db',
-  background: '#f7f8fa',
+  border: `1px solid ${T.inputBorder}`,
+  background: T.inputBg,
   fontSize: 13,
   fontFamily: 'inherit',
   boxSizing: 'border-box',

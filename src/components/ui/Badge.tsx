@@ -1,4 +1,5 @@
 import { STAGE_COLORS, STAGE_LABELS, type TalentStage } from '@/types/stages'
+import { T } from '@/lib/tokens'
 import { cn } from '@/lib/utils'
 import type { User } from '@/types'
 
@@ -37,12 +38,12 @@ export function StageBadge({ stage }: { stage: TalentStage | string }) {
 
 export function NichePill({ n }: { n: string }) {
   const map: Record<string, { bg: string; c: string }> = {
-    Model: { bg: '#f3e8ff', c: '#7c3aed' },
-    Actor: { bg: '#dbeafe', c: '#1d4ed8' },
-    Influencer: { bg: '#d1fae5', c: '#065f46' },
-    Athlete: { bg: '#fef3c7', c: '#92400e' },
+    Model: { bg: T.purpleL, c: T.purple },
+    Actor: { bg: T.blueL, c: T.blue },
+    Influencer: { bg: T.greenL, c: T.green },
+    Athlete: { bg: T.amberL, c: T.amber },
   }
-  const s = map[n] || { bg: '#f3f4f6', c: '#374151' }
+  const s = map[n] || { bg: T.mutedBg, c: T.t2 }
   return (
     <span
       className="mr-0.5 rounded-[10px] px-1.5 py-px text-[11px] font-medium"
@@ -55,10 +56,10 @@ export function NichePill({ n }: { n: string }) {
 
 export function PriorityBadge({ p }: { p: string }) {
   const map: Record<string, { bg: string; c: string }> = {
-    urgent: { bg: '#fee2e2', c: '#dc2626' },
-    high: { bg: '#fef3c7', c: '#d97706' },
-    medium: { bg: '#dbeafe', c: '#1d4ed8' },
-    low: { bg: '#f3f4f6', c: '#6b7280' },
+    urgent: { bg: T.redL, c: T.red },
+    high: { bg: T.amberL, c: T.amber },
+    medium: { bg: T.blueL, c: T.blue },
+    low: { bg: T.mutedBg, c: T.t3 },
   }
   const s = map[p] || map.low
   return (
@@ -78,7 +79,7 @@ export function ScoreBar({ score }: { score: number }) {
     score >= 3.5 ? 'text-brand-green' : score >= 3 ? 'text-brand-amber' : 'text-brand-red'
   return (
     <div className="flex items-center gap-1.5">
-      <div className="h-1.5 flex-1 overflow-hidden rounded bg-gray-200">
+      <div className="h-1.5 flex-1 overflow-hidden rounded bg-muted-bg">
         <div className={cn('h-full rounded', color)} style={{ width: `${(score / 5) * 100}%` }} />
       </div>
       <span className={cn('min-w-6 text-right text-[11px] font-bold', textColor)}>

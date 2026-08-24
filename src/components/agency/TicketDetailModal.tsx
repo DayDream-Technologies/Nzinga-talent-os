@@ -79,7 +79,7 @@ export function TicketDetailModal({
     >
       <div
         style={{
-          background: '#fff',
+          background: T.cardBg,
           borderRadius: 12,
           padding: '28px 32px',
           width: 520,

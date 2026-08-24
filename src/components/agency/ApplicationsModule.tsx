@@ -73,7 +73,7 @@ function appProgress(app: Application): { pct: number; missing: number; complete
 function ProgressCell({ pct, complete }: { pct: number; complete: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 88 }}>
-      <div style={{ width: 64, height: 6, background: '#e5e7eb', borderRadius: 99, overflow: 'hidden' }}>
+      <div style={{ width: 64, height: 6, background: T.mutedBg, borderRadius: 99, overflow: 'hidden' }}>
         <div
           style={{
             height: '100%',
@@ -211,8 +211,8 @@ export function ApplicationsModule() {
 
       <div
         style={{
-          background: '#fff',
-          border: '1px solid #e5e7eb',
+          background: T.cardBg,
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 10,
           overflowX: 'auto',
           overflowY: 'visible',

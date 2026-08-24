@@ -47,9 +47,9 @@ export function FileUpload({
       onClick={() => ref.current?.click()}
       className={cn(
         'cursor-pointer rounded-lg border-2 border-dashed p-3',
-        error && 'border-brand-red bg-red-50',
-        !error && hasFile && 'border-brand-green bg-green-50',
-        !error && !hasFile && 'border-input-border bg-[#fafbfc]',
+        error && 'border-brand-red bg-brand-red-light',
+        !error && hasFile && 'border-brand-green bg-brand-green-light',
+        !error && !hasFile && 'border-input-border bg-muted-bg',
         compact && 'px-2.5 py-2',
       )}
     >

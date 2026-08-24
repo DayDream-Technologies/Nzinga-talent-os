@@ -81,8 +81,8 @@ function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
               key={v}
               onClick={() => setFilter(v)}
               style={{
-                background: filter === v ? '#fff' : 'transparent',
-                border: `1px solid ${filter === v ? '#d1d5db' : 'transparent'}`,
+                background: filter === v ? T.cardBg : 'transparent',
+                border: `1px solid ${filter === v ? T.inputBorder : 'transparent'}`,
                 borderRadius: 5,
                 padding: '4px 10px',
                 fontSize: 12,
@@ -103,8 +103,8 @@ function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
       {showAdd && (
         <div
           style={{
-            background: '#fff',
-            border: '1px solid #e5e7eb',
+            background: T.cardBg,
+            border: `1px solid ${T.cardBorder}`,
             borderRadius: 8,
             padding: 12,
             marginBottom: 12,
@@ -168,7 +168,7 @@ function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
         style={{
           width: '100%',
           borderCollapse: 'collapse',
-          background: '#fff',
+          background: T.cardBg,
           borderRadius: 8,
           overflow: 'hidden',
         }}

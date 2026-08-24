@@ -21,7 +21,7 @@ function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) 
 
   if(sent){return(
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400 }}>
-      <div style={{ background:"#fff",borderRadius:12,width:440,padding:28,textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
+      <div style={{ background: T.cardBg,borderRadius:12,width:440,padding:28,textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
         <div style={{ fontSize:40,marginBottom:10 }}>✅</div>
         <div style={{ fontSize:17,fontWeight:700,color:T.t1,marginBottom:6,fontFamily:"'Syne',sans-serif" }}>Application Ready!</div>
         <div style={{ fontSize:13,color:T.t3,marginBottom:16,lineHeight:1.6 }}>
@@ -40,14 +40,14 @@ function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) 
 
   return(
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400 }}>
-      <div style={{ background:"#fff",borderRadius:12,width:460,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
-        <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.purple,background:"#fafbfc",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+      <div style={{ background: T.cardBg,borderRadius:12,width:460,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
+        <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.purple,background:T.mutedBg,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div><div style={{ fontSize:14,fontWeight:700,color:T.t1 }}>Send Application — {talent.name}</div><div style={{ fontSize:11,color:T.t3,marginTop:1 }}>Invite prospect to complete their own application</div></div>
           <button onClick={onClose} style={{ background:"transparent",border:"none",fontSize:16,cursor:"pointer",color:T.t3 }}>✕</button>
         </div>
         <div style={{ padding:18 }}>
-          <div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:6,fontSize:11,color:"#b45309" }}>📋 Invitation will be saved. Share access code <strong>{code}</strong> with the prospect.</div>}</div>
-          <div style={{ padding:"8px 10px",background:"#f8f9fb",border:"1px solid #e5e7eb",borderRadius:6,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <div style={{ marginBottom:12 }}><Lbl required>Talent Email Address</Lbl><FInput value={email} onChange={setEmail} placeholder="talent@email.com" type="email"/>{email&&<div style={{ marginTop:6,padding:"7px 10px",background:T.amberL,border:`1px solid ${T.amber}55`,borderRadius:6,fontSize:11,color:T.amber }}>📋 Invitation will be saved. Share access code <strong>{code}</strong> with the prospect.</div>}</div>
+          <div style={{ padding:"8px 10px",background:T.mutedBg,border:`1px solid ${T.cardBorder}`,borderRadius:6,marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
             <span style={{ fontSize:11,color:T.t3 }}>Generated code:</span>
             <span style={{ fontSize:13,fontWeight:800,color:T.purple,letterSpacing:"0.12em" }}>{code}</span>
           </div>
@@ -77,8 +77,8 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
   return(
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:350,padding:"16px 0",overflowY:"auto" }}>
       {viewingDoc&&<DocViewer doc={viewingDoc} onClose={()=>setViewingDoc(null)}/>}
-      <div style={{ width:880,background:"#fff",borderRadius:10,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
-        <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.blue,background:"#fafbfc",flexShrink:0 }}>
+      <div style={{ width:880,background: T.cardBg,borderRadius:10,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
+        <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.blue,background:T.mutedBg,flexShrink:0 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
             <div>
               <div style={{ fontSize:15,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>Application Review — {app.talent_name}</div>
@@ -92,12 +92,12 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
             </div>
             <div style={{ display:"flex",gap:8 }}>
               {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm onClick={onImportToPipeline}>Import to New / Lead</Btn>}
-              <button onClick={onClose} style={{ background:"transparent",border:"1px solid #e5e7eb",borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
+              <button onClick={onClose} style={{ background:"transparent",border:`1px solid ${T.cardBorder}`,borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
             </div>
           </div>
         </div>
 
-        <div style={{ display:"flex",borderBottom:"1px solid #e5e7eb",background:"#fff",flexShrink:0,overflowX:"auto" }}>
+        <div style={{ display:"flex",borderBottom:`1px solid ${T.cardBorder}`,background: T.cardBg,flexShrink:0,overflowX:"auto" }}>
           {tabIds.map(t=><div key={t} onClick={()=>setTab(t)} style={{ padding:"7px 14px",cursor:"pointer",fontSize:12,fontWeight:tab===t?600:400,color:tab===t?T.blue:T.t3,borderBottom:`2px solid ${tab===t?T.blue:"transparent"}`,textTransform:"capitalize",whiteSpace:"nowrap" }}>{t==="incomplete"?"Incomplete":t.replace(/_/g," ")}</div>)}
         </div>
 
@@ -126,7 +126,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
               <div style={{ fontSize:12,marginBottom:4 }}>Existing representation: <strong>{d.currently_represented||"—"}</strong></div>
               <div style={{ fontSize:12,marginBottom:4 }}>Conflicts: <strong>{d.has_conflicting_obligations||"—"}</strong></div>
               <div style={{ fontSize:12 }}>Socials: {[d.link_instagram,d.link_tiktok,d.influencer_handle].filter(Boolean).join(" · ")||"—"}</div>
-              <div style={{ marginTop:10,padding:"8px 10px",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:6,fontSize:11,color:"#9a3412",lineHeight:1.45 }}>
+              <div style={{ marginTop:10,padding:"8px 10px",background:T.amberL,border:`1px solid ${T.amber}55`,borderRadius:6,fontSize:11,color:T.amber,lineHeight:1.45 }}>
                 Scout boundary (SOP): Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
               </div>
             </Section>
@@ -146,7 +146,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
             {visible.map(s=>{
               const missing=missingMap[s.id]||[];
               if(missing.length===0)return null;
-              return <div key={s.id} style={{ background:"#fff",border:"1px solid #fca5a5",borderRadius:8,padding:12,marginBottom:10 }}>
+              return <div key={s.id} style={{ background: T.cardBg,border:"1px solid #fca5a5",borderRadius:8,padding:12,marginBottom:10 }}>
                 <div style={{ fontSize:12,fontWeight:700,color:T.red,marginBottom:8 }}>{s.label} — {missing.length} missing</div>
                 {missing.map(fieldId=>{const field=s.fields.find(f=>f.id===fieldId);return <div key={fieldId} style={{ fontSize:12,padding:"4px 0" }}>{field?.label||fieldId}</div>;})}
               </div>;
@@ -173,7 +173,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
                 const hasVal=val&&val.toString().trim();
                 return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"?"1/-1":"auto" }}>
                   <Lbl>{field.label}</Lbl>
-                  <div style={{ padding:"7px 10px",background:"#f8f9fb",border:"1px solid #e5e7eb",borderRadius:5,fontSize:12,color:hasVal?T.t1:T.t4,minHeight:30 }}>
+                  <div style={{ padding:"7px 10px",background:T.mutedBg,border:`1px solid ${T.cardBorder}`,borderRadius:5,fontSize:12,color:hasVal?T.t1:T.t4,minHeight:30 }}>
                     {field.type==="checkbox"?(val?"Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):field.type==="file_upload"?(val?String(d[field.id+"_name"]||"Uploaded"):"—"):val||"—"}
                   </div>
                 </div>;

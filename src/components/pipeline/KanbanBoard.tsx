@@ -93,8 +93,8 @@ function KanbanCard({
         if (!isDragging) onSelect(talent)
       }}
       style={{
-        background: '#fff',
-        border: `1px solid ${locked ? '#e5e7eb' : '#dbe1ea'}`,
+        background: T.cardBg,
+        border: `1px solid ${T.cardBorder}`,
         borderRadius: 8,
         padding: '10px 11px',
         marginBottom: 8,
@@ -211,13 +211,13 @@ function KanbanColumn({
         display: 'flex',
         flexDirection: 'column',
         maxHeight: '100%',
-        background: locked ? '#f3f4f6' : '#eef1f6',
+        background: locked ? T.mutedBg : T.pageBg,
         borderRadius: 10,
         border: dropActive
           ? `2px solid ${color}`
           : locked
-            ? '1px dashed #c4c9d2'
-            : '1px solid #e2e6ee',
+            ? `1px dashed ${T.cardBorder}`
+            : `1px solid ${T.cardBorder}`,
         position: 'relative',
         overflow: 'hidden',
         opacity: locked ? 0.92 : 1,
@@ -239,13 +239,13 @@ function KanbanColumn({
       <div
         style={{
           padding: '10px 12px 8px',
-          borderBottom: `1px solid ${locked ? '#e5e7eb' : '#e2e6ee'}`,
+          borderBottom: `1px solid ${T.cardBorder}`,
           display: 'flex',
           alignItems: 'center',
           gap: 8,
           position: 'relative',
           zIndex: 1,
-          background: locked ? 'rgba(243,244,246,0.95)' : 'rgba(238,241,246,0.95)',
+          background: locked ? T.mutedBg : T.pageBg,
         }}
       >
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
@@ -267,7 +267,7 @@ function KanbanColumn({
         </div>
         <span
           style={{
-            background: locked ? '#e5e7eb' : color + '22',
+            background: locked ? T.cardBorder : color + '22',
             color: locked ? T.t4 : color,
             borderRadius: 10,
             padding: '1px 7px',
@@ -287,7 +287,7 @@ function KanbanColumn({
               fontSize: 10,
               fontWeight: 700,
               color: T.t4,
-              background: '#e5e7eb',
+              background: T.cardBorder,
               borderRadius: 4,
               padding: '2px 6px',
             }}
@@ -489,8 +489,8 @@ export function KanbanBoard({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
-              background: '#f3f4f6',
-              border: '1px dashed #c4c9d2',
+              background: T.mutedBg,
+              border: `1px dashed ${T.cardBorder}`,
               borderRadius: 4,
               padding: '3px 8px',
             }}
@@ -555,8 +555,8 @@ export function KanbanBoard({
         >
           <div
             style={{
-              background: '#fff',
-              border: '1px solid #dbe1ea',
+              background: T.cardBg,
+              border: `1px solid ${T.cardBorder}`,
               borderRadius: 8,
               padding: '10px 11px',
             }}

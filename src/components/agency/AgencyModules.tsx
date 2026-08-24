@@ -38,13 +38,13 @@ import {
 } from './AgencyUI'
 
 const WS = {
-  pageBg: '#e8eef5',
+  pageBg: T.pageBg,
   pagePattern:
     'radial-gradient(circle at 15% 85%, rgba(59,130,246,0.06) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(0,45,86,0.04) 0%, transparent 40%)',
-  cardBorder: '#dce4ed',
-  headerBorder: '#e5e7eb',
-  accent: '#2563eb',
-  iconBgs: ['#dbeafe', '#bfdbfe', '#93c5fd', '#3b82f6', '#ede9fe', '#cffafe'],
+  cardBorder: T.cardBorder,
+  headerBorder: T.cardBorder,
+  accent: T.blue,
+  iconBgs: [T.blueL, T.blueL, T.blueL, T.blue, T.purpleL, T.cyanL],
 }
 
 const FAVORITE_ICONS: Record<string, string> = {
@@ -64,7 +64,7 @@ const REPORT_ICONS: Record<string, string> = {
 
 function workspaceCardStyle(extra: CSSProperties = {}): CSSProperties {
   return {
-    background: '#fff',
+    background: T.cardBg,
     border: `1px solid ${WS.cardBorder}`,
     borderRadius: 10,
     boxShadow: '0 2px 10px rgba(0,45,86,0.07)',
@@ -90,7 +90,7 @@ function WorkspaceNavGroup({
         border: `1px solid ${WS.headerBorder}`,
         borderRadius: 8,
         padding: '10px 12px',
-        background: '#fff',
+        background: T.cardBg,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
@@ -192,7 +192,7 @@ export function AgencyWorkspace() {
                 alignItems: 'center',
                 justifyContent: 'flex-start',
                 padding: '11px 14px',
-                background: '#fff',
+                background: T.cardBg,
                 borderBottom: `2px solid ${WS.accent}`,
               }}
             >
@@ -227,7 +227,7 @@ export function AgencyWorkspace() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '11px 14px',
-                background: '#fff',
+                background: T.cardBg,
                 borderBottom: `2px solid ${WS.accent}`,
               }}
             >

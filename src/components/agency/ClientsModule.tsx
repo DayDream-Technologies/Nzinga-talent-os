@@ -247,8 +247,8 @@ export function ClientsModule() {
             style={{
               padding: '6px 12px',
               borderRadius: 7,
-              border: `1px solid ${statusFilter === s ? T.blue : '#e5e7eb'}`,
-              background: statusFilter === s ? '#eff6ff' : '#fff',
+              border: `1px solid ${statusFilter === s ? T.blue : T.cardBorder}`,
+              background: statusFilter === s ? T.blueL : T.cardBg,
               color: statusFilter === s ? T.blue : T.t2,
               fontWeight: statusFilter === s ? 700 : 500,
               fontSize: 12,
@@ -263,8 +263,8 @@ export function ClientsModule() {
       </div>
       <div
         style={{
-          background: '#fff',
-          border: '1px solid #e5e7eb',
+          background: T.cardBg,
+          border: `1px solid ${T.cardBorder}`,
           borderRadius: 10,
           overflowX: 'auto',
           overflowY: 'visible',

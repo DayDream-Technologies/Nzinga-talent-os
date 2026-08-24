@@ -35,8 +35,8 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
           <input value={q} onChange={e=>{setQ(e.target.value);setQOpen(true);}} onFocus={()=>setQOpen(true)} placeholder="Command Launch — people, apps, pages" style={{ background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:12,flex:1,fontFamily:"inherit" }}/>
           {q&&<span onClick={()=>{setQ("");setQOpen(false);}} style={{ color:"rgba(255,255,255,0.4)",cursor:"pointer" }}>✕</span>}
         </div>
-        {qOpen&&results.length>0&&<div style={{ position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:"#fff",border:"1px solid #e5e7eb",borderRadius:7,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,maxHeight:360,overflowY:"auto" }}>
-          {results.map(r=><div key={r.id} onClick={()=>{onNav(r.path);setQ("");setQOpen(false);}} style={{ padding:"8px 12px",cursor:"pointer",borderBottom:"1px solid #f5f5f5",display:"flex",alignItems:"center",justifyContent:"space-between" }}><div><span style={{ color:r.kind==="page"?T.blue:T.purple,fontWeight:600,fontSize:12 }}>{r.label}</span><span style={{ color:T.t4,fontSize:11,marginLeft:6 }}>{r.sublabel}</span></div><span style={{ fontSize:10,color:T.t3,textTransform:"capitalize" }}>{r.kind}</span></div>)}
+        {qOpen&&results.length>0&&<div style={{ position:"absolute",top:"calc(100% + 4px)",left:0,right:0,background:T.elevatedBg,border:`1px solid ${T.cardBorder}`,borderRadius:7,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,maxHeight:360,overflowY:"auto" }}>
+          {results.map(r=><div key={r.id} onClick={()=>{onNav(r.path);setQ("");setQOpen(false);}} style={{ padding:"8px 12px",cursor:"pointer",borderBottom:`1px solid ${T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"space-between" }}><div><span style={{ color:r.kind==="page"?T.blue:T.purple,fontWeight:600,fontSize:12 }}>{r.label}</span><span style={{ color:T.t4,fontSize:11,marginLeft:6 }}>{r.sublabel}</span></div><span style={{ fontSize:10,color:T.t3,textTransform:"capitalize" }}>{r.kind}</span></div>)}
         </div>}
       </div>
       <div style={{ flex:1 }}/>
@@ -47,13 +47,13 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
           {unreadCount>0&&<span style={{ fontSize:11,fontWeight:700 }}>{unreadCount}</span>}
         </button>
         {notifOpen&&(
-          <div style={{ position:"absolute",right:0,top:40,width:320,maxHeight:380,overflowY:"auto",background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",zIndex:250 }}>
-            <div style={{ padding:"10px 12px",borderBottom:"1px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <div style={{ position:"absolute",right:0,top:40,width:320,maxHeight:380,overflowY:"auto",background:T.elevatedBg,border:`1px solid ${T.cardBorder}`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,0.14)",zIndex:250 }}>
+            <div style={{ padding:"10px 12px",borderBottom:`1px solid ${T.cardBorder}`,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
               <span style={{ fontSize:12,fontWeight:700,color:T.t1 }}>Notifications</span>
               <button type="button" onClick={markAllRead} style={{ background:"none",border:"none",color:T.blue,fontSize:11,cursor:"pointer",fontFamily:"inherit" }}>Mark all read</button>
             </div>
             {notifs.length===0?<div style={{ padding:16,fontSize:12,color:T.t3 }}>No notifications</div>:notifs.map(n=>(
-              <div key={n.id} onClick={()=>{markRead(n.id);onNav(n.path);setNotifOpen(false);}} style={{ padding:"10px 12px",borderBottom:"1px solid #f5f5f5",cursor:"pointer",background:readIds.has(n.id)?"#fff":"#f8fafc" }}>
+              <div key={n.id} onClick={()=>{markRead(n.id);onNav(n.path);setNotifOpen(false);}} style={{ padding:"10px 12px",borderBottom:`1px solid ${T.cardBorder}`,cursor:"pointer",background:readIds.has(n.id)?T.elevatedBg:T.mutedBg }}>
                 <div style={{ fontSize:12,fontWeight:600,color:T.t1 }}>{n.title}</div>
                 <div style={{ fontSize:11,color:T.t3,marginTop:2 }}>{n.body}</div>
               </div>
@@ -69,8 +69,8 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
       </div>
       <div style={{ position:"relative" }}>
         <div onClick={()=>setProfileOpen(o=>!o)} style={{ width:32,height:32,borderRadius:"50%",background:user.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer" }}>{user.initials}</div>
-        {profileOpen&&<div style={{ position:"absolute",right:0,top:38,background:"#fff",border:"1px solid #e5e7eb",borderRadius:8,width:190,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,overflow:"hidden" }}>
-          <div style={{ padding:"12px 14px",borderBottom:"1px solid #f0f0f0",background:"#fafbfc" }}>
+        {profileOpen&&<div style={{ position:"absolute",right:0,top:38,background:T.elevatedBg,border:`1px solid ${T.cardBorder}`,borderRadius:8,width:190,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,overflow:"hidden" }}>
+          <div style={{ padding:"12px 14px",borderBottom:`1px solid ${T.cardBorder}`,background:T.mutedBg }}>
             <div style={{ display:"flex",alignItems:"center",gap:8 }}><Av user={user} size={30}/><div><div style={{ fontSize:12,fontWeight:600,color:T.t1 }}>{user.name}</div><div style={{ fontSize:11,color:user.color,fontWeight:500 }}>{user.title}</div></div></div>
           </div>
           <div style={{ padding:6 }}>
@@ -118,14 +118,14 @@ function Scoreboard({ agencyStats }) {
     { label: "Pending Payouts", value: "—", color: T.green },
   ];
   return (
-    <div style={{ display: "flex", gap: 8, padding: "8px 18px", background: "#f8f9fb", borderBottom: "1px solid #e5e7eb", overflowX: "auto", flexShrink: 0 }}>
+    <div style={{ display: "flex", gap: 8, padding: "8px 18px", background: T.mutedBg, borderBottom: `1px solid ${T.cardBorder}`, overflowX: "auto", flexShrink: 0 }}>
       {tiles.map((t, i) => (
         <div
           key={t.label}
           className={`scoreboard-tile animate-scale-in stagger-${Math.min(i + 1, 8)}`}
           style={{
-            background: "#fff",
-            border: "1px solid #e5e7eb",
+            background: T.cardBg,
+            border: `1px solid ${T.cardBorder}`,
             borderLeft: `3px solid ${t.color}`,
             borderRadius: 7,
             padding: "6px 14px",
@@ -155,7 +155,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
           position: "relative",
           width: 860,
           margin: "48px 0 0",
-          background: "#fff",
+          background: T.elevatedBg,
           borderRadius: "0 0 10px 0",
           boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
           display: "flex",
@@ -164,7 +164,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
           overflow: "hidden",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #f0f0f0", background: "#fafbfc", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${T.cardBorder}`, background: T.mutedBg, gap: 10 }}>
           <CompanyLogo variant="company" companyCode={companyCode} size="sm" showWordmark />
           <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>Menu</span>
           <button onClick={() => { onNav("workspace"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "5px 10px", cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Workspace</button>
@@ -179,7 +179,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
           <button onClick={onClose} className="transition-fast" style={{ background: "transparent", border: "none", fontSize: 16, cursor: "pointer", color: T.t3 }}>✕</button>
         </div>
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          <div style={{ width: 160, background: "#f8f9fb", borderRight: "1px solid #e5e7eb", padding: "8px 0", flexShrink: 0 }}>
+          <div style={{ width: 160, background: T.mutedBg, borderRight: `1px solid ${T.cardBorder}`, padding: "8px 0", flexShrink: 0 }}>
             {navCats.map((c, i) => (
               <div
                 key={c.id}
@@ -191,7 +191,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
                   fontSize: 13,
                   fontWeight: cat === c.id ? 700 : 400,
                   color: cat === c.id ? T.blue : T.t2,
-                  background: cat === c.id ? "#fff" : "transparent",
+                  background: cat === c.id ? T.cardBg : "transparent",
                   borderLeft: `3px solid ${cat === c.id ? T.blue : "transparent"}`,
                 }}
               >

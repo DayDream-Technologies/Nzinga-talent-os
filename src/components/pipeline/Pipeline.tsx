@@ -79,8 +79,8 @@ function Roster({ talents, onSelectTalent, userRole, currentUserId }) {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
             style={{
-              background: '#fff',
-              border: '1px solid #e5e7eb',
+              background: T.cardBg,
+              border: `1px solid ${T.cardBorder}`,
               borderRadius: 6,
               color: T.t1,
               padding: '5px 9px 5px 24px',
@@ -106,7 +106,7 @@ function Roster({ talents, onSelectTalent, userRole, currentUserId }) {
         style={{
           width: '100%',
           borderCollapse: 'collapse',
-          background: '#fff',
+          background: T.cardBg,
           borderRadius: 8,
           overflow: 'hidden',
           boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
@@ -130,7 +130,7 @@ function Roster({ talents, onSelectTalent, userRole, currentUserId }) {
           {filt.map((t) => (
             <tr
               key={t.id}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8f9fb')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = T.mutedBg)}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               <TD>

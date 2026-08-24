@@ -94,12 +94,12 @@ const router = createBrowserRouter([
         ],
       },
       {
+        path: '*',
         element: (
           <Suspense fallback={<PageLoader />}>
             <ProtectedApp />
           </Suspense>
         ),
-        children: [{ path: '*', element: null }],
       },
     ],
   },
