@@ -71,7 +71,7 @@ export function useCommandSearch(query: string): CommandSearchResult[] {
           id: `app-${app.id}`,
           label: app.talent_name || 'Application',
           sublabel: `App · ${app.status} · ${app.access_code || ''}`,
-          path: 'applications',
+          path: `applications/${app.id}`,
           kind: 'application',
           score: s - 5,
         })

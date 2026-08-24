@@ -6,6 +6,13 @@ export type Role =
   | 'director'
   | 'success_manager'
 
+export type ThemePreference = 'light' | 'dark'
+
+export interface UserUiSettings {
+  theme: ThemePreference
+  sidebar_visible: boolean
+}
+
 export interface User {
   id: string
   name: string
@@ -18,6 +25,7 @@ export interface User {
   auth_uid?: string | null
   company_code?: string
   active?: boolean
+  settings?: UserUiSettings | null
 }
 
 export interface ProspectProfile {

@@ -210,6 +210,9 @@ export function canAccessAgencyPath(role: Role, path: string): boolean {
   if (!normalized || normalized === 'workspace') return true
   if (normalized === 'settings') return true
   if (normalized === 'talent' || normalized.startsWith('talent/')) return true
+  if (normalized === 'applications' || normalized.startsWith('applications/')) {
+    return (AGENCY_MODULE_ACCESS[role] || []).includes('applications')
+  }
   // Nested admin routes remain director-only (handled elsewhere); deny here for agency gate
   if (normalized.startsWith('admin')) return role === 'director'
   // Legacy roster → clients

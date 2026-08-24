@@ -13,6 +13,7 @@ import type { Role } from '@/types'
 const WorkspacePage = lazyWithReload(() => import('@/pages/WorkspacePage').then(m => ({ default: m.WorkspacePage })))
 const AgencyModulePage = lazyWithReload(() => import('@/pages/AgencyModulePage').then(m => ({ default: m.AgencyModulePage })))
 const ApplicationsPage = lazyWithReload(() => import('@/pages/ApplicationsPage').then(m => ({ default: m.ApplicationsPage })))
+const ApplicantAccountPage = lazyWithReload(() => import('@/pages/ApplicantAccountPage').then(m => ({ default: m.ApplicantAccountPage })))
 const AgencyReportsPage = lazyWithReload(() => import('@/pages/AgencyReportsPage').then(m => ({ default: m.AgencyReportsPage })))
 const PipelinePage = lazyWithReload(() => import('@/pages/PipelinePage').then(m => ({ default: m.PipelinePage })))
 const TalentAccountPage = lazyWithReload(() => import('@/pages/TalentAccountPage').then(m => ({ default: m.TalentAccountPage })))
@@ -53,6 +54,14 @@ function AuthenticatedApp() {
                 element={
                   <RoleRoute path="applications" role={user.role}>
                     <ApplicationsPage />
+                  </RoleRoute>
+                }
+              />
+              <Route
+                path="applications/:appId"
+                element={
+                  <RoleRoute path="applications" role={user.role}>
+                    <ApplicantAccountPage />
                   </RoleRoute>
                 }
               />

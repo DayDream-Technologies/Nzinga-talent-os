@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppData } from '@/context/AppDataContext'
-import { ApplicationReview } from '@/components/application/ApplicationModals'
 import { TalentRecord } from '@/components/talent/TalentRecord'
 import { TopNav, BreadcrumbBar, FullMenu, Sidebar } from '@/components/layout/Layout'
 import { AGENCY_PAGE_TITLES } from '@/constants/agency-nav'
@@ -24,13 +23,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     applications,
     selectedTalent,
     setSelectedTalent,
-    reviewingApp,
-    setReviewingApp,
     updateTalent,
     setTasks,
     setHistory,
     handleSendApp,
-    importAppToPipeline,
     refreshAll,
   } = useAppData()
 
@@ -44,7 +40,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const pageTitle = view.startsWith('talent/')
     ? 'Talent Account'
-    : AGENCY_PAGE_TITLES[view] || view
+    : view.startsWith('applications/')
+      ? 'Applicant Account'
+      : AGENCY_PAGE_TITLES[view] || view
 
   function nav(path: string) {
     if (path.includes('?')) {
@@ -101,13 +99,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           }}
           userRole={user.role}
           companyCode={companyCode}
-        />
-      )}
-      {reviewingApp && (
-        <ApplicationReview
-          app={reviewingApp}
-          onClose={() => setReviewingApp(null)}
-          onImportToPipeline={() => importAppToPipeline(reviewingApp)}
         />
       )}
       {currentTalent && (

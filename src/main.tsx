@@ -13,23 +13,16 @@ import { TalentLoginPage } from '@/pages/TalentLoginPage'
 import { TalentHomePage } from '@/pages/TalentHomePage'
 import { GuardianVerifyPage } from '@/pages/GuardianVerifyPage'
 import { installChunkLoadRecovery, lazyWithReload } from '@/lib/lazy-with-reload'
+import { readStorage, STORAGE_THEME } from '@/lib/session-storage'
+import { applyTheme } from '@/lib/user-settings'
 import './index.css'
 import './styles/animations.css'
 
 installChunkLoadRecovery()
 
 try {
-  const theme = localStorage.getItem('nto_theme')
-  if (theme === 'dark' || theme === 'light') {
-    document.documentElement.setAttribute('data-theme', theme)
-    if (theme === 'dark') {
-      document.documentElement.style.setProperty('--color-page-bg', '#0f172a')
-      document.documentElement.style.setProperty('--color-card-bg', '#1e293b')
-      document.documentElement.style.setProperty('--color-t1', '#f8fafc')
-      document.documentElement.style.setProperty('--color-t2', '#e2e8f0')
-      document.documentElement.style.setProperty('--color-t3', '#94a3b8')
-    }
-  }
+  const theme = readStorage(STORAGE_THEME)
+  if (theme === 'dark' || theme === 'light') applyTheme(theme)
 } catch {
   /* ignore */
 }

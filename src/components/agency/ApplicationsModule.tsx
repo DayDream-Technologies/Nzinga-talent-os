@@ -89,7 +89,7 @@ function ProgressCell({ pct, complete }: { pct: number; complete: boolean }) {
 }
 
 export function ApplicationsModule() {
-  const { applications, talents, setReviewingApp, importAppToPipeline } = useAppData()
+  const { applications, talents, importAppToPipeline } = useAppData()
   const { prospects } = useAgencyData()
   const navigate = useNavigate()
 
@@ -156,7 +156,7 @@ export function ApplicationsModule() {
         label: 'Review Selected',
         onClick: () => {
           const first = selectedList[0]
-          if (first) setReviewingApp(first)
+          if (first) navigate(`/applications/${first.id}`)
         },
       },
       'Import to Pipeline': {
@@ -232,7 +232,7 @@ export function ApplicationsModule() {
           }
           onRowClick={(i) => {
             const app = filtered[i]
-            if (app) setReviewingApp(app)
+            if (app) navigate(`/applications/${app.id}`)
           }}
           rowSelected={filtered.map((app) => selected.has(app.id))}
           headers={[
@@ -301,7 +301,7 @@ export function ApplicationsModule() {
                   {
                     id: 'review',
                     label: 'Review',
-                    onClick: () => setReviewingApp(app),
+                    onClick: () => navigate(`/applications/${app.id}`),
                   },
                   {
                     id: 'import',

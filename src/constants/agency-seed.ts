@@ -105,6 +105,19 @@ export const AGENCY_TALENT_SEED: AgencyTalent[] = [
     bookedDates: ['2026-08-12', '2026-08-13'],
     contractStart: '2025-09-01',
     contractEnd: null,
+    udf: {
+      stageName: 'Maya Rivera',
+      talentTypes: ['Modeling'],
+      talentStatus: 'Current',
+      representationType: 'exclusive',
+      assignedAgent: 'Sarah Chen',
+      height: "5'9\"",
+      clothingSize: '4',
+      shoeSize: '9',
+      hairColor: 'Dark brown',
+      eyeColor: 'Brown',
+      modelingCategory: 'Commercial, Editorial',
+    },
   },
   {
     id: 'talent_leo',
@@ -177,6 +190,15 @@ export const AGENCY_PROSPECTS_SEED: AgencyProspect[] = [
     lastLoginAt: '2026-08-12T14:22:00Z',
     contractStart: '2026-01-15',
     contractEnd: null,
+    linkedApplicationId: 'app_kai',
+    udf: {
+      stageName: 'Kai Johnson',
+      talentTypes: ['Acting'],
+      talentStatus: 'Prospect',
+      representationType: 'exclusive',
+      assignedAgent: 'Sarah Chen',
+      actingCategory: 'Commercial',
+    },
     contracts: [
       seededContract({
         id: 'ctr_kai_past',

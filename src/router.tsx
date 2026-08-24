@@ -29,6 +29,9 @@ const ReportsPage = lazy(() =>
 const ApplicationsPage = lazy(() =>
   import('@/pages/ApplicationsPage').then((m) => ({ default: m.ApplicationsPage })),
 )
+const ApplicantAccountPage = lazy(() =>
+  import('@/pages/ApplicantAccountPage').then((m) => ({ default: m.ApplicantAccountPage })),
+)
 const NewEntryPage = lazy(() =>
   import('@/pages/NewEntryPage').then((m) => ({ default: m.NewEntryPage })),
 )
@@ -189,6 +192,14 @@ export const router = createBrowserRouter([
                 element: (
                   <Lazy>
                     <ApplicationsPage />
+                  </Lazy>
+                ),
+              },
+              {
+                path: 'applications/:appId',
+                element: (
+                  <Lazy>
+                    <ApplicantAccountPage />
                   </Lazy>
                 ),
               },

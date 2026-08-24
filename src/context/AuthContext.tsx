@@ -26,6 +26,14 @@ import {
 } from '@/lib/session-storage'
 import { IdleReauthModal } from '@/components/auth/IdleReauthModal'
 import { writeAuditEvent } from '@/services/audit.service'
+import { applyUserUiSettings, hydrateUserSettings, normalizeUserUiSettings } from '@/lib/user-settings'
+
+function adoptUser(u: User | null): User | null {
+  if (!u) return null
+  const hydrated = hydrateUserSettings(u)
+  applyUserUiSettings(normalizeUserUiSettings(hydrated.settings))
+  return hydrated
+}
 
 interface AuthContextValue {
   user: User | null
@@ -64,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (settled) return
       settled = true
       if (u) {
-        setUser(u)
+        setUser(adoptUser(u))
         const code = (u.company_code || readStorage(STORAGE_COMPANY_CODE) || '').toUpperCase()
         if (code) {
           setCompanyCodeState(code)
@@ -167,7 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (u) {
       markFreshLogin()
       setNeedsReauth(false)
-      setUser(u)
+      const adopted = adoptUser(u)
+      setUser(adopted)
       const code = (u.company_code || companyCode || '').toUpperCase()
       if (code) {
         setCompanyCodeState(code)
@@ -180,12 +189,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           /* ignore */
         }
       }
+      return adopted
     }
     return u
   }, [companyCode])
 
   const switchUser = useCallback((u: User) => {
-    setUser(u)
+    setUser(adoptUser(u))
     touchActivity()
     setNeedsReauth(false)
     if (!supabaseConfigured) {

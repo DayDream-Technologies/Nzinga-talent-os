@@ -36,3 +36,5 @@ export type {
   EscrowStatus,
 } from './agency'
 export type { TaskStatus as AgencyTaskStatus } from './agency'
+export type { TalentUdf, TalentType } from './udf'
+export { TALENT_TYPES } from './udf'

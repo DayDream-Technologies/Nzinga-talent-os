@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ApplicationsModule } from '@/components/agency/ApplicationsModule'
 import type { Application } from '@/types'
 
-const { sampleApp, setReviewingApp, importAppToPipeline } = vi.hoisted(() => {
+const { sampleApp, importAppToPipeline, navigate } = vi.hoisted(() => {
   const sampleApp: Application = {
     id: 'app_kai',
     talent_id: 't4',
@@ -25,16 +25,20 @@ const { sampleApp, setReviewingApp, importAppToPipeline } = vi.hoisted(() => {
   }
   return {
     sampleApp,
-    setReviewingApp: vi.fn(),
     importAppToPipeline: vi.fn(),
+    navigate: vi.fn(),
   }
+})
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  return { ...actual, useNavigate: () => navigate }
 })
 
 vi.mock('@/context/AppDataContext', () => ({
   useAppData: () => ({
     applications: { app_kai: sampleApp },
     talents: [],
-    setReviewingApp,
     importAppToPipeline,
   }),
 }))
@@ -46,7 +50,7 @@ vi.mock('@/context/AgencyDataContext', () => ({
 }))
 
 describe('ApplicationsModule', () => {
-  it('renders the prospects-style panel, table columns, and opens review on row click', () => {
+  it('renders the prospects-style panel, table columns, and navigates on row click', () => {
     render(
       <MemoryRouter>
         <ApplicationsModule />
@@ -70,7 +74,7 @@ describe('ApplicationsModule', () => {
     expect(screen.getAllByText('In Progress').length).toBeGreaterThan(0)
 
     fireEvent.click(screen.getByText('Kai'))
-    expect(setReviewingApp).toHaveBeenCalledWith(sampleApp)
+    expect(navigate).toHaveBeenCalledWith('/applications/app_kai')
     expect(importAppToPipeline).not.toHaveBeenCalled()
   })
 })

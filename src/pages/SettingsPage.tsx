@@ -5,10 +5,12 @@ import { useAuthContext } from '@/context/AuthContext'
 import { getRcConnectionStatus, getRcAuthUrl, disconnectRc } from '@/lib/phone'
 import type { RcConnectionStatus } from '@/lib/ringcentral-types'
 import { sendPasswordResetEmail } from '@/services/auth.service'
+import { saveUserSettings } from '@/services/user-settings.service'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
-import { readStorage, STORAGE_THEME, writeStorage } from '@/lib/session-storage'
+import { applyTheme, normalizeUserUiSettings } from '@/lib/user-settings'
 import { useSidebarPreference } from '@/hooks/useSidebarPreference'
 import { ConfirmDialog, useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
+import { useToast } from '@/components/ui/Toast'
 import { PageContent } from '@/components/layout/PageContent'
 import { T } from '@/lib/tokens'
 
@@ -19,40 +21,26 @@ const RC_ERROR_MESSAGES: Record<string, string> = {
   store_tokens: 'Connected to RingCentral but failed to save tokens. Contact support.',
 }
 
-function applyTheme(theme: 'light' | 'dark') {
-  const root = document.documentElement
-  root.setAttribute('data-theme', theme)
-  if (theme === 'dark') {
-    root.style.setProperty('--color-page-bg', '#0f172a')
-    root.style.setProperty('--color-card-bg', '#1e293b')
-    root.style.setProperty('--color-t1', '#f8fafc')
-    root.style.setProperty('--color-t2', '#e2e8f0')
-    root.style.setProperty('--color-t3', '#94a3b8')
-  } else {
-    root.style.setProperty('--color-page-bg', '#f0f2f5')
-    root.style.setProperty('--color-card-bg', '#ffffff')
-    root.style.setProperty('--color-t1', '#111827')
-    root.style.setProperty('--color-t2', '#374151')
-    root.style.setProperty('--color-t3', '#6b7280')
-  }
-}
-
 export function SettingsPage() {
   const { user, switchUser } = useAuthContext()
+  const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const [rcStatus, setRcStatus] = useState<RcConnectionStatus>({ connected: false })
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
+  const [confirmSave, setConfirmSave] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
 
+  const savedUi = normalizeUserUiSettings(user?.settings)
   const [displayName, setDisplayName] = useState(user?.name || '')
   const [displayTitle, setDisplayTitle] = useState(user?.title || '')
   const [profileMsg, setProfileMsg] = useState('')
   const [pwMsg, setPwMsg] = useState('')
   const [pwSending, setPwSending] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => (readStorage(STORAGE_THEME) === 'dark' ? 'dark' : 'light'))
+  const [theme, setTheme] = useState<'light' | 'dark'>(savedUi.theme)
   const { sidebarVisible, setSidebarVisible } = useSidebarPreference()
   const [mfaMsg, setMfaMsg] = useState('')
   const [mfaFactorId, setMfaFactorId] = useState('')
@@ -60,8 +48,14 @@ export function SettingsPage() {
   const [mfaCode, setMfaCode] = useState('')
 
   useEffect(() => {
+    if (!user) return
+    setDisplayName(user.name || '')
+    setDisplayTitle(user.title || '')
+    setTheme(normalizeUserUiSettings(user.settings).theme)
+  }, [user?.id, user?.name, user?.title, user?.settings?.theme])
+
+  useEffect(() => {
     applyTheme(theme)
-    writeStorage(STORAGE_THEME, theme)
   }, [theme])
 
   useEffect(() => {
@@ -179,20 +173,54 @@ export function SettingsPage() {
     setMfaFactorId('')
   }
 
-  function handleSaveProfile() {
+  const settingsDirty =
+    displayName !== (user?.name || '') ||
+    displayTitle !== (user?.title || '') ||
+    theme !== savedUi.theme ||
+    sidebarVisible !== savedUi.sidebar_visible
+
+  function requestSaveSettings() {
+    if (!user || saving) return
+    if (!displayName.trim()) {
+      setProfileMsg('Enter a display name.')
+      return
+    }
+    setConfirmSave(true)
+  }
+
+  async function persistSettings() {
     if (!user) return
     const name = displayName.trim()
     const title = displayTitle.trim()
-    switchUser({ ...user, name, title })
-    setDisplayName(name)
-    setDisplayTitle(title)
-    setProfileMsg('Profile saved for this session.')
+    if (!name) {
+      setProfileMsg('Enter a display name.')
+      return
+    }
+    setSaving(true)
+    setProfileMsg('')
+    const { user: saved, error } = await saveUserSettings(user, {
+      name,
+      title,
+      settings: { theme, sidebar_visible: sidebarVisible },
+    })
+    setSaving(false)
+    if (error) {
+      showToast(error, 'error')
+      setProfileMsg(error)
+      return
+    }
+    switchUser(saved)
+    setDisplayName(saved.name)
+    setDisplayTitle(saved.title)
+    setProfileMsg(
+      supabaseConfigured
+        ? 'Settings saved to your account. They will apply on other devices when you sign in.'
+        : 'Settings saved on this device for this account.',
+    )
+    showToast('Settings saved.', 'success')
   }
 
-  const dirty =
-    displayName !== (user?.name || '') ||
-    displayTitle !== (user?.title || '') ||
-    Boolean(mfaQr)
+  const dirty = settingsDirty || Boolean(mfaQr)
   const unsavedDialog = useUnsavedNavigation(dirty)
 
   const card = {
@@ -237,8 +265,8 @@ export function SettingsPage() {
         <div style={{ fontSize: 12, color: T.t3 }}>Email: <strong style={{ color: T.t1 }}>{user?.email}</strong></div>
         <button
           type="button"
-          onClick={handleSaveProfile}
-          disabled={!user || (displayName === (user?.name || '') && displayTitle === (user?.title || ''))}
+          onClick={requestSaveSettings}
+          disabled={!user || !settingsDirty || saving}
           style={{
             background: T.blue,
             color: '#fff',
@@ -249,13 +277,15 @@ export function SettingsPage() {
             cursor: 'pointer',
             fontFamily: 'inherit',
             marginTop: 12,
-            opacity: !user || (displayName === (user?.name || '') && displayTitle === (user?.title || '')) ? 0.5 : 1,
+            opacity: !user || !settingsDirty || saving ? 0.5 : 1,
           }}
         >
-          Save profile
+          {saving ? 'Saving…' : 'Save settings'}
         </button>
         {profileMsg && <div style={{ marginTop: 8, fontSize: 12, color: T.t3 }}>{profileMsg}</div>}
-        <div style={{ fontSize: 11, color: T.t4, marginTop: 8 }}>Name/title updates apply to this session display. Persist to staff profile when DB profile update is available.</div>
+        <div style={{ fontSize: 11, color: T.t4, marginTop: 8 }}>
+          Saves name, title, theme, and sidebar to your account so they follow you across sessions and devices.
+        </div>
       </div>
 
       <div style={card}>
@@ -345,7 +375,7 @@ export function SettingsPage() {
           </button>
         </div>
         <p style={{ fontSize: 11, color: T.t4, marginTop: 10, lineHeight: 1.45, marginBottom: 0 }}>
-          Full Menu (☰) stays available either way. Default is show sidebar.
+          Preview applies immediately. Confirm with Save settings to keep theme and sidebar on your account. Full Menu (☰) stays available either way.
         </p>
       </div>
 
@@ -435,6 +465,17 @@ export function SettingsPage() {
       </div>
       </div>
       {unsavedDialog}
+      <ConfirmDialog
+        open={confirmSave}
+        title="Save settings?"
+        message="This saves your name, title, theme, and sidebar preference to your account. They will apply on this device and when you sign in elsewhere."
+        confirmLabel="Save settings"
+        onCancel={() => setConfirmSave(false)}
+        onConfirm={() => {
+          setConfirmSave(false)
+          void persistSettings()
+        }}
+      />
       <ConfirmDialog
         open={confirmDisconnect}
         title="Disconnect RingCentral?"

@@ -77,6 +77,8 @@ export interface AgencyTalent {
   contractStart?: string | null
   contractEnd?: string | null
   linkedProspectId?: string | null
+  /** Staff-maintained roster sheet */
+  udf?: Partial<import('./udf').TalentUdf>
 }
 
 export interface AgencyProspect {
@@ -127,6 +129,8 @@ export interface AgencyProspect {
   /** Linked pipeline application id when synced from Applications */
   linkedApplicationId?: string | null
   lost?: boolean
+  /** Staff-maintained roster sheet */
+  udf?: Partial<import('./udf').TalentUdf>
 }
 
 export interface ProspectContractDocument {
