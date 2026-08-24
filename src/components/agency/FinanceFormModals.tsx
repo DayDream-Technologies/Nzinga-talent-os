@@ -11,6 +11,7 @@ import type {
   Vendor,
 } from '@/types/agency'
 import { Btn, Field, ModalShell, inputStyle } from './AgencyUI'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 function Footer({
   isEdit,
@@ -23,15 +24,11 @@ function Footer({
   onSave: () => void
   onDelete?: () => void
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
       {isEdit && onDelete && (
-        <Btn
-          variant="danger"
-          onClick={() => {
-            if (window.confirm('Delete this record?')) onDelete()
-          }}
-        >
+        <Btn variant="danger" onClick={() => setConfirmDelete(true)}>
           Delete
         </Btn>
       )}
@@ -40,6 +37,18 @@ function Footer({
         Cancel
       </Btn>
       <Btn onClick={onSave}>{isEdit ? 'Save' : 'Create'}</Btn>
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete this record?"
+        message="This cannot be undone from this screen."
+        confirmLabel="Delete"
+        danger
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false)
+          onDelete?.()
+        }}
+      />
     </div>
   )
 }

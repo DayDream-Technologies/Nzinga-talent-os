@@ -440,7 +440,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:10 }}>
           <div style={{ fontSize:11,color:saveStatus==="saved"?"#4ade80":saveStatus==="saving"?"#fbbf24":saveStatus==="error"?"#fca5a5":"rgba(255,255,255,0.35)" }}>
-            {saveStatus==="saved"&&"Saved"}{saveStatus==="saving"&&"Saving…"}{saveStatus==="unsaved"&&"Unsaved"}{saveStatus==="error"&&"Save failed — retrying…"}
+            {saveStatus==="saved"&&"Saved"}{saveStatus==="saving"&&"Saving…"}{saveStatus==="unsaved"&&"Unsaved"}{saveStatus==="error"&&"Not saved"}
           </div>
           <button onClick={async ()=>{ try{ await flushSave(); }catch{ /* still exit */ } onExit(); }} style={{ background:"transparent",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.6)",borderRadius:6,padding:"8px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Exit & Save</button>
         </div>

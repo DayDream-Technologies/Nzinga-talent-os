@@ -11,6 +11,7 @@ import { ComposeEmail } from "@/components/talent/ComposeEmail";
 import { PhoneActions } from "@/components/talent/PhoneActions";
 import { TalentLink } from "@/components/talent/TalentLink";
 import { useAuth } from "@/hooks/useAuth";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const NICHE_OPTIONS = ["Modeling", "Acting", "Sports & Athletics", "Influencing / Content Creation", "Model", "Actor", "Influencer", "Athlete"];
 
@@ -28,6 +29,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
   const [followUpDate, setFollowUpDate] = useState("");
   const [opsReturnNotes, setOpsReturnNotes] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [pendingConfirm, setPendingConfirm] = useState(null);
 
   const role = currentUser.role;
   const tHistory = allHistory.filter((h) => h.talent_id === local.id);
@@ -73,13 +75,19 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
   function auditLog(action, stage) {
     return [...local.audit_log, { user: currentUser.name, role: ROLE_LABELS[role], action, stage, ts: new Date().toISOString() }];
   }
-  function save(u) {
-    setDirty(false);
-    onUpdate(u);
+  async function save(u, closeAfter = false) {
+    setErr("");
+    try {
+      await Promise.resolve(onUpdate(u));
+      setDirty(false);
+      if (closeAfter) onClose();
+    } catch (e) {
+      setErr(e?.message || "Save failed. Changes were not stored.");
+    }
   }
   function saveProfile() {
     setErr("");
-    save({ ...local, audit_log: dirty ? auditLog("Updated talent profile", local.stage) : local.audit_log });
+    void save({ ...local, audit_log: dirty ? auditLog("Updated talent profile", local.stage) : local.audit_log });
   }
 
   function postNote() {
@@ -163,54 +171,84 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
     if (local.jordan_score < 3.5) { setErr("Jordan Score must be at least 3.5."); return; }
     if (!local.revenue_path || !local.scout_summary || !local.niches.length) { setErr("Complete scout summary, revenue path, and niches."); return; }
     setErr("");
-    save({ ...local, stage: "team1_review", applicant_stage_status: "Qualified", audit_log: auditLog("Submitted Client Packet → Client Packet Review", "team1_review") });
-    onClose();
+    void save({ ...local, stage: "team1_review", applicant_stage_status: "Qualified", audit_log: auditLog("Submitted Client Packet → Client Packet Review", "team1_review") }, true);
   }
-  function scoutArchive() { save({ ...local, stage: "not_viable", audit_log: auditLog("Marked Declined", "not_viable") }); onClose(); }
-  function markLost() { save({ ...local, stage: "not_viable", audit_log: auditLog("Marked Withdrawn / Lost", "not_viable") }); onClose(); }
+  function scoutArchive() {
+    setPendingConfirm({
+      title: "Mark as declined?",
+      message: "This talent will move to Not Viable. You can still find them in that stage later.",
+      confirmLabel: "Mark declined",
+      next: { ...local, stage: "not_viable", audit_log: auditLog("Marked Declined", "not_viable") },
+    });
+  }
+  function markLost() {
+    setPendingConfirm({
+      title: "Mark as withdrawn / lost?",
+      message: "This talent will move to Not Viable. You can still find them in that stage later.",
+      confirmLabel: "Mark lost",
+      next: { ...local, stage: "not_viable", audit_log: auditLog("Marked Withdrawn / Lost", "not_viable") },
+    });
+  }
   function t1(d) {
     if (d === "approved") {
       for (let i = 0; i < 5; i++) { if (local.pillar_scores[i] < 3) { setErr(`Pillar ${i + 1} below minimum 3.`); return; } }
       if (local.jordan_score < 3.5) { setErr(`Jordan Score ${local.jordan_score.toFixed(2)} is below 3.5 threshold.`); return; }
-      save({ ...local, stage: "ops_processing", team1_decision: "approved", audit_log: auditLog("Approved for Success Manager Validation", "team1_review") }); onClose();
+      void save({ ...local, stage: "ops_processing", team1_decision: "approved", audit_log: auditLog("Approved for Success Manager Validation", "team1_review") }, true);
     } else if (d === "revision") {
       if (!local.team1_notes) { setErr("Correction notes required for revision."); return; }
-      save({ ...local, stage: "scout_complete", team1_decision: "revision", audit_log: auditLog("Returned for More Information", "team1_review") });
+      void save({ ...local, stage: "scout_complete", team1_decision: "revision", audit_log: auditLog("Returned for More Information", "team1_review") }, true);
       setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Revision Required: " + local.name, assigned_to: local.scout_id || "u1", related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: local.team1_notes }, ...prev]);
-      onClose();
-    } else { save({ ...local, stage: "archived", team1_decision: "rejected", audit_log: auditLog("Rejected at Client Packet Review", "team1_review") }); onClose(); }
+    } else {
+      setPendingConfirm({
+        title: "Reject this talent?",
+        message: "They will be archived. You can still find them in the Archived stage.",
+        confirmLabel: "Reject",
+        next: { ...local, stage: "archived", team1_decision: "rejected", audit_log: auditLog("Rejected at Client Packet Review", "team1_review") },
+      });
+    }
   }
   function ops() {
     if (Object.values(local.compliance || {}).filter(Boolean).length < 6) { setErr("At least 6/8 compliance items must be verified."); return; }
     if (!local.rep_type || !local.commission || !local.term_length) { setErr("Complete all Framework fields first."); return; }
-    save({ ...local, stage: "team2_audit", audit_log: auditLog("Compliance verified → Contract Pending", "ops_processing") }); onClose();
+    void save({ ...local, stage: "team2_audit", audit_log: auditLog("Compliance verified → Contract Pending", "ops_processing") }, true);
   }
   function opsReturnTeam1() {
     if (!opsReturnNotes.trim()) { setErr("Return notes required for Team 1 Lead."); return; }
     setErr("");
-    save({ ...local, stage: "team1_review", team1_notes: opsReturnNotes, audit_log: auditLog("Returned to Client Packet Review", "ops_processing") });
+    void save({ ...local, stage: "team1_review", team1_notes: opsReturnNotes, audit_log: auditLog("Returned to Client Packet Review", "ops_processing") }, true);
     const t1User = USERS.find((u) => u.role === "team1_lead");
     setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Ops Return — Review: " + local.name, assigned_to: t1User ? t1User.id : "u2", related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: opsReturnNotes }, ...prev]);
-    onClose();
   }
   function t2(d) {
-    if (d === "approved") { save({ ...local, stage: "executive_review", team2_decision: "approved", audit_log: auditLog("Approved for Director Review", "team2_audit") }); onClose(); }
+    if (d === "approved") { void save({ ...local, stage: "executive_review", team2_decision: "approved", audit_log: auditLog("Approved for Director Review", "team2_audit") }, true); }
     else if (d === "returned") {
-      save({ ...local, stage: "ops_processing", team2_decision: "returned", audit_log: auditLog("Returned to Success Manager Validation", "team2_audit") });
+      void save({ ...local, stage: "ops_processing", team2_decision: "returned", audit_log: auditLog("Returned to Success Manager Validation", "team2_audit") }, true);
       const opsUser = USERS.find((u) => u.role === "ops_specialist");
       setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Returned from Audit: " + local.name, assigned_to: opsUser ? opsUser.id : "u3", related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: local.team2_notes || "Returned from audit." }, ...prev]);
-      onClose();
-    } else { save({ ...local, stage: "archived", team2_decision: "rejected", audit_log: auditLog("Rejected at Contract Pending", "team2_audit") }); onClose(); }
+    } else {
+      setPendingConfirm({
+        title: "Reject this talent?",
+        message: "They will be archived. You can still find them in the Archived stage.",
+        confirmLabel: "Reject",
+        next: { ...local, stage: "archived", team2_decision: "rejected", audit_log: auditLog("Rejected at Contract Pending", "team2_audit") },
+      });
+    }
   }
   function dir(d) {
-    if (d === "approved") save({ ...local, stage: "signed_onboarding", director_decision: "approved", audit_log: auditLog("Approved – Active Client", "executive_review") });
-    else if (d === "hold") save({ ...local, director_decision: "hold", audit_log: auditLog("Decision on Hold", "executive_review") });
-    else save({ ...local, stage: "archived", director_decision: "rejected", audit_log: auditLog("Rejected by Director", "executive_review") });
-    onClose();
+    if (d === "approved") void save({ ...local, stage: "signed_onboarding", director_decision: "approved", audit_log: auditLog("Approved – Active Client", "executive_review") }, true);
+    else if (d === "hold") void save({ ...local, director_decision: "hold", audit_log: auditLog("Decision on Hold", "executive_review") }, true);
+    else {
+      setPendingConfirm({
+        title: "Reject this talent?",
+        message: "They will be archived. You can still find them in the Archived stage.",
+        confirmLabel: "Reject",
+        next: { ...local, stage: "archived", director_decision: "rejected", audit_log: auditLog("Rejected by Director", "executive_review") },
+      });
+    }
   }
   function success() {
     if (!local.warm_handoff) { setErr("Warm hand-off name / division required."); return; }
-    save({ ...local, warm_handoff_confirmed: true, audit_log: auditLog("Warm hand-off confirmed: " + local.warm_handoff, "signed_onboarding") }); onClose();
+    void save({ ...local, warm_handoff_confirmed: true, audit_log: auditLog("Warm hand-off confirmed: " + local.warm_handoff, "signed_onboarding") }, true);
   }
 
   const compFields = [["legal_name", "Full Legal Name"], ["gov_id", "Government ID"], ["dob", "Date of Birth"], ["address", "Physical Address"], ["email_phone", "Email / Phone"], ["tax_doc", "Tax Documentation (W-9)"], ["banking", "Banking Information"], ["social_ownership", "Social Account Ownership"]];
@@ -790,6 +828,19 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           })()}
         </div>
       </div>
+      <ConfirmDialog
+        open={!!pendingConfirm}
+        title={pendingConfirm?.title || ""}
+        message={pendingConfirm?.message || ""}
+        confirmLabel={pendingConfirm?.confirmLabel || "Confirm"}
+        danger
+        onCancel={() => setPendingConfirm(null)}
+        onConfirm={() => {
+          const next = pendingConfirm?.next;
+          setPendingConfirm(null);
+          if (next) void save(next, true);
+        }}
+      />
     </div>
   );
 }

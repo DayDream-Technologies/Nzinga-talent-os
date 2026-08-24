@@ -120,9 +120,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           setTasks={setTasks}
           applications={applications}
           onClose={() => setSelectedTalent(null)}
-          onUpdate={(u: import('@/types').Talent) => {
-            void updateTalent(u)
-            setSelectedTalent(u)
+          onUpdate={async (u: import('@/types').Talent) => {
+            await updateTalent(u)
           }}
           onSendApp={handleSendApp}
           refreshAll={refreshAll}

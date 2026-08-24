@@ -5,6 +5,7 @@ import { listUsers, setUserActive } from '@/services/admin.service'
 import { useAuth } from '@/hooks/useAuth'
 import { T } from '@/lib/tokens'
 import { Av, Btn, TH, TD } from '@/components/ui-compat'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface AllUsersPanelProps {
   onManageRoles: () => void
@@ -17,6 +18,7 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionId, setActionId] = useState<string | null>(null)
+  const [pendingDeactivate, setPendingDeactivate] = useState<(User & { active?: boolean }) | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -147,7 +149,10 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
                       sm
                       variant={active ? 'ghost' : 'success'}
                       disabled={actionId === u.id}
-                      onClick={() => void toggleActive(u as User & { active?: boolean })}
+                      onClick={() => {
+                        if (active) setPendingDeactivate(u as User & { active?: boolean })
+                        else void toggleActive(u as User & { active?: boolean })
+                      }}
                     >
                       {actionId === u.id ? '…' : active ? 'Deactivate' : 'Reactivate'}
                     </Btn>
@@ -158,6 +163,19 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
           </tbody>
         </table>
       )}
+      <ConfirmDialog
+        open={!!pendingDeactivate}
+        title="Deactivate this user?"
+        message={`${pendingDeactivate?.name || 'This user'} will lose access until they are reactivated.`}
+        confirmLabel="Deactivate"
+        danger
+        onCancel={() => setPendingDeactivate(null)}
+        onConfirm={() => {
+          const user = pendingDeactivate
+          setPendingDeactivate(null)
+          if (user) void toggleActive(user)
+        }}
+      />
     </div>
   )
 }

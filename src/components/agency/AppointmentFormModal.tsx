@@ -10,6 +10,7 @@ import {
   inputStyle,
   toLocalDateTimeInput,
 } from './AgencyUI'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export type AppointmentFormValues = Omit<Appointment, 'id'>
 
@@ -54,6 +55,7 @@ export function AppointmentFormModal({
   )
   const [talentNames, setTalentNames] = useState<string[]>(initial?.talentNames || [])
   const [error, setError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     if (!initial) return
@@ -139,12 +141,7 @@ export function AppointmentFormModal({
       {error && <div style={{ color: '#dc2626', fontSize: 12, marginBottom: 10 }}>{error}</div>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
         {initial && onDelete && (
-          <Btn
-            variant="danger"
-            onClick={() => {
-              if (window.confirm('Delete this appointment?')) onDelete()
-            }}
-          >
+          <Btn variant="danger" onClick={() => setConfirmDelete(true)}>
             Delete
           </Btn>
         )}
@@ -154,6 +151,18 @@ export function AppointmentFormModal({
         </Btn>
         <Btn onClick={submit}>{initial ? 'Save' : 'Create'}</Btn>
       </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete this appointment?"
+        message="This appointment will be removed from the calendar."
+        confirmLabel="Delete"
+        danger
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          setConfirmDelete(false)
+          onDelete?.()
+        }}
+      />
     </ModalShell>
   )
 }

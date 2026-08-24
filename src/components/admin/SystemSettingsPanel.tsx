@@ -9,7 +9,7 @@ import {
 } from '@/services/admin.service'
 import { T } from '@/lib/tokens'
 import { Btn, TH, TD } from '@/components/ui-compat'
-import { useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
+import { ConfirmDialog, useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
 
 export function SystemSettingsPanel() {
   const [settings, setSettings] = useState<SystemSetting[]>([])
@@ -18,6 +18,7 @@ export function SystemSettingsPanel() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [newCode, setNewCode] = useState('')
+  const [pendingDeactivateCode, setPendingDeactivateCode] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
 
@@ -135,7 +136,13 @@ export function SystemSettingsPanel() {
                       </span>
                     </TD>
                     <TD>
-                      <Btn sm onClick={() => void handleToggleCode(c.code, !c.active)}>
+                      <Btn
+                        sm
+                        onClick={() => {
+                          if (c.active) setPendingDeactivateCode(c.code)
+                          else void handleToggleCode(c.code, true)
+                        }}
+                      >
                         {c.active ? 'Deactivate' : 'Activate'}
                       </Btn>
                     </TD>
@@ -238,6 +245,19 @@ export function SystemSettingsPanel() {
         </>
       )}
       {unsavedDialog}
+      <ConfirmDialog
+        open={!!pendingDeactivateCode}
+        title="Deactivate company code?"
+        message={`Deactivate ${pendingDeactivateCode || ''}? Users with this code will not be able to sign in until it is activated again.`}
+        confirmLabel="Deactivate"
+        danger
+        onCancel={() => setPendingDeactivateCode(null)}
+        onConfirm={() => {
+          const code = pendingDeactivateCode
+          setPendingDeactivateCode(null)
+          if (code) void handleToggleCode(code, false)
+        }}
+      />
     </div>
   )
 }

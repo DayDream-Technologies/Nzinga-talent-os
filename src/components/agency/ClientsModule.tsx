@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { BulkActionsMenu, RowActionsMenu, stubGroups } from '@/components/agency/RowActionsMenu'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Badge, Btn, Field, ModalShell, Panel, SelectAllCheckbox, Table, inputStyle } from '@/components/agency/AgencyUI'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
@@ -109,7 +110,7 @@ function AddClientModal({
 }
 
 export function ClientsModule() {
-  const { talent, createClient, prospects, sendMessage } = useAgencyData()
+  const { talent, createClient, archiveClients, restoreClients, prospects, sendMessage } = useAgencyData()
   const { setHistory, talents } = useAppData()
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState<ClientLifecycleStatus>('current')
@@ -118,6 +119,7 @@ export function ClientsModule() {
   const [noteTarget, setNoteTarget] = useState<AgencyTalent | null>(null)
   const [noteText, setNoteText] = useState('')
   const [noteType, setNoteType] = useState<'note' | 'call'>('note')
+  const [pending, setPending] = useState<{ mode: 'archive' | 'restore'; ids: string[] } | null>(null)
 
   const rows = useMemo(
     () => talent.filter((t) => normalizeStatus(String(t.status)) === statusFilter),
@@ -188,6 +190,10 @@ export function ClientsModule() {
         label: 'Reports',
         actions: ['Report Writer', 'Export Selected'],
       },
+      {
+        label: 'Status',
+        actions: [statusFilter === 'past' ? 'Restore to Current' : 'Move to Past'],
+      },
     ],
     {
       'Add to History': {
@@ -206,6 +212,17 @@ export function ClientsModule() {
         id: 'Send Email',
         label: 'Send Email',
         onClick: () => navigate('/send-email'),
+      },
+      'Move to Past': {
+        id: 'Move to Past',
+        label: 'Move to Past',
+        danger: true,
+        onClick: () => setPending({ mode: 'archive', ids: [...selected] }),
+      },
+      'Restore to Current': {
+        id: 'Restore to Current',
+        label: 'Restore to Current',
+        onClick: () => setPending({ mode: 'restore', ids: [...selected] }),
       },
     },
   )
@@ -363,6 +380,18 @@ export function ClientsModule() {
                   },
                   { id: 'docs', label: 'Publish Signable Documents', stub: true },
                   { id: 'screening', label: 'Add Screening', stub: true },
+                  statusFilter === 'past'
+                    ? {
+                        id: 'restore',
+                        label: 'Restore to Current',
+                        onClick: () => setPending({ mode: 'restore', ids: [t.id] }),
+                      }
+                    : {
+                        id: 'archive',
+                        label: 'Move to Past',
+                        danger: true,
+                        onClick: () => setPending({ mode: 'archive', ids: [t.id] }),
+                      },
                 ]}
               />,
             ]
@@ -404,6 +433,25 @@ export function ClientsModule() {
           </div>
         </ModalShell>
       )}
+      <ConfirmDialog
+        open={!!pending}
+        title={pending?.mode === 'restore' ? 'Restore to Current?' : 'Move to Past?'}
+        message={
+          pending?.mode === 'restore'
+            ? `Restore ${pending.ids.length} client(s) to the Current list?`
+            : `Move ${pending?.ids.length || 0} client(s) to Past? They will leave the Current list and can be restored from the Past tab.`
+        }
+        confirmLabel={pending?.mode === 'restore' ? 'Restore' : 'Move to Past'}
+        danger={pending?.mode === 'archive'}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          if (!pending) return
+          if (pending.mode === 'restore') restoreClients(pending.ids)
+          else archiveClients(pending.ids)
+          setSelected(new Set())
+          setPending(null)
+        }}
+      />
     </Panel>
   )
 }

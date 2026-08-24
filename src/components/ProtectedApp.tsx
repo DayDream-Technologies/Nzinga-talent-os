@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { AppDataProvider } from '@/context/AppDataContext'
 import { AgencyDataProvider } from '@/context/AgencyDataContext'
+import { ToastProvider } from '@/components/ui/Toast'
 import { AppShell } from '@/components/layout/AppShell'
 import { SessionGate } from '@/components/auth/SessionGate'
 import { canAccessAgencyPath } from '@/constants/agency-nav'
@@ -39,6 +40,7 @@ function AuthenticatedApp() {
   if (!user) return null
 
   return (
+    <ToastProvider>
     <AppDataProvider>
       <AgencyDataProvider>
         <AppShell>
@@ -127,6 +129,7 @@ function AuthenticatedApp() {
         </AppShell>
       </AgencyDataProvider>
     </AppDataProvider>
+    </ToastProvider>
   )
 }
 

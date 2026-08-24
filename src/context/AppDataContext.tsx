@@ -18,6 +18,8 @@ import { fetchTasks, saveTasks } from '@/services/task.service'
 import { fetchHistory, saveHistory } from '@/services/history.service'
 import { useAuthContext } from './AuthContext'
 import { supabaseConfigured } from '@/lib/supabase'
+import { useToast } from '@/components/ui/Toast'
+import { persistErrorMessage } from '@/lib/persist-error'
 
 interface AppDataContextValue {
   talents: Talent[]
@@ -29,7 +31,7 @@ interface AppDataContextValue {
   setSelectedTalent: (t: Talent | null) => void
   reviewingApp: Application | null
   setReviewingApp: (a: Application | null) => void
-  updateTalent: (t: Talent) => void
+  updateTalent: (t: Talent) => Promise<void>
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
   setHistory: React.Dispatch<React.SetStateAction<HistoryEntry[]>>
   saveApp: (app: Application) => void
@@ -51,6 +53,7 @@ function withAccountNumber(talent: Talent, existing: Talent[]): Talent {
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const { user } = useAuthContext()
+  const { showToast } = useToast()
   const [selectedTalent, setSelectedTalent] = useState<Talent | null>(null)
   const [reviewingApp, setReviewingApp] = useState<Application | null>(null)
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
@@ -88,10 +91,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const updateTalent = useCallback(
     async (t: Talent) => {
       const next = talentsRef.current.map((x) => (x.id === t.id ? t : x))
-      await persistTalents(next)
-      if (selectedTalent?.id === t.id) setSelectedTalent(t)
+      try {
+        await persistTalents(next)
+        if (selectedTalent?.id === t.id) setSelectedTalent(t)
+      } catch (e) {
+        showToast(persistErrorMessage(e), 'error')
+        throw e
+      }
     },
-    [persistTalents, selectedTalent?.id],
+    [persistTalents, selectedTalent?.id, showToast],
   )
 
   const saveApp = useCallback(
@@ -102,7 +110,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         try {
           saved = await saveApplication(app)
         } catch (e) {
-          console.warn('[saveApp] Supabase save failed:', e)
+          showToast(persistErrorMessage(e), 'error')
           return
         }
         const apps = { ...applicationsRef.current, [saved.id]: saved }
@@ -134,7 +142,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             await persistTalents([...talentsRef.current, stub])
             await saveApplication({ ...saved, talent_id: stub.id })
           } catch (e) {
-            console.warn('[saveApp] Talent stub persist failed:', e)
+            showToast(persistErrorMessage(e), 'error')
           }
           return
         }
@@ -146,7 +154,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           try {
             await persistTalents(next)
           } catch (e) {
-            console.warn('[saveApp] Talent update from application failed:', e)
+            showToast(persistErrorMessage(e), 'error')
           }
         }
 
@@ -182,7 +190,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               )
               await persistTalents(next)
             } catch (e) {
-              console.warn('[saveApp] Talent upgrade on submit failed:', e)
+              showToast(persistErrorMessage(e), 'error')
             }
             const hist: HistoryEntry = {
               id: 'h' + Date.now(),
@@ -220,79 +228,94 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           }
         }
         } catch (e) {
-          console.warn('[saveApp] failed:', e)
+          showToast(persistErrorMessage(e), 'error')
         }
       })()
     },
-    [queryClient, persistTalents, history],
+    [queryClient, persistTalents, history, showToast],
   )
 
   const handleSendApp = useCallback(
     (app: Application) => {
       void (async () => {
-        await saveApplication(app)
-        queryClient.setQueryData(['applications'], {
-          ...applicationsRef.current,
-          [app.id]: app,
-        })
-        if (app.talent_id) {
-          const next = talentsRef.current.map((t) =>
-            t.id === app.talent_id
-              ? { ...t, application_id: app.id, application_status: 'sent' }
-              : t,
-          )
-          await persistTalents(next)
+        try {
+          await saveApplication(app)
+          queryClient.setQueryData(['applications'], {
+            ...applicationsRef.current,
+            [app.id]: app,
+          })
+          if (app.talent_id) {
+            const next = talentsRef.current.map((t) =>
+              t.id === app.talent_id
+                ? { ...t, application_id: app.id, application_status: 'sent' }
+                : t,
+            )
+            await persistTalents(next)
+          }
+        } catch (e) {
+          showToast(persistErrorMessage(e), 'error')
         }
       })()
     },
-    [queryClient, persistTalents],
+    [queryClient, persistTalents, showToast],
   )
 
   const importAppToPipeline = useCallback(
     (app: Application) => {
       if (!isAppComplete(app)) return
       void (async () => {
-        const existing = talentsRef.current.find((t) => t.application_id === app.id)
-        if (existing) {
-          const upgraded = {
-            ...existing,
-            ...talentFromApp(app, existing.account_number),
-            id: existing.id,
-            account_number: existing.account_number,
+        try {
+          const existing = talentsRef.current.find((t) => t.application_id === app.id)
+          if (existing) {
+            const upgraded = {
+              ...existing,
+              ...talentFromApp(app, existing.account_number),
+              id: existing.id,
+              account_number: existing.account_number,
+            }
+            await upsertTalent(upgraded)
+            await persistTalents(
+              talentsRef.current.map((t) => (t.id === existing.id ? upgraded : t)),
+            )
+          } else {
+            const newTalent = talentFromApp(
+              app,
+              nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
+            )
+            await persistTalents([...talentsRef.current, newTalent])
+            await saveApplication({ ...app, talent_id: newTalent.id })
           }
-          await upsertTalent(upgraded)
-          await persistTalents(
-            talentsRef.current.map((t) => (t.id === existing.id ? upgraded : t)),
-          )
-        } else {
-          const newTalent = talentFromApp(
-            app,
-            nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
-          )
-          await persistTalents([...talentsRef.current, newTalent])
-          await saveApplication({ ...app, talent_id: newTalent.id })
+          setReviewingApp(null)
+        } catch (e) {
+          showToast(persistErrorMessage(e), 'error')
         }
-        setReviewingApp(null)
       })()
     },
-    [persistTalents],
+    [persistTalents, showToast],
   )
 
   const handleNewTalent = useCallback(
     (t: Talent) => {
-      void persistTalents([...talentsRef.current, withAccountNumber(t, talentsRef.current)])
+      void persistTalents([...talentsRef.current, withAccountNumber(t, talentsRef.current)]).catch(
+        (e) => showToast(persistErrorMessage(e), 'error'),
+      )
     },
-    [persistTalents],
+    [persistTalents, showToast],
   )
 
   const setTasks = useCallback(
     (updater: React.SetStateAction<Task[]>) => {
+      const prev = tasks
       const next = typeof updater === 'function' ? updater(tasks) : updater
       setLocalTasks(next)
-      void saveTasks(next)
       queryClient.setQueryData(['tasks'], next)
+      void saveTasks(next).catch((err) => {
+        setLocalTasks(prev)
+        queryClient.setQueryData(['tasks'], prev)
+        showToast(persistErrorMessage(err), 'error')
+      })
     },
-    [tasks, queryClient],
+    [tasks, queryClient, showToast],
   )
 
   const setHistoryState = useCallback(
@@ -304,10 +327,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(['history'], next)
       if (changed.length === 0) return
       void saveHistory(changed).catch((err) => {
-        console.error('[history] persist failed', err)
+        setLocalHistory(history)
+        queryClient.setQueryData(['history'], history)
+        showToast(persistErrorMessage(err), 'error')
       })
     },
-    [history, queryClient],
+    [history, queryClient, showToast],
   )
 
   const refreshAll = useCallback(() => {

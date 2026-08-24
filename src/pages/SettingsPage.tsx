@@ -8,7 +8,7 @@ import { sendPasswordResetEmail } from '@/services/auth.service'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { readStorage, STORAGE_THEME, writeStorage } from '@/lib/session-storage'
 import { useSidebarPreference } from '@/hooks/useSidebarPreference'
-import { useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
+import { ConfirmDialog, useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
 import { PageContent } from '@/components/layout/PageContent'
 import { T } from '@/lib/tokens'
 
@@ -43,6 +43,7 @@ export function SettingsPage() {
   const [rcStatus, setRcStatus] = useState<RcConnectionStatus>({ connected: false })
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
 
@@ -423,7 +424,7 @@ export function SettingsPage() {
             </button>
           ) : (
             <button
-              onClick={handleDisconnect}
+              onClick={() => setConfirmDisconnect(true)}
               disabled={actionLoading}
               style={{ background: '#fff', color: '#dc2626', border: '1px solid #fca5a5', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
             >
@@ -434,6 +435,18 @@ export function SettingsPage() {
       </div>
       </div>
       {unsavedDialog}
+      <ConfirmDialog
+        open={confirmDisconnect}
+        title="Disconnect RingCentral?"
+        message="You will need to reconnect to place or receive calls from this workspace."
+        confirmLabel="Disconnect"
+        danger
+        onCancel={() => setConfirmDisconnect(false)}
+        onConfirm={() => {
+          setConfirmDisconnect(false)
+          void handleDisconnect()
+        }}
+      />
     </PageContent>
   )
 }

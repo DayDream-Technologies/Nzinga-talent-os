@@ -133,6 +133,8 @@ interface AgencyDataValue {
     contractEnd: string
   }) => AgencyTalent
   updateTalent: (id: string, patch: Partial<AgencyTalent>) => void
+  archiveClients: (ids: string[]) => void
+  restoreClients: (ids: string[]) => void
   addProspectContract: (prospectId: string, contract: Omit<ProspectContract, 'id' | 'uploadedAt'> & { id?: string; uploadedAt?: string }) => void
   advanceProspect: (id: string) => void
   createRenewalOffer: (talentId: string) => string
@@ -647,6 +649,16 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     setTalent((prev) => patchById(prev, id, patch))
   }, [])
 
+  const archiveClients = useCallback((ids: string[]) => {
+    const idSet = new Set(ids)
+    setTalent((prev) => prev.map((t) => (idSet.has(t.id) ? { ...t, status: 'past' as const } : t)))
+  }, [])
+
+  const restoreClients = useCallback((ids: string[]) => {
+    const idSet = new Set(ids)
+    setTalent((prev) => prev.map((t) => (idSet.has(t.id) ? { ...t, status: 'current' as const } : t)))
+  }, [])
+
   const addProspectContract = useCallback(
     (
       prospectId: string,
@@ -760,6 +772,8 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       upsertProspectFromApplication,
       createClient,
       updateTalent: updateTalentRecord,
+      archiveClients,
+      restoreClients,
       addProspectContract,
       advanceProspect,
       createRenewalOffer,
@@ -822,6 +836,8 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       upsertProspectFromApplication,
       createClient,
       updateTalentRecord,
+      archiveClients,
+      restoreClients,
       addProspectContract,
       advanceProspect,
       createRenewalOffer,
