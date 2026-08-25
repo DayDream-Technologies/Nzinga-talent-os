@@ -1,5 +1,6 @@
 import type { ApplicationsMap, HistoryEntry, Talent, Task, User } from '@/types'
 import { ACCOUNT_NUMBER_START, formatAccountNumber } from '@/lib/account-number'
+import { seedProfilePhoto } from '@/lib/profile-photo'
 
 export const USERS: User[] = [
   {
@@ -1047,10 +1048,89 @@ const talentsRaw = [
   },
 ] as Talent[]
 
-export const TALENTS_SEED: Talent[] = talentsRaw.map((t, i) => ({
-  ...t,
-  account_number: formatAccountNumber(ACCOUNT_NUMBER_START + i),
-}))
+const MAYA_PROFILE_PHOTO = seedProfilePhoto('Maya Rivera', 'MR', '#7c3aed')
+
+export const TALENTS_SEED: Talent[] = [
+  ...talentsRaw.map((t, i) => ({
+    ...t,
+    account_number: formatAccountNumber(ACCOUNT_NUMBER_START + i),
+  })),
+  {
+    id: 't_maya',
+    account_number: 'NZG-200101',
+    name: 'Maya Rivera',
+    first_name: 'Maya',
+    last_name: 'Rivera',
+    email: 'maya@example.com',
+    phone: '+1 555-0101',
+    stage: 'signed_onboarding',
+    niches: ['Model', 'Commercial'],
+    scout_id: 'u1',
+    created_at: '2025-09-01T12:00:00Z',
+    social_handle: '@mayarivera',
+    follower_count: '410K',
+    er_pct: '5.4',
+    platform: 'Instagram',
+    location: 'Atlanta, GA',
+    pillar_scores: [4, 4, 5, 4, 4],
+    pillar_rationales: [
+      'Strong commercial look.',
+      'Consistent booking history.',
+      'Clean public presence.',
+      'Versatile in editorial and ads.',
+      'Repeat Nike relationship.',
+    ],
+    jordan_score: 4.2,
+    revenue_path: 'Commercial print and lifestyle campaigns.',
+    scout_summary: 'Signed commercial model used for demo talent portal login.',
+    team1_notes: '',
+    team1_decision: 'approved',
+    compliance: {
+      legal_name: true,
+      gov_id: true,
+      dob: true,
+      address: true,
+      email_phone: true,
+      tax_doc: true,
+      banking: true,
+      social_ownership: true,
+    },
+    rep_type: 'Exclusive',
+    commission: '20',
+    term_length: '12 months',
+    team2_notes: '',
+    team2_decision: 'approved',
+    director_decision: 'approved',
+    portal_setup: true,
+    technical_routing: true,
+    warm_handoff: 'Sarah Chen – Modeling Division',
+    warm_handoff_confirmed: true,
+    revenue_ytd: '28000',
+    revenue_projected: '90000',
+    last_contacted: '2026-08-05',
+    application_id: null,
+    application_status: null,
+    uploaded_docs: {
+      profile_photo: MAYA_PROFILE_PHOTO,
+    },
+    audit_log: [
+      {
+        user: 'Simone Nzinga',
+        role: 'Director',
+        action: 'Approved – Sign Client',
+        stage: 'executive_review',
+        ts: '2025-08-28T10:00:00Z',
+      },
+      {
+        user: 'Alexis Grant',
+        role: 'Success Manager',
+        action: 'Warm hand-off confirmed',
+        stage: 'signed_onboarding',
+        ts: '2025-09-01T13:30:00Z',
+      },
+    ],
+  },
+]
 
 /** Minimal placeholder PDF used for complete submitted apps in seed/demo data. */
 const SEED_DOC = 'data:application/pdf;base64,JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoK'

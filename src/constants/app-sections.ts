@@ -76,8 +76,8 @@ export const APP_SECTIONS: AppSection[] = [
         id: 'doc_profile_photo',
         label: 'Profile Photo',
         type: 'file_upload',
-        required: true,
-        note: 'Clear head-and-shoulders photo',
+        required: false,
+        note: 'Optional. Staff can add a photo later on the talent account.',
       },
       {
         id: 'guardian_invite_email',

@@ -20,6 +20,7 @@ import {
   makeTextContractDocument,
   REPRESENTATION_AGREEMENT_TEXT,
 } from '@/lib/representation-agreement'
+import { seedProfilePhoto } from '@/lib/profile-photo'
 
 /** Scenario: Sarah (agent) · Nike (client) · Maya (talent) · $10k shoot @ 20% commission */
 
@@ -105,6 +106,8 @@ export const AGENCY_TALENT_SEED: AgencyTalent[] = [
     bookedDates: ['2026-08-12', '2026-08-13'],
     contractStart: '2025-09-01',
     contractEnd: null,
+    linkedProspectId: 'pros_maya',
+    profilePhoto: seedProfilePhoto('Maya Rivera', 'MR', '#7c3aed'),
     udf: {
       stageName: 'Maya Rivera',
       talentTypes: ['Modeling'],
@@ -288,6 +291,53 @@ export const AGENCY_PROSPECTS_SEED: AgencyProspect[] = [
     contractStart: null,
     contractEnd: null,
     contracts: [],
+  },
+  {
+    id: 'pros_maya',
+    accountId: 'NZG-200101',
+    name: 'Maya Rivera',
+    firstName: 'Maya',
+    lastName: 'Rivera',
+    email: 'maya@example.com',
+    phone: '+1 555-0101',
+    workArea: 'Modeling',
+    stage: 'contract_completed',
+    source: 'Signed client',
+    submittedAt: '2025-08-20T10:00:00Z',
+    notes: 'Demo client account for talent portal login.',
+    organization: 'NZG',
+    property: 'Nzinga Management Agency',
+    street: '410 Peachtree St',
+    city: 'Atlanta',
+    state: 'GA',
+    postal: '30308',
+    messageEmails: ['maya@example.com'],
+    assignedAgentName: 'Sarah Chen',
+    representationType: 'exclusive',
+    termLengthYears: 1,
+    lastLoginAt: '2026-08-12T09:00:00Z',
+    contractStart: '2025-09-01',
+    contractEnd: null,
+    profilePhoto: seedProfilePhoto('Maya Rivera', 'MR', '#7c3aed'),
+    udf: {
+      stageName: 'Maya Rivera',
+      talentTypes: ['Modeling'],
+      talentStatus: 'Current',
+      representationType: 'exclusive',
+      assignedAgent: 'Sarah Chen',
+    },
+    contracts: [
+      seededContract({
+        id: 'ctr_maya_current',
+        title: 'Exclusive Modeling Agreement 2025',
+        status: 'current',
+        startDate: '2025-09-01',
+        endDate: null,
+        representationType: 'exclusive',
+        termLengthYears: 1,
+        talentName: 'Maya Rivera',
+      }),
+    ],
   },
 ]
 

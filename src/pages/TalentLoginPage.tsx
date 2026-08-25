@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
+import { DEMO_TALENT_LOGIN, DEMO_TALENT_LOGIN_HINT } from '@/constants/demo-talent'
 import { TMXLogo, TMXMark } from '@/components/branding'
 import { useTalentAuth } from '@/context/TalentAuthContext'
 import {
@@ -38,14 +39,16 @@ const inputStyle: React.CSSProperties = {
 export function TalentLoginPage() {
   const navigate = useNavigate()
   const { session, loading: sessionLoading, setSession } = useTalentAuth()
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() =>
+    !supabaseConfigured || import.meta.env.DEV ? DEMO_TALENT_LOGIN.email : '',
+  )
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
-
-  const demoBlocked = !supabaseConfigured
+  const demoMode = !supabaseConfigured
+  const showDemoHint = demoMode || Boolean(import.meta.env.DEV)
 
   if (!sessionLoading && session) {
     return <Navigate to="/talent/home" replace />
@@ -55,10 +58,6 @@ export function TalentLoginPage() {
     e.preventDefault()
     setError('')
     setInfo('')
-    if (demoBlocked) {
-      setError(TALENT_LOGIN_DEMO_MESSAGE)
-      return
-    }
     if (!email.trim() || !password) {
       setError('Enter your email and password.')
       return
@@ -83,7 +82,7 @@ export function TalentLoginPage() {
   async function handleReset() {
     setError('')
     setInfo('')
-    if (demoBlocked) {
+    if (demoMode) {
       setError(TALENT_LOGIN_DEMO_MESSAGE)
       return
     }
@@ -203,21 +202,21 @@ export function TalentLoginPage() {
             approval and signed onboarding.
           </p>
 
-          {demoBlocked && (
+          {showDemoHint && (
             <div
               role="status"
               style={{
                 marginBottom: 16,
                 padding: '12px 14px',
                 borderRadius: 8,
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.35)',
+                background: 'rgba(34, 197, 94, 0.12)',
+                border: '1px solid rgba(34, 197, 94, 0.35)',
                 fontSize: 13,
                 lineHeight: 1.45,
-                color: '#fcd34d',
+                color: '#86efac',
               }}
             >
-              {TALENT_LOGIN_DEMO_MESSAGE}
+              {DEMO_TALENT_LOGIN_HINT}
             </div>
           )}
 
@@ -229,7 +228,7 @@ export function TalentLoginPage() {
               type="email"
               autoComplete="email"
               value={email}
-              disabled={demoBlocked || loading}
+              disabled={loading}
               onChange={(e) => setEmail(e.target.value)}
               style={{ ...inputStyle, marginBottom: 14 }}
             />
@@ -241,7 +240,7 @@ export function TalentLoginPage() {
               type="password"
               autoComplete="current-password"
               value={password}
-              disabled={demoBlocked || loading}
+              disabled={loading}
               onChange={(e) => setPassword(e.target.value)}
               style={{ ...inputStyle, marginBottom: 16 }}
             />
@@ -259,17 +258,17 @@ export function TalentLoginPage() {
 
             <button
               type="submit"
-              disabled={demoBlocked || loading}
+              disabled={loading}
               style={{
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: 8,
                 border: 'none',
-                background: demoBlocked || loading ? 'rgba(255,255,255,0.12)' : '#16a34a',
+                background: loading ? 'rgba(255,255,255,0.12)' : '#16a34a',
                 color: '#fff',
                 fontSize: 14,
                 fontWeight: 600,
-                cursor: demoBlocked || loading ? 'not-allowed' : 'pointer',
+                cursor: loading ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',
               }}
             >
@@ -280,14 +279,14 @@ export function TalentLoginPage() {
           <div style={{ marginTop: 16, textAlign: 'center' }}>
             <button
               type="button"
-              disabled={demoBlocked || resetting}
+              disabled={demoMode || resetting}
               onClick={() => void handleReset()}
               style={{
                 background: 'none',
                 border: 'none',
                 color: 'rgba(232,238,244,0.65)',
                 fontSize: 12,
-                cursor: demoBlocked || resetting ? 'not-allowed' : 'pointer',
+                cursor: demoMode || resetting ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit',
                 textDecoration: 'underline',
               }}

@@ -100,13 +100,25 @@ function tryLoadV1(): Partial<AgencyRecords> | null {
   }
 }
 
+function mergeMissingSeed<T extends { id: string }>(saved: T[], seed: T[]): T[] {
+  const ids = new Set(saved.map((row) => row.id))
+  const missing = seed.filter((row) => !ids.has(row.id))
+  return missing.length ? [...saved, ...missing] : saved
+}
+
 export function loadAgencyRecords(): AgencyRecords {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<AgencyRecords>
-      const prospectsIn = Array.isArray(parsed.prospects) ? parsed.prospects : AGENCY_PROSPECTS_SEED
-      const talentIn = Array.isArray(parsed.talent) ? parsed.talent : AGENCY_TALENT_SEED
+      const prospectsIn = mergeMissingSeed(
+        Array.isArray(parsed.prospects) ? parsed.prospects : AGENCY_PROSPECTS_SEED,
+        AGENCY_PROSPECTS_SEED,
+      )
+      const talentIn = mergeMissingSeed(
+        Array.isArray(parsed.talent) ? parsed.talent : AGENCY_TALENT_SEED,
+        AGENCY_TALENT_SEED,
+      )
       const prospects = hydrateProspects(prospectsIn, usedAccountIds(prospectsIn, talentIn))
       const talent = hydrateTalent(talentIn, usedAccountIds(prospects, talentIn))
       return { prospects, talent }

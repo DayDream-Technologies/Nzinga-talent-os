@@ -49,6 +49,23 @@ describe('NZG short application', () => {
     expect(missing).toContain('guardian_invite_email')
   })
 
+  it('does not require a profile photo in the personal section', () => {
+    const missing = validateSection('personal', {
+      legal_first: 'A',
+      legal_last: 'B',
+      preferred_name: 'A B',
+      dob: '1990-01-01',
+      email: 'a@example.com',
+      phone: '555-123-4567',
+      city: 'X',
+      state: 'Y',
+      country: 'USA',
+      current_market: 'X',
+    })
+    expect(missing).not.toContain('doc_profile_photo')
+    expect(missing).toEqual([])
+  })
+
   it('maps stage keys to Build Requirements / SOP labels', () => {
     expect(STAGE_LABELS.holding_entry).toBe('New / Lead')
     expect(STAGE_LABELS.team1_review).toBe('Client Packet Review')

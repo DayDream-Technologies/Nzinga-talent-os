@@ -1,11 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountProfileTemplate } from '@/components/agency/AccountProfileTemplate'
 import { emptyUdf } from '@/lib/talent-udf'
+import { seedProfilePhoto } from '@/lib/profile-photo'
 import type { Application } from '@/types/application'
 
-const { updateProspect } = vi.hoisted(() => ({ updateProspect: vi.fn() }))
+const { updateProspect, updatePipelineTalent, updateRosterTalent, authState } = vi.hoisted(() => ({
+  updateProspect: vi.fn(),
+  updatePipelineTalent: vi.fn(),
+  updateRosterTalent: vi.fn(),
+  authState: { role: 'scout' as string },
+}))
 
 const sampleApp: Application = {
   id: 'app_kai',
@@ -36,6 +42,7 @@ vi.mock('@/context/AppDataContext', () => ({
     setHistory: vi.fn(),
     importAppToPipeline: vi.fn(),
     handleSendApp: vi.fn(),
+    updateTalent: updatePipelineTalent,
   }),
 }))
 
@@ -49,16 +56,25 @@ vi.mock('@/context/AgencyDataContext', () => ({
     addTicket: vi.fn(),
     createProspect: vi.fn(),
     updateProspect,
-    updateTalent: vi.fn(),
+    updateTalent: updateRosterTalent,
     updateTicket: vi.fn(),
   }),
 }))
 
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'u1', name: 'Jordan Hayes', role: 'scout' }, companyCode: 'NZG' }),
+  useAuth: () => ({
+    user: { id: 'u1', name: 'Jordan Hayes', role: authState.role },
+    companyCode: 'NZG',
+  }),
 }))
 
 describe('AccountProfileTemplate', () => {
+  beforeEach(() => {
+    authState.role = 'scout'
+    updateProspect.mockReset()
+    updatePipelineTalent.mockReset()
+    updateRosterTalent.mockReset()
+  })
   it('renders shared chrome and opens Add Charge', () => {
     render(
       <MemoryRouter>
@@ -127,5 +143,61 @@ describe('AccountProfileTemplate', () => {
     )
     fireEvent.click(screen.getByLabelText('Modeling'))
     expect(screen.queryByText('Height')).not.toBeInTheDocument()
+  })
+
+  it('renders a profile photo from the pipeline record', () => {
+    render(
+      <MemoryRouter>
+        <AccountProfileTemplate
+          kind="client"
+          displayName="Maya Rivera"
+          statusLabel="Active Client"
+          statusColor="#16a34a"
+          accountId="NZG-200101"
+          pipelineTalent={{
+            id: 't_maya',
+            name: 'Maya Rivera',
+            uploaded_docs: { profile_photo: seedProfilePhoto('Maya Rivera', 'MR') },
+          } as never}
+          backTo={{ label: 'Back to Clients', to: '/clients' }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('button', { name: 'View profile photo of Maya Rivera' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Change photo' })).not.toBeInTheDocument()
+  })
+
+  it('lets a director change the profile photo', () => {
+    authState.role = 'director'
+    render(
+      <MemoryRouter>
+        <AccountProfileTemplate
+          kind="client"
+          displayName="Maya Rivera"
+          statusLabel="Active Client"
+          statusColor="#16a34a"
+          accountId="NZG-200101"
+          rosterTalent={{
+            id: 'talent_maya',
+            accountId: 'NZG-200101',
+            name: 'Maya Rivera',
+            email: 'maya@example.com',
+            role: 'Signed Model',
+            status: 'current',
+            workArea: 'Modeling',
+            niches: ['Commercial'],
+            bankReady: true,
+            taxFormsReady: true,
+            available: true,
+            bookedDates: [],
+          }}
+          backTo={{ label: 'Back to Clients', to: '/clients' }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Change photo' })).toBeInTheDocument()
+    expect(document.querySelector('input[type="file"][accept="image/*"]')).toBeTruthy()
   })
 })

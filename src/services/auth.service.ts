@@ -1,10 +1,16 @@
 import type { ProspectProfile, Talent, TalentStage, User } from '@/types'
 import { USERS } from '@/constants/seed-data'
+import {
+  DEMO_TALENT_LOGIN,
+  DEMO_TALENT_SESSION_KEY,
+  isDemoTalentLogin,
+} from '@/constants/demo-talent'
 import { COMPANY_CODES } from '@/constants/roles'
 import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { clearLocalAuthSession, supabase, supabaseConfigured } from '@/lib/supabase'
 import { isFreshLoginActive } from '@/lib/session-storage'
 import { fetchTalentByEmailOrApplication } from '@/services/talent.service'
+import { demoStore } from '@/services/demo-store'
 
 /** Director-approved talent may use the talent portal (signed onboarding and beyond). */
 export function isTalentPortalApproved(stage: TalentStage | string | null | undefined): boolean {
@@ -15,7 +21,7 @@ export const TALENT_UNDER_REVIEW_MESSAGE =
   'Your application is still under review. Talent login is available after director approval and signed onboarding.'
 
 export const TALENT_LOGIN_DEMO_MESSAGE =
-  'Talent login is not available in demo mode. Connect Supabase to enable approved talent access.'
+  'Password reset is not available in demo mode. Sign in with the demo client credentials shown on this page.'
 
 export function validateCompanyCode(code: string): boolean {
   return Boolean(COMPANY_CODES[code.toUpperCase()])
@@ -90,7 +96,80 @@ export async function restoreSession(): Promise<User | null> {
   }
 }
 
+function readDemoTalentEmail(): string | null {
+  try {
+    return sessionStorage.getItem(DEMO_TALENT_SESSION_KEY)
+  } catch {
+    return null
+  }
+}
+
+function writeDemoTalentEmail(email: string) {
+  try {
+    sessionStorage.setItem(DEMO_TALENT_SESSION_KEY, email)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearDemoTalentSession() {
+  try {
+    sessionStorage.removeItem(DEMO_TALENT_SESSION_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function findDemoTalentByEmail(email: string): Talent | null {
+  const lower = email.trim().toLowerCase()
+  if (!lower) return null
+  return demoStore.getTalents().find((t) => (t.email || '').toLowerCase() === lower) ?? null
+}
+
+function demoProspectProfile(talent: Talent): ProspectProfile {
+  return {
+    id: `demo_profile_${talent.id}`,
+    auth_uid: `demo_auth_${talent.id}`,
+    email: talent.email || DEMO_TALENT_LOGIN.email,
+    name: talent.name,
+    application_id: talent.application_id,
+    created_at: talent.created_at,
+    last_login_at: new Date().toISOString(),
+  }
+}
+
+async function loginDemoTalent(
+  email: string,
+  password: string,
+): Promise<{ profile: ProspectProfile | null; talent: Talent | null; error: string | null }> {
+  if (!isDemoTalentLogin(email, password)) {
+    return { profile: null, talent: null, error: 'Incorrect email or password. Please try again.' }
+  }
+  const talent = findDemoTalentByEmail(DEMO_TALENT_LOGIN.email)
+  if (!talent || !isTalentPortalApproved(talent.stage)) {
+    return { profile: null, talent: null, error: TALENT_UNDER_REVIEW_MESSAGE }
+  }
+  writeDemoTalentEmail(DEMO_TALENT_LOGIN.email)
+  return { profile: demoProspectProfile(talent), talent, error: null }
+}
+
+async function restoreDemoTalentSession(): Promise<{
+  profile: ProspectProfile | null
+  talent: Talent | null
+  error: string | null
+}> {
+  const email = readDemoTalentEmail()
+  if (!email) return { profile: null, talent: null, error: null }
+  const talent = findDemoTalentByEmail(email)
+  if (!talent || !isTalentPortalApproved(talent.stage)) {
+    clearDemoTalentSession()
+    return { profile: null, talent: null, error: null }
+  }
+  return { profile: demoProspectProfile(talent), talent, error: null }
+}
+
 export async function logout(): Promise<void> {
+  clearDemoTalentSession()
   if (supabaseConfigured && supabase) {
     try {
       await supabase.auth.signOut({ scope: 'local' })
@@ -232,8 +311,9 @@ export async function loginApprovedTalent(
   email: string,
   password: string,
 ): Promise<{ profile: ProspectProfile | null; talent: Talent | null; error: string | null }> {
-  if (!supabaseConfigured || !supabase) {
-    return { profile: null, talent: null, error: TALENT_LOGIN_DEMO_MESSAGE }
+  const demoEmail = email.trim().toLowerCase() === DEMO_TALENT_LOGIN.email
+  if (!supabaseConfigured || !supabase || demoEmail) {
+    return loginDemoTalent(email, password)
   }
 
   const { profile, error } = await prospectLogin(email, password)
@@ -274,8 +354,12 @@ export async function restoreApprovedTalentSession(): Promise<{
   talent: Talent | null
   error: string | null
 }> {
+  const demoSession = await restoreDemoTalentSession()
+  if (demoSession.profile && demoSession.talent) {
+    return demoSession
+  }
   if (!supabaseConfigured || !supabase) {
-    return { profile: null, talent: null, error: TALENT_LOGIN_DEMO_MESSAGE }
+    return demoSession
   }
 
   const profile = await getProspectProfile()

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApplicationAnswersTab, fileFromApplication } from '@/components/agency/ApplicationAnswersTab'
 import { UdfPanel } from '@/components/agency/UdfPanel'
@@ -28,6 +28,7 @@ import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
 import { interestsToTalentTypes, resolvedUdf } from '@/lib/talent-udf'
 import { T } from '@/lib/tokens'
+import { isImageDoc, readImageFileAsDoc, resolveProfilePhoto } from '@/lib/profile-photo'
 import type { Application } from '@/types/application'
 import type {
   AgencyProspect,
@@ -141,7 +142,7 @@ export function AccountProfileTemplate({
 }) {
   const navigate = useNavigate()
   const { user, companyCode } = useAuth()
-  const { history, setHistory, importAppToPipeline, handleSendApp } = useAppData()
+  const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent } = useAppData()
   const {
     clients,
     invoices,
@@ -151,7 +152,7 @@ export function AccountProfileTemplate({
     addTicket,
     createProspect,
     updateProspect,
-    updateTalent,
+    updateTalent: updateRosterTalent,
     updateTicket,
   } = useAgencyData()
   const [tab, setTab] = useState<ProfileTab>(application ? 'application' : 'general')
@@ -167,8 +168,10 @@ export function AccountProfileTemplate({
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [udf, setUdf] = useState<TalentUdf>(() => resolvedUdf(prospect?.udf || rosterTalent?.udf, application, prospect))
   const [udfSaved, setUdfSaved] = useState(false)
+  const [localPhoto, setLocalPhoto] = useState<UploadedDoc | null>(null)
   const contactsRef = useRef<HTMLDivElement>(null)
   const notesRef = useRef<HTMLDivElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setUdf(resolvedUdf(prospect?.udf || rosterTalent?.udf, application, prospect))
@@ -201,6 +204,13 @@ export function AccountProfileTemplate({
       type: c.document.type,
     })),
   ]
+  const profilePhoto =
+    localPhoto ||
+    resolveProfilePhoto({ pipelineTalent, rosterTalent, prospect, application })
+  if (profilePhoto && !docs.some((d) => d.data === profilePhoto.data && d.name === profilePhoto.name)) {
+    docs.unshift(profilePhoto)
+  }
+  const canEditPhoto = user?.role === 'director'
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || null
   const canImport = Boolean(application && isAppComplete(application) && application.status === 'submitted')
   const tabs: { id: ProfileTab; label: string }[] = [
@@ -236,8 +246,32 @@ export function AccountProfileTemplate({
   function persistUdf(next: TalentUdf) {
     const person = prospect || ensureProspect()
     if (person) updateProspect(person.id, { udf: next })
-    if (rosterTalent) updateTalent(rosterTalent.id, { udf: next })
+    if (rosterTalent) updateRosterTalent(rosterTalent.id, { udf: next })
     setUdfSaved(true)
+  }
+
+  async function persistProfilePhoto(doc: UploadedDoc) {
+    setLocalPhoto(doc)
+    if (pipelineTalent) {
+      try {
+        await updatePipelineTalent({
+          ...pipelineTalent,
+          uploaded_docs: { ...(pipelineTalent.uploaded_docs || {}), profile_photo: doc },
+        })
+      } catch {
+        /* toast is shown by AppDataContext */
+      }
+    }
+    if (rosterTalent) updateRosterTalent(rosterTalent.id, { profilePhoto: doc })
+    const person = prospect || ensureProspect()
+    if (person) updateProspect(person.id, { profilePhoto: doc })
+  }
+
+  async function onProfilePhotoFile(file: File | undefined) {
+    if (!file) return
+    if (!file.type.startsWith('image/')) return
+    const doc = await readImageFileAsDoc(file)
+    await persistProfilePhoto(doc)
   }
 
   function addHistoryNote(text: string) {
@@ -306,20 +340,59 @@ export function AccountProfileTemplate({
             <div style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>{formatAccountDisplay(accountId)}</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                background: '#eef2ff',
-                color: T.blue,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-              }}
-            >
-              {initials(displayName)}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <button
+                type="button"
+                aria-label={profilePhoto ? `View profile photo of ${displayName}` : `${displayName} profile`}
+                onClick={() => {
+                  if (profilePhoto) setViewDoc(profilePhoto)
+                }}
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: '50%',
+                  border: `1px solid ${T.cardBorder}`,
+                  background: '#eef2ff',
+                  color: T.blue,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: 20,
+                  overflow: 'hidden',
+                  padding: 0,
+                  cursor: profilePhoto ? 'pointer' : 'default',
+                }}
+              >
+                {profilePhoto && isImageDoc(profilePhoto) && profilePhoto.data?.startsWith('data:') ? (
+                  <img
+                    src={profilePhoto.data}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  initials(displayName)
+                )}
+              </button>
+              {canEditPhoto && (
+                <>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    aria-label="Change photo"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      e.target.value = ''
+                      void onProfilePhotoFile(file)
+                    }}
+                  />
+                  <Btn variant="ghost" onClick={() => photoInputRef.current?.click()}>
+                    Change photo
+                  </Btn>
+                </>
+              )}
             </div>
             <div>
               <div style={{ fontSize: 16, fontWeight: 800 }}>{displayName}</div>

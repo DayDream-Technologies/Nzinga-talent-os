@@ -8,6 +8,7 @@ import { DocViewer } from '@/components/ui/DocViewer'
 import { AgencyDataProvider, useAgencyData } from '@/context/AgencyDataContext'
 import { useTalentAuth } from '@/context/TalentAuthContext'
 import { downloadUploadedDoc } from '@/lib/representation-agreement'
+import { isImageDoc, resolveProfilePhoto } from '@/lib/profile-photo'
 import type { UploadedDoc } from '@/types'
 import type { ProspectContract } from '@/types/agency'
 
@@ -42,22 +43,27 @@ const ghostBtn: React.CSSProperties = {
 function TalentHomeInner() {
   const navigate = useNavigate()
   const { session, loading, logout } = useTalentAuth()
-  const { prospects } = useAgencyData()
+  const { prospects, talent: roster } = useAgencyData()
   const [viewDoc, setViewDoc] = useState<UploadedDoc | null>(null)
 
   const agencyMatch = useMemo(() => {
     if (!session) return null
     const email = session.profile.email.toLowerCase()
+    const accountId = session.talent.account_number
     return (
       prospects.find((p) => p.email.toLowerCase() === email) ??
-      prospects.find(
-        (p) =>
-          Boolean(session.talent.account_number) &&
-          p.accountId === session.talent.account_number,
-      ) ??
+      prospects.find((p) => Boolean(accountId) && p.accountId === accountId) ??
+      prospects.find((p) => {
+        const linked = roster.find(
+          (t) =>
+            (t.email || '').toLowerCase() === email ||
+            (accountId && t.accountId === accountId),
+        )
+        return Boolean(linked?.linkedProspectId) && p.id === linked?.linkedProspectId
+      }) ??
       null
     )
-  }, [prospects, session])
+  }, [prospects, roster, session])
 
   const contracts: ProspectContract[] = agencyMatch?.contracts ?? []
 
@@ -82,8 +88,18 @@ function TalentHomeInner() {
   const { profile, talent } = session
   const stageColor = STAGE_COLORS[talent.stage] ?? '#6b7280'
   const stageLabel = STAGE_LABELS[talent.stage] ?? talent.stage
-  const agentName = agencyMatch?.assignedAgentName
+  const rosterMatch = roster.find(
+    (item) =>
+      (item.email || '').toLowerCase() === profile.email.toLowerCase() ||
+      (talent.account_number && item.accountId === talent.account_number),
+  )
+  const agentName = agencyMatch?.assignedAgentName || rosterMatch?.udf?.assignedAgent
   const agentContact = talent.email || profile.email
+  const profilePhoto = resolveProfilePhoto({
+    pipelineTalent: talent,
+    rosterTalent: rosterMatch,
+    prospect: agencyMatch,
+  })
 
   const docs = REQUIRED_DOCS.map((d) => {
     const uploaded = talent.uploaded_docs?.[d.id] ?? null
@@ -142,17 +158,51 @@ function TalentHomeInner() {
           <TMXLogo size="sm" theme="dark" />
         </div>
 
-        <h1
-          style={{
-            fontFamily: "'Syne', 'Outfit', sans-serif",
-            fontSize: 28,
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            marginBottom: 8,
-          }}
-        >
-          Welcome, {talent.name || profile.name}
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: '50%',
+              overflow: 'hidden',
+              flexShrink: 0,
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: 22,
+              color: '#e8eef4',
+            }}
+          >
+            {profilePhoto && isImageDoc(profilePhoto) && profilePhoto.data?.startsWith('data:') ? (
+              <img
+                src={profilePhoto.data}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              (talent.name || profile.name)
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0]?.toUpperCase() || '')
+                .join('')
+            )}
+          </div>
+          <h1
+            style={{
+              fontFamily: "'Syne', 'Outfit', sans-serif",
+              fontSize: 28,
+              fontWeight: 700,
+              letterSpacing: '-0.02em',
+              margin: 0,
+            }}
+          >
+            Welcome, {talent.name || profile.name}
+          </h1>
+        </div>
         <p style={{ color: 'rgba(232,238,244,0.65)', fontSize: 14, marginBottom: 28, lineHeight: 1.5 }}>
           Your talent home — status, contracts, documents, and how to reach your agent.
         </p>
