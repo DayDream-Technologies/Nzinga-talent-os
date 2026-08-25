@@ -1,4 +1,5 @@
 import { parseApplicationStoragePath } from '@/lib/application-files'
+import { SOP_STATUS, shouldAdvanceSopStatus } from '@/constants/sop-status'
 import type {
   AppField,
   AppFieldCondition,
@@ -874,9 +875,13 @@ export function talentFromApp(app: Application, accountNumber = ''): Talent {
     legal_minor_status: parentRequired,
     animal_skill_onset: '',
     travel_logistics: String(d.scheduling_restrictions || ''),
-    applicant_stage_status: 'New / Lead',
+    applicant_stage_status:
+      app.status === 'submitted' ? SOP_STATUS.underVetting : 'New / Lead',
     discovery_source: '',
-    application_submitted_at: new Date().toISOString().split('T')[0],
+    application_submitted_at:
+      app.status === 'submitted' || app.status === 'pending_guardian'
+        ? new Date().toISOString().split('T')[0]
+        : '',
     next_callback_date: '',
     prior_annual_revenue: '',
     current_agency: String(d.rep_agency_name || ''),
@@ -927,7 +932,7 @@ export function talentFromApp(app: Application, accountNumber = ''): Talent {
     revenue_projected: '0',
     last_contacted: new Date().toISOString().split('T')[0],
     application_id: app.id,
-    application_status: app.status === 'pending_guardian' ? 'pending_guardian' : 'submitted',
+    application_status: app.status,
     uploaded_docs: {
       profile_photo: docFromApp(d, 'doc_profile_photo', 'Profile Photo'),
       gov_id: docFromApp(d, 'doc_gov_id', 'Government ID'),
@@ -1000,6 +1005,12 @@ export function applyApplicationToTalent(existing: Talent, app: Application): Ta
     legal_minor_status: mapped.legal_minor_status || existing.legal_minor_status,
     parent_guardian_required: mapped.parent_guardian_required || existing.parent_guardian_required,
     travel_logistics: mapped.travel_logistics || existing.travel_logistics,
+    applicant_stage_status: shouldAdvanceSopStatus(
+      existing.applicant_stage_status,
+      mapped.applicant_stage_status || SOP_STATUS.underVetting,
+    )
+      ? mapped.applicant_stage_status || existing.applicant_stage_status
+      : existing.applicant_stage_status,
     compliance: { ...existing.compliance, ...mapped.compliance },
     uploaded_docs: { ...existing.uploaded_docs, ...mapped.uploaded_docs },
     application_id: app.id,

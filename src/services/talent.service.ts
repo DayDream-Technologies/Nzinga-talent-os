@@ -83,6 +83,7 @@ const PROFILE_KEYS: (keyof ApplicantProfile)[] = [
   'shoe_size',
   'eye_color',
   'scout_notes',
+  'discovery_call_notes',
   'link_instagram',
   'link_tiktok',
   'link_youtube',

@@ -19,16 +19,17 @@ import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { SendApplicationModal } from '@/components/application/ApplicationModals'
 import { DocViewer } from '@/components/ui/DocViewer'
 import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
-import { isAppComplete } from '@/constants/app-sections'
+import { isApplicationReadyToImport } from '@/lib/application-prefill'
 import { STAGE_LABELS } from '@/constants/stages'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useResolvedImageUrl } from '@/hooks/useResolvedImageUrl'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
 import { interestsToTalentTypes, resolvedUdf } from '@/lib/talent-udf'
 import { T } from '@/lib/tokens'
-import { isImageDoc, readImageFileAsDoc, resolveProfilePhoto } from '@/lib/profile-photo'
+import { isImageDoc, resolveProfilePhoto, uploadProfilePhoto } from '@/lib/profile-photo'
 import type { Application } from '@/types/application'
 import type {
   AgencyProspect,
@@ -207,12 +208,13 @@ export function AccountProfileTemplate({
   const profilePhoto =
     localPhoto ||
     resolveProfilePhoto({ pipelineTalent, rosterTalent, prospect, application })
+  const profilePhotoUrl = useResolvedImageUrl(profilePhoto)
   if (profilePhoto && !docs.some((d) => d.data === profilePhoto.data && d.name === profilePhoto.name)) {
     docs.unshift(profilePhoto)
   }
   const canEditPhoto = user?.role === 'director'
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || null
-  const canImport = Boolean(application && isAppComplete(application) && application.status === 'submitted')
+  const canImport = Boolean(application && isApplicationReadyToImport(application))
   const tabs: { id: ProfileTab; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'udf', label: 'UDF' },
@@ -270,8 +272,14 @@ export function AccountProfileTemplate({
   async function onProfilePhotoFile(file: File | undefined) {
     if (!file) return
     if (!file.type.startsWith('image/')) return
-    const doc = await readImageFileAsDoc(file)
-    await persistProfilePhoto(doc)
+    try {
+      const ownerId =
+        pipelineTalent?.id || rosterTalent?.id || prospect?.id || application?.id || accountId || 'unassigned'
+      const doc = await uploadProfilePhoto(file, ownerId, user?.name || 'staff')
+      await persistProfilePhoto(doc)
+    } catch {
+      /* persist errors toast from AppDataContext; upload errors leave the previous photo */
+    }
   }
 
   function addHistoryNote(text: string) {
@@ -364,9 +372,9 @@ export function AccountProfileTemplate({
                   cursor: profilePhoto ? 'pointer' : 'default',
                 }}
               >
-                {profilePhoto && isImageDoc(profilePhoto) && profilePhoto.data?.startsWith('data:') ? (
+                {profilePhoto && isImageDoc(profilePhoto) && profilePhotoUrl ? (
                   <img
-                    src={profilePhoto.data}
+                    src={profilePhotoUrl}
                     alt=""
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
@@ -417,7 +425,17 @@ export function AccountProfileTemplate({
         <Btn variant="secondary" onClick={() => navigate('/send-email')}>Send Email</Btn>
         <Btn variant="secondary" onClick={() => setModal('docs')}>View documents</Btn>
         {kind === 'applicant' && (
-          <Btn variant="success" disabled={!canImport} onClick={() => application && importAppToPipeline(application)}>
+          <Btn
+            variant="success"
+            disabled={!canImport}
+            onClick={async () => {
+              if (!application) return
+              const imported = await importAppToPipeline(application)
+              const account = imported?.account_number || accountId
+              if (account) navigate(talentAccountPath(account))
+              else if (imported) navigate('/pipeline')
+            }}
+          >
             Import to pipeline
           </Btn>
         )}
@@ -727,9 +745,19 @@ export function AccountProfileTemplate({
       )}
       {modal === 'renew' && application && (
         <SendApplicationModal
-          talent={{ id: application.talent_id || application.id, name: displayName }}
+          talent={{
+            id: application.talent_id || pipelineTalent?.id || application.id,
+            name: displayName,
+            email: email || prospect?.email,
+            phone: phone || prospect?.phone,
+            first_name: String(application.data?.legal_first || prospect?.firstName || ''),
+            last_name: String(application.data?.legal_last || prospect?.lastName || ''),
+            dob: String(application.data?.dob || prospect?.dateOfBirth || ''),
+            application_data: application.data,
+          }}
+          prospect={prospect}
           companyCode={companyCode || application.company_code}
-          onSend={handleSendApp}
+          onSend={(app) => handleSendApp(app, { accountNumber: accountId })}
           onClose={() => setModal(null)}
         />
       )}

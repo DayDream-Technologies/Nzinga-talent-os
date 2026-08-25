@@ -45,8 +45,10 @@ import type {
   ProspectContract,
   ProspectStage,
 } from '@/types/agency'
-import { nextProspectStage, normalizeProspectStage } from '@/constants/prospect-stages'
+import { nextProspectStage, normalizeProspectStage, PROSPECT_TRACKING_STAGES } from '@/constants/prospect-stages'
+import { shouldAdvanceSopStatus } from '@/constants/sop-status'
 import { AGENCY_PROPERTY } from '@/lib/session-storage'
+import { clientFromSignedProspect, signPendingContract } from '@/lib/sop-workflow'
 
 interface AgencyDataValue {
   clients: AgencyClient[]
@@ -122,6 +124,7 @@ interface AgencyDataValue {
     stage: ProspectStage
     applicationId?: string
     organization?: string
+    sopSubStatus?: string | null
   }) => void
   createClient: (input: {
     firstName: string
@@ -132,11 +135,24 @@ interface AgencyDataValue {
     status: ClientLifecycleStatus
     contractStart: string
     contractEnd: string
+    linkedProspectId?: string | null
+    accountId?: string
   }) => AgencyTalent
   updateTalent: (id: string, patch: Partial<AgencyTalent>) => void
   archiveClients: (ids: string[]) => void
   restoreClients: (ids: string[]) => void
   addProspectContract: (prospectId: string, contract: Omit<ProspectContract, 'id' | 'uploadedAt'> & { id?: string; uploadedAt?: string }) => void
+  upsertProspectSop: (input: {
+    email?: string
+    name?: string
+    applicationId?: string | null
+    talentEmail?: string
+    talentName?: string
+    stage: ProspectStage
+    sopSubStatus: string
+    organization?: string
+  }) => AgencyProspect | null
+  signProspectContract: (prospectId: string, contractId: string, signedName: string) => AgencyTalent | null
   advanceProspect: (id: string) => void
   createRenewalOffer: (talentId: string) => string
 }
@@ -558,6 +574,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       stage: ProspectStage
       applicationId?: string
       organization?: string
+      sopSubStatus?: string | null
     }) => {
       const email = input.email.trim().toLowerCase()
       if (!email) return
@@ -568,11 +585,22 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
             (input.applicationId && p.linkedApplicationId === input.applicationId),
         )
         if (existing) {
+          const currentRank = PROSPECT_TRACKING_STAGES.indexOf(normalizeProspectStage(existing.stage))
+          const nextRank = PROSPECT_TRACKING_STAGES.indexOf(normalizeProspectStage(input.stage))
+          const stage =
+            nextRank >= 0 && currentRank >= 0 && nextRank < currentRank
+              ? existing.stage
+              : normalizeProspectStage(input.stage)
+          const sopSubStatus =
+            input.sopSubStatus && shouldAdvanceSopStatus(existing.sopSubStatus, input.sopSubStatus)
+              ? input.sopSubStatus
+              : existing.sopSubStatus
           return prev.map((p) =>
             p.id === existing.id
               ? {
                   ...p,
-                  stage: normalizeProspectStage(input.stage),
+                  stage,
+                  sopSubStatus,
                   linkedApplicationId: input.applicationId || p.linkedApplicationId,
                   name: p.name || input.name,
                 }
@@ -600,6 +628,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
           contractStart: null,
           contractEnd: null,
           linkedApplicationId: input.applicationId || null,
+          sopSubStatus: input.sopSubStatus || null,
         }
         return [created, ...prev]
       })
@@ -617,6 +646,8 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       status: ClientLifecycleStatus
       contractStart: string
       contractEnd: string
+      linkedProspectId?: string | null
+      accountId?: string
     }) => {
       const used = [
         ...prospects.map((p) => p.accountId),
@@ -625,7 +656,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       const name = `${input.firstName} ${input.lastName}`.trim()
       const created: AgencyTalent = {
         id: uid('talent'),
-        accountId: nextAccountNumber(used),
+        accountId: input.accountId || nextAccountNumber(used),
         name,
         firstName: input.firstName,
         lastName: input.lastName,
@@ -643,6 +674,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
         bookedDates: [],
         contractStart: input.contractStart || null,
         contractEnd: input.contractEnd || null,
+        linkedProspectId: input.linkedProspectId || null,
       }
       setTalent((prev) => [created, ...prev])
       return created
@@ -698,6 +730,117 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       )
     },
     [],
+  )
+
+  const upsertProspectSop = useCallback(
+    (input: {
+      email?: string
+      name?: string
+      applicationId?: string | null
+      talentEmail?: string
+      talentName?: string
+      stage: ProspectStage
+      sopSubStatus: string
+      organization?: string
+    }): AgencyProspect | null => {
+      const email = (input.email || input.talentEmail || '').trim().toLowerCase()
+      const name = input.name || input.talentName || email
+      if (!email && !input.applicationId) return null
+      let result: AgencyProspect | null = null
+      setProspects((prev) => {
+        const existing = prev.find(
+          (p) =>
+            (email && p.email.toLowerCase() === email) ||
+            (input.applicationId && p.linkedApplicationId === input.applicationId),
+        )
+        if (existing) {
+          const next = prev.map((p) =>
+            p.id === existing.id
+              ? {
+                  ...p,
+                  stage: input.stage,
+                  sopSubStatus: input.sopSubStatus,
+                  linkedApplicationId: input.applicationId || p.linkedApplicationId,
+                  name: p.name || name,
+                }
+              : p,
+          )
+          result = next.find((p) => p.id === existing.id) || null
+          return next
+        }
+        const used = [...prev.map((p) => p.accountId), ...talent.map((t) => t.accountId)]
+        const parts = name.trim().split(/\s+/)
+        const created: AgencyProspect = {
+          id: uid('pros'),
+          accountId: nextAccountNumber(used),
+          name,
+          firstName: parts[0] || '',
+          lastName: parts.slice(1).join(' ') || '',
+          email: input.email || input.talentEmail || '',
+          workArea: 'Acting',
+          stage: input.stage,
+          source: 'Client packet',
+          submittedAt: new Date().toISOString(),
+          notes: '',
+          organization: (input.organization || 'NZG').toUpperCase(),
+          property: AGENCY_PROPERTY,
+          messageEmails: email ? [email] : [],
+          contracts: [],
+          contractStart: null,
+          contractEnd: null,
+          linkedApplicationId: input.applicationId || null,
+          sopSubStatus: input.sopSubStatus,
+        }
+        result = created
+        return [created, ...prev]
+      })
+      return result
+    },
+    [talent],
+  )
+
+  const signProspectContract = useCallback(
+    (prospectId: string, contractId: string, signedName: string): AgencyTalent | null => {
+      let created: AgencyTalent | null = null
+      setProspects((prev) => {
+        const prospect = prev.find((p) => p.id === prospectId)
+        if (!prospect) return prev
+        const contracts = signPendingContract(prospect.contracts || [], contractId, signedName)
+        const updated: AgencyProspect = {
+          ...prospect,
+          contracts,
+          stage: 'contract_completed',
+          sopSubStatus: 'Active',
+          lost: false,
+        }
+        const draft = clientFromSignedProspect(updated)
+        const used = [
+          ...prev.map((p) => p.accountId),
+          ...talent.map((t) => t.accountId),
+        ]
+        created = {
+          ...draft,
+          id: uid('talent'),
+          accountId: draft.accountId || nextAccountNumber(used),
+        }
+        setTalent((roster) => {
+          const existing = roster.find(
+            (t) =>
+              t.linkedProspectId === prospectId ||
+              (created && t.accountId === created.accountId) ||
+              (created?.email && (t.email || '').toLowerCase() === created.email.toLowerCase()),
+          )
+          if (existing) {
+            created = { ...existing, ...draft, id: existing.id, status: 'current' }
+            return roster.map((t) => (t.id === existing.id ? created! : t))
+          }
+          return [created!, ...roster]
+        })
+        return prev.map((p) => (p.id === prospectId ? updated : p))
+      })
+      return created
+    },
+    [talent],
   )
 
   const advanceProspect = useCallback((id: string) => {
@@ -781,6 +924,8 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       archiveClients,
       restoreClients,
       addProspectContract,
+      upsertProspectSop,
+      signProspectContract,
       advanceProspect,
       createRenewalOffer,
     }),
@@ -846,6 +991,8 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       archiveClients,
       restoreClients,
       addProspectContract,
+      upsertProspectSop,
+      signProspectContract,
       advanceProspect,
       createRenewalOffer,
     ],

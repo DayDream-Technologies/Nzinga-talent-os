@@ -2,17 +2,32 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
+import { completedSectionsFromData, prefillApplicationData } from "@/lib/application-prefill";
 
-function SendApplicationModal({ talent, onSend, onClose, companyCode = "NZG" }) {
-  const [email,setEmail]=useState("");
+function SendApplicationModal({ talent, prospect, onSend, onClose, companyCode = "NZG" }) {
+  const [email,setEmail]=useState(talent.email || prospect?.email || "");
   const [sent,setSent]=useState(false);
   const [sendErr,setSendErr]=useState("");
-  const [code]=useState(talent.name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999));
+  const [code]=useState((talent.name||prospect?.name||"APPL").toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999));
   const method="email";
   const tenantCode=String(companyCode||"NZG").trim().toUpperCase();
 
   function send(){
-    const app={id:"app_"+talent.id+"_"+Date.now(),talent_id:talent.id,access_code:code,company_code:tenantCode,talent_name:talent.name,talent_email:email||"",status:"sent",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{},delivery_method:method};
+    const data=prefillApplicationData({ talent, prospect, existing: talent.application_data });
+    const app={
+      id:"app_"+talent.id+"_"+Date.now(),
+      talent_id:talent.id,
+      access_code:code,
+      company_code:tenantCode,
+      talent_name:talent.name||prospect?.name||"",
+      talent_email:email||data.email||"",
+      status:"sent",
+      created_at:new Date().toISOString(),
+      last_saved:new Date().toISOString(),
+      completed_sections:completedSectionsFromData({ ...data, email: email || data.email }),
+      data:{ ...data, email: email || data.email || "" },
+      delivery_method:method,
+    };
     if(method==="email"&&email){
       setSendErr("Share the access code below with the prospect. Auth emails (signup, reset, guardian links) are sent by Supabase.");
     }
@@ -91,7 +106,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
               </div>
             </div>
             <div style={{ display:"flex",gap:8 }}>
-              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm onClick={onImportToPipeline}>Import to New / Lead</Btn>}
+              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm onClick={onImportToPipeline}>Import to Pipeline</Btn>}
               <button onClick={onClose} style={{ background:"transparent",border:`1px solid ${T.cardBorder}`,borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
             </div>
           </div>

@@ -72,6 +72,8 @@ export interface ApplicantProfile {
   shoe_size?: string
   eye_color?: string
   scout_notes?: string
+  /** Structured Discovery Call notes (required before Client Packet submit). */
+  discovery_call_notes?: string
   /** Social / web links */
   link_instagram?: string
   link_tiktok?: string

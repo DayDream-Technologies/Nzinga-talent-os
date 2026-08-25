@@ -12,13 +12,13 @@ import { isFreshLoginActive } from '@/lib/session-storage'
 import { fetchTalentByEmailOrApplication } from '@/services/talent.service'
 import { demoStore } from '@/services/demo-store'
 
-/** Director-approved talent may use the talent portal (signed onboarding and beyond). */
+/** Talent portal login: Active clients, plus Contract Pending after SM approval (so they can sign). */
 export function isTalentPortalApproved(stage: TalentStage | string | null | undefined): boolean {
-  return stage === 'signed_onboarding' || stage === 'archived'
+  return stage === 'signed_onboarding' || stage === 'archived' || stage === 'team2_audit' || stage === 'executive_review'
 }
 
 export const TALENT_UNDER_REVIEW_MESSAGE =
-  'Your application is still under review. Talent login is available after director approval and signed onboarding.'
+  'Your application is still under review. Talent login is available after your Success Manager approves your packet and publishes a contract.'
 
 export const TALENT_LOGIN_DEMO_MESSAGE =
   'Password reset is not available in demo mode. Sign in with the demo client credentials shown on this page.'

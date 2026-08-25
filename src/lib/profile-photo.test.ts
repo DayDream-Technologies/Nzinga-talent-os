@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { resolveProfilePhoto, seedProfilePhoto } from '@/lib/profile-photo'
+import { describe, expect, it, vi } from 'vitest'
+import { resolveProfilePhoto, seedProfilePhoto, uploadProfilePhoto } from '@/lib/profile-photo'
 import type { Application } from '@/types/application'
 import type { AgencyProspect, AgencyTalent } from '@/types/agency'
 import type { Talent } from '@/types/talent'
+
+vi.mock('@/lib/supabase', () => ({
+  supabaseConfigured: false,
+  supabase: null,
+  DOCUMENTS_BUCKET: 'documents',
+}))
 
 const appPhoto = {
   name: 'app.jpg',
@@ -57,5 +63,17 @@ describe('resolveProfilePhoto', () => {
     } as AgencyTalent
     const prospect = { profilePhoto: null } as AgencyProspect
     expect(resolveProfilePhoto({ rosterTalent, prospect })?.name).toContain('Kai_Johnson')
+  })
+})
+
+describe('uploadProfilePhoto', () => {
+  it('embeds the file as a data URL when storage is not configured', async () => {
+    const file = new File(['hello'], 'headshot.jpg', { type: 'image/jpeg' })
+    const doc = await uploadProfilePhoto(file, 'talent_1', 'talent')
+    expect(doc.data.startsWith('data:')).toBe(true)
+    expect(doc.name).toBe('headshot.jpg')
+    expect(doc.doc_type).toBe('profile_photo')
+    expect(doc.uploaded_by).toBe('talent')
+    expect(doc.storagePath).toBeUndefined()
   })
 })

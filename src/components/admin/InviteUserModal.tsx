@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Role } from '@/types'
-import { ROLE_LABELS } from '@/constants/roles'
+import { useRoles } from '@/context/RolesContext'
+import { roleLabel } from '@/constants/roles'
 import { inviteUser, type InvitePayload } from '@/services/invite.service'
 import { useAuth } from '@/hooks/useAuth'
 import { T } from '@/lib/tokens'
@@ -13,6 +14,7 @@ interface InviteUserModalProps {
 
 export function InviteUserModal({ onClose, onSuccess }: InviteUserModalProps) {
   const { companyCode } = useAuth()
+  const { roles } = useRoles()
   const [form, setForm] = useState({ name: '', email: '', role: 'scout' as Role, title: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,15 +45,13 @@ export function InviteUserModal({ onClose, onSuccess }: InviteUserModalProps) {
     if (err) {
       setError(err)
     } else {
-      setSuccess(`${form.name} has been invited as ${ROLE_LABELS[form.role]}.`)
+      setSuccess(`${form.name} has been invited as ${roleLabel(form.role)}.`)
       setTimeout(() => {
         onSuccess()
         onClose()
       }, 1500)
     }
   }
-
-  const roles = Object.entries(ROLE_LABELS) as [Role, string][]
 
   return (
     <>
@@ -173,9 +173,9 @@ export function InviteUserModal({ onClose, onSuccess }: InviteUserModalProps) {
                   fontFamily: 'inherit',
                 }}
               >
-                {roles.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
+                {roles.map((r) => (
+                  <option key={r.slug} value={r.slug}>
+                    {r.name}
                   </option>
                 ))}
               </select>

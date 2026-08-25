@@ -240,4 +240,30 @@ describe('NZG short application', () => {
     expect(updated.application_data?.sport_highlights).toBe('Conference champion')
     expect(updated.stage).toBe(existing.stage)
   })
+
+  it('sets Application Submitted / Under Vetting on import without regressing later SOP status', () => {
+    const submitted = {
+      id: 'app_sop',
+      talent_id: null,
+      access_code: 'SOP1',
+      company_code: 'NZG',
+      talent_name: 'Kai Johnson',
+      talent_email: 'kai@example.com',
+      status: 'submitted' as const,
+      created_at: new Date().toISOString(),
+      data: { legal_first: 'Kai', legal_last: 'Johnson' },
+    } as Application
+    const created = talentFromApp(submitted, 'NZG-100020')
+    expect(created.stage).toBe('holding_entry')
+    expect(created.applicant_stage_status).toBe('Application Submitted / Under Vetting')
+    expect(created.application_status).toBe('submitted')
+
+    const later = applyApplicationToTalent(
+      { ...created, stage: 'team2_audit', applicant_stage_status: 'Approved - Future', jordan_score: 4.2 },
+      submitted,
+    )
+    expect(later.stage).toBe('team2_audit')
+    expect(later.applicant_stage_status).toBe('Approved - Future')
+    expect(later.jordan_score).toBe(4.2)
+  })
 })

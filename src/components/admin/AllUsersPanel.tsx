@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { User } from '@/types'
-import { ROLE_LABELS } from '@/constants/roles'
+import { roleLabel } from '@/constants/roles'
 import { listUsers, setUserActive } from '@/services/admin.service'
 import { useAuth } from '@/hooks/useAuth'
 import { T } from '@/lib/tokens'
@@ -126,7 +126,7 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
                   <TD muted>{u.email}</TD>
                   <TD>
                     <span style={{ color: u.color, fontWeight: 600, fontSize: 11 }}>
-                      {ROLE_LABELS[u.role]}
+                      {roleLabel(u.role)}
                     </span>
                   </TD>
                   <TD muted>{u.title}</TD>

@@ -48,6 +48,7 @@ export function ProspectsCrmModule() {
   const filtered = useMemo(() => {
     return prospects.filter((p) => {
       if (p.lost && stageFilter !== 'lost') return false
+      if (normalizeProspectStage(p.stage) === 'contract_completed' && stageFilter === 'all') return false
       if (stageFilter === 'all') return !p.lost
       if (stageFilter === 'lost') return !!p.lost
       return normalizeProspectStage(p.stage) === stageFilter
@@ -314,17 +315,23 @@ export function ProspectsCrmModule() {
             id: sendAppFor.id,
             name: sendAppFor.name,
             email: sendAppFor.email,
+            phone: sendAppFor.phone,
+            first_name: sendAppFor.firstName,
+            last_name: sendAppFor.lastName,
+            dob: sendAppFor.dateOfBirth,
+            city: sendAppFor.city,
+            state: sendAppFor.state,
             account_number: sendAppFor.accountId,
           }}
+          prospect={sendAppFor}
           companyCode={companyCode || 'NZG'}
           onClose={() => setSendAppFor(null)}
           onSend={(app: import('@/types').Application) => {
-            handleSendApp(app)
+            handleSendApp(app, { accountNumber: sendAppFor.accountId })
             updateProspect(sendAppFor.id, {
               stage: 'application_sent',
               linkedApplicationId: app.id,
             })
-            setSendAppFor(null)
           }}
         />
       )}

@@ -1,3 +1,5 @@
+import { sanitizeStorageFileName } from '@/lib/application-files'
+import { DOCUMENTS_BUCKET, supabase, supabaseConfigured } from '@/lib/supabase'
 import type { Application } from '@/types/application'
 import type { AgencyProspect, AgencyTalent } from '@/types/agency'
 import type { Talent, UploadedDoc } from '@/types/talent'
@@ -56,7 +58,7 @@ export function resolveProfilePhoto(opts: {
   return photoFromApplication(opts.application)
 }
 
-export function readImageFileAsDoc(file: File): Promise<UploadedDoc> {
+export function readImageFileAsDoc(file: File, uploadedBy: string = 'staff'): Promise<UploadedDoc> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
@@ -66,11 +68,63 @@ export function readImageFileAsDoc(file: File): Promise<UploadedDoc> {
         type: file.type || 'image/jpeg',
         doc_type: 'profile_photo',
         uploaded_at: new Date().toISOString(),
-        uploaded_by: 'staff',
+        uploaded_by: uploadedBy,
         status: 'received',
       })
     }
     reader.onerror = () => reject(reader.error || new Error('Could not read photo'))
     reader.readAsDataURL(file)
   })
+}
+
+const PROFILE_PHOTO_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+])
+
+/** Upload a profile photo to Supabase Storage, or embed as a data URL in demo/offline mode. */
+export async function uploadProfilePhoto(
+  file: File,
+  ownerId: string,
+  uploadedBy: string = 'staff',
+): Promise<UploadedDoc> {
+  if (!supabaseConfigured || !supabase) {
+    return readImageFileAsDoc(file, uploadedBy)
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  if (!session) {
+    throw new Error('Log in to upload a profile photo.')
+  }
+
+  const safeOwner = sanitizeStorageFileName(ownerId || 'unassigned')
+  const path = `${safeOwner}/profile_photo/${Date.now()}_${sanitizeStorageFileName(file.name)}`
+  const contentType = file.type && PROFILE_PHOTO_TYPES.has(file.type) ? file.type : 'application/octet-stream'
+  const { error: uploadError } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(path, file, {
+    upsert: true,
+    contentType,
+  })
+  if (uploadError) {
+    console.error('[uploadProfilePhoto]', uploadError.message, { path, contentType, size: file.size })
+    throw new Error(uploadError.message || 'Could not upload photo. Please try again.')
+  }
+
+  const { data: urlData } = supabase.storage.from(DOCUMENTS_BUCKET).getPublicUrl(path)
+  return {
+    name: file.name,
+    data: urlData.publicUrl,
+    type: file.type || 'image/jpeg',
+    storagePath: path,
+    doc_type: 'profile_photo',
+    uploaded_at: new Date().toISOString(),
+    uploaded_by: uploadedBy,
+    status: 'received',
+  }
 }

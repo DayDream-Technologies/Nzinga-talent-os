@@ -3,7 +3,7 @@ import { useState } from "react";
 import {
   USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, STAGES, STAGE_LABELS, PILLAR_NAMES, REQUIRED_DOCS,
   validateSection, getVisibleSections,
-  APPLICANT_STAGE_STATUSES, ROSTER_DIVISIONS, isScoutReadOnlyView,
+  APPLICANT_STAGE_STATUSES, ROSTER_DIVISIONS, isScoutReadOnlyView, hasPermission, SOP_STATUS,
 } from "@/constants";
 import { T, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, Section, PriBadge, DocViewer } from "@/components/ui-compat";
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
@@ -11,12 +11,19 @@ import { ComposeEmail } from "@/components/talent/ComposeEmail";
 import { PhoneActions } from "@/components/talent/PhoneActions";
 import { TalentLink } from "@/components/talent/TalentLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useResolvedImageUrl } from "@/hooks/useResolvedImageUrl";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { canSubmitClientPacket, clientPacketSubmitBlockers } from "@/lib/client-packet";
+import { CONTRACT_PUBLISHED_EMAIL, markContractPendingSignature } from "@/lib/sop-workflow";
+import { useAgencyData } from "@/context/AgencyDataContext";
+import { sendGeneralEmail } from "@/lib/email";
+import { uploadProfilePhoto } from "@/lib/profile-photo";
 
 const NICHE_OPTIONS = ["Modeling", "Acting", "Sports & Athletics", "Influencing / Content Creation", "Model", "Actor", "Influencer", "Athlete"];
 
 function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
   const { companyCode } = useAuth();
+  const { upsertProspectSop, addProspectContract, prospects } = useAgencyData();
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(talent)));
   const [err, setErr] = useState("");
   const [showSendApp, setShowSendApp] = useState(false);
@@ -37,11 +44,12 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
   const scoutUser = USERS.find((u) => u.id === local.scout_id);
   const scoutReadOnly = isScoutReadOnlyView(role, local.stage, local.scout_id, currentUser.id);
   const canEdit = !scoutReadOnly;
-  const canEditStage = role === "director" || role === "success_manager" || (!scoutReadOnly && ROLE_STAGE_ACCESS[role]?.includes(local.stage));
+  const canEditStage = hasPermission(role, "admin_access") || hasPermission(role, "approve_client_packet") || (!scoutReadOnly && ROLE_STAGE_ACCESS[role]?.includes(local.stage));
   const creatorUser = USERS.find((u) => u.id === local.created_by);
   const createdByLabel = local.created_by === null ? "Prospect" : creatorUser ? `${ROLE_LABELS[creatorUser.role]} (${creatorUser.name})` : "System";
   const linkedApp = local.application_id ? applications[local.application_id] : null;
   const profilePhoto = (local.uploaded_docs || {}).profile_photo;
+  const profilePhotoUrl = useResolvedImageUrl(profilePhoto);
 
   const appMissingMap = {};
   if (linkedApp) {
@@ -119,7 +127,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
     setFollowUpDate("");
   }
 
-  function uploadDocToProfile(docId, data, name, type) {
+  function uploadDocToProfile(docId, data, name, type, extra = {}) {
     const updDocs = {
       ...(local.uploaded_docs || {}),
       [docId]: {
@@ -130,6 +138,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
         uploaded_at: new Date().toISOString(),
         uploaded_by: currentUser.name,
         status: "received",
+        ...extra,
       },
     };
     const compKey = { gov_id: "gov_id", tax_doc: "tax_doc", banking: "banking", proof_income: "proof_income" }[docId] || docId;
@@ -156,22 +165,41 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
     setDirty(false);
   }
 
-  function onProfilePhoto(file) {
+  async function onProfilePhoto(file) {
     if (!file) return;
-    const r = new FileReader();
-    r.onload = (ev) => uploadDocToProfile("profile_photo", ev.target.result, file.name, file.type);
-    r.readAsDataURL(file);
+    try {
+      const doc = await uploadProfilePhoto(file, local.id, currentUser.name);
+      uploadDocToProfile("profile_photo", doc.data, doc.name, doc.type, {
+        storagePath: doc.storagePath,
+        uploaded_at: doc.uploaded_at,
+        uploaded_by: doc.uploaded_by,
+        status: doc.status,
+      });
+    } catch (e) {
+      setErr(e?.message || "Could not upload photo.");
+    }
   }
 
   function scoutSubmit() {
-    for (let i = 0; i < 5; i++) {
-      if (!local.pillar_rationales[i]) { setErr("All 5 pillar rationales required."); return; }
-      if (local.pillar_scores[i] < 3) { setErr(`Pillar ${i + 1} (${PILLAR_NAMES[i]}) must be at least 3.`); return; }
+    const blockers = clientPacketSubmitBlockers(local);
+    if (blockers.length) {
+      setErr("Complete before submit: " + blockers.join(", "));
+      return;
     }
-    if (local.jordan_score < 3.5) { setErr("Jordan Score must be at least 3.5."); return; }
-    if (!local.revenue_path || !local.scout_summary || !local.niches.length) { setErr("Complete scout summary, revenue path, and niches."); return; }
     setErr("");
-    void save({ ...local, stage: "team1_review", applicant_stage_status: "Qualified", audit_log: auditLog("Submitted Client Packet → Client Packet Review", "team1_review") }, true);
+    upsertProspectSop({
+      email: local.email,
+      name: local.name,
+      applicationId: local.application_id,
+      stage: "application_pending",
+      sopSubStatus: SOP_STATUS.inManagerReview,
+    });
+    void save({
+      ...local,
+      stage: "team1_review",
+      applicant_stage_status: SOP_STATUS.inManagerReview,
+      audit_log: auditLog("Submitted Client Packet to Success Manager", "team1_review"),
+    }, true);
   }
   function scoutArchive() {
     setPendingConfirm({
@@ -206,6 +234,64 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
         next: { ...local, stage: "archived", team1_decision: "rejected", audit_log: auditLog("Rejected at Client Packet Review", "team1_review") },
       });
     }
+  }
+  function smApprove() {
+    for (let i = 0; i < 5; i++) { if (local.pillar_scores[i] < 3) { setErr(`Pillar ${i + 1} below minimum 3.`); return; } }
+    if (local.jordan_score < 3.5) { setErr(`Jordan Score ${local.jordan_score.toFixed(2)} is below 3.5 threshold.`); return; }
+    upsertProspectSop({
+      email: local.email,
+      name: local.name,
+      applicationId: local.application_id,
+      stage: "application_approved",
+      sopSubStatus: SOP_STATUS.approvedFuture,
+    });
+    void save({
+      ...local,
+      stage: "team2_audit",
+      team1_decision: "approved",
+      applicant_stage_status: SOP_STATUS.approvedFuture,
+      audit_log: auditLog("Success Manager approved Client Packet → Approved - Future", "team2_audit"),
+    }, true);
+  }
+  function smReturn() {
+    if (!local.team1_notes) { setErr("Correction notes required for revision."); return; }
+    void save({ ...local, stage: "scout_complete", team1_decision: "revision", applicant_stage_status: SOP_STATUS.underVetting, audit_log: auditLog("Returned for more information", "scout_complete") }, true);
+  }
+  function publishContract(file) {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = async (ev) => {
+      const prospect = upsertProspectSop({
+        email: local.email,
+        name: local.name,
+        applicationId: local.application_id,
+        stage: "contact_published",
+        sopSubStatus: SOP_STATUS.contractPending,
+      });
+      if (prospect) {
+        addProspectContract(prospect.id, markContractPendingSignature({
+          title: file.name.replace(/\.[^.]+$/, "") || "Representation agreement",
+          status: "pending_signature",
+          startDate: new Date().toISOString().slice(0, 10),
+          document: { name: file.name, data: ev.target.result, type: file.type || "application/pdf" },
+        }));
+      }
+      if (local.email) {
+        await sendGeneralEmail({
+          toEmail: local.email,
+          toName: local.name,
+          subject: CONTRACT_PUBLISHED_EMAIL.subject,
+          textBody: CONTRACT_PUBLISHED_EMAIL.textBody,
+          htmlBody: CONTRACT_PUBLISHED_EMAIL.htmlBody,
+        });
+      }
+      void save({
+        ...local,
+        applicant_stage_status: SOP_STATUS.contractPending,
+        audit_log: auditLog("Published contract to client portal", "team2_audit"),
+      }, false);
+    };
+    r.readAsDataURL(file);
   }
   function ops() {
     if (Object.values(local.compliance || {}).filter(Boolean).length < 6) { setErr("At least 6/8 compliance items must be verified."); return; }
@@ -253,7 +339,14 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
   const compFields = [["legal_name", "Full Legal Name"], ["gov_id", "Government ID"], ["dob", "Date of Birth"], ["address", "Physical Address"], ["email_phone", "Email / Phone"], ["tax_doc", "Tax Documentation (W-9)"], ["banking", "Banking Information"], ["social_ownership", "Social Account Ownership"]];
   const filtHistory = showDocOnly ? tHistory.filter((h) => h.is_document) : tHistory;
-  const canUploadDocs = role === "ops_specialist" || role === "scout" || role === "director";
+  const canUploadDocs = hasPermission(role, "submit_client_packet") || role === "ops_specialist" || hasPermission(role, "admin_access");
+  const packetBlockers = clientPacketSubmitBlockers(local);
+  const packetReady = canSubmitClientPacket(local);
+  const linkedProspect = prospects.find(
+    (p) =>
+      (local.email && p.email?.toLowerCase() === String(local.email).toLowerCase()) ||
+      (local.application_id && p.linkedApplicationId === local.application_id),
+  );
   const openFollowUps = tHistory.filter((h) => h.follow_up_needed);
 
   return (
@@ -261,6 +354,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
       {showSendApp && (
         <SendApplicationModal
           talent={local}
+          prospect={linkedProspect}
           companyCode={companyCode || "NZG"}
           onSend={(app) => { onSendApp(app); setLocal((x) => ({ ...x, application_id: app.id, application_status: "sent" })); setShowSendApp(false); }}
           onClose={() => setShowSendApp(false)}
@@ -274,8 +368,8 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ position: "relative" }}>
-                {profilePhoto?.data ? (
-                  <img src={profilePhoto.data} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: `2px solid ${T.purple}44` }} />
+                {profilePhotoUrl ? (
+                  <img src={profilePhotoUrl} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: `2px solid ${T.purple}44` }} />
                 ) : (
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: T.purple + "22", border: `2px solid ${T.purple}44`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: T.purple, fontFamily: "'Syne', sans-serif" }}>
                     {local.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
@@ -318,7 +412,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                 </div>
               )}
               {canEdit && <Btn variant="primary" sm onClick={saveProfile}>{dirty ? "Save changes" : "Saved"}</Btn>}
-              {role === "scout" && !scoutReadOnly && <Btn variant="orange" sm onClick={() => setShowSendApp(true)}>Send App</Btn>}
+              {hasPermission(role, "send_application") && !scoutReadOnly && <Btn variant="orange" sm onClick={() => setShowSendApp(true)}>Send App</Btn>}
               <button onClick={onClose} style={{ background: "transparent", border: `1px solid ${T.cardBorder}`, borderRadius: 6, color: T.t3, cursor: "pointer", padding: "5px 10px", fontSize: 12, fontFamily: "inherit" }}>✕</button>
             </div>
           </div>
@@ -483,7 +577,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
           {/* Jordan score */}
           <Section title="Jordan Score" accent={local.jordan_score >= 3.5 ? T.green : T.purple}>
-            {canEdit && (role === "scout" || role === "director" || role === "team1_lead") ? (
+            {canEdit && (hasPermission(role, "submit_client_packet") || hasPermission(role, "admin_access") || role === "team1_lead") ? (
               <div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
                   <div>
@@ -491,8 +585,8 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                     <FTextarea value={local.scout_summary || ""} onChange={(v) => p("scout_summary", v)} rows={3} />
                   </div>
                   <div>
-                    <Lbl>Scout notes</Lbl>
-                    <FTextarea value={local.scout_notes || ""} onChange={(v) => p("scout_notes", v)} rows={3} />
+                    <Lbl>Discovery Call notes (required)</Lbl>
+                    <FTextarea value={local.discovery_call_notes || ""} onChange={(v) => p("discovery_call_notes", v)} rows={3} placeholder="Career readiness, communication, availability, prior representation…" />
                   </div>
                 </div>
                 {PILLAR_NAMES.map((name, i) => (
@@ -635,14 +729,19 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           </Section>
 
           {/* Role actions — inline, no tabs */}
-          {role === "scout" && (local.stage === "holding_entry" || local.stage === "scout_complete") && !scoutReadOnly && (
-            <Section title="Scout actions" accent={T.orange}>
+          {hasPermission(role, "submit_client_packet") && (local.stage === "holding_entry" || local.stage === "scout_complete") && !scoutReadOnly && (
+            <Section title="Scouting Agent actions" accent={T.orange}>
               <div style={{ fontSize: 11, color: T.amber, background: T.amberL, border: `1px solid ${T.amber}55`, borderRadius: 6, padding: "8px 10px", marginBottom: 10, lineHeight: 1.45 }}>
                 SOP: Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
               </div>
+              {!packetReady && (
+                <div style={{ fontSize: 11, color: T.red, marginBottom: 8 }}>
+                  Submit blocked until complete: {packetBlockers.join(", ")}
+                </div>
+              )}
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-                <Btn variant="primary" onClick={scoutSubmit} disabled={local.jordan_score < 3.5 || local.pillar_scores.some((s) => s < 3)}>Submit Client Packet →</Btn>
-                <Btn variant="ghost" sm onClick={() => { p("applicant_stage_status", "Under Review"); onUpdate({ ...local, applicant_stage_status: "Under Review" }); }}>Mark Under Review</Btn>
+                <Btn variant="primary" onClick={scoutSubmit} disabled={!packetReady}>Submit Client Packet to Success Manager</Btn>
+                <Btn variant="ghost" sm onClick={() => { p("applicant_stage_status", SOP_STATUS.underVetting); onUpdate({ ...local, applicant_stage_status: SOP_STATUS.underVetting }); }}>Mark Under Vetting</Btn>
                 <Btn variant="danger" sm onClick={scoutArchive}>Declined</Btn>
                 <Btn variant="warning" sm onClick={markLost}>Withdrawn / Lost</Btn>
               </div>
@@ -658,6 +757,34 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                 <Btn variant="warning" onClick={() => t1("revision")}>Return for more info</Btn>
                 <Btn variant="danger" onClick={() => t1("rejected")}>Reject</Btn>
               </div>
+            </Section>
+          )}
+
+          {hasPermission(role, "approve_client_packet") && role !== "team1_lead" && local.stage === "team1_review" && (
+            <Section title="Success Manager quality assurance" accent={T.amber}>
+              <div style={{ fontSize: 11, color: T.t3, marginBottom: 8 }}>Review the Client Packet, then approve into Prospects as Approved - Future, or return to the Scouting Agent.</div>
+              <Lbl>Correction notes (required for revision)</Lbl>
+              <FTextarea value={local.team1_notes} onChange={(v) => p("team1_notes", v)} rows={2} />
+              <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
+                <Btn variant="success" onClick={smApprove}>Approve — Approved - Future</Btn>
+                <Btn variant="warning" onClick={smReturn}>Return for more info</Btn>
+                <Btn variant="danger" onClick={() => t1("rejected")}>Reject</Btn>
+              </div>
+            </Section>
+          )}
+
+          {hasPermission(role, "publish_contract") && local.stage === "team2_audit" && local.applicant_stage_status === SOP_STATUS.approvedFuture && (
+            <Section title="Publish contract" accent={T.cyan}>
+              <div style={{ fontSize: 11, color: T.t3, marginBottom: 8 }}>
+                Attach the representation agreement. The client is emailed to log in and sign. Status becomes Contract Published / Pending Signature.
+              </div>
+              <label style={{ display: "inline-block", border: `1px dashed ${T.inputBorder}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, cursor: "pointer" }}>
+                Upload and publish contract
+                <input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={(e) => publishContract(e.target.files?.[0])} />
+              </label>
+              {linkedProspect?.contracts?.some((c) => c.status === "pending_signature") && (
+                <div style={{ fontSize: 11, color: T.green, marginTop: 8 }}>A contract is pending signature in the client portal.</div>
+              )}
             </Section>
           )}
 
@@ -720,7 +847,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
             </Section>
           )}
 
-          {(role === "success_manager" || local.stage === "signed_onboarding") && (
+          {(role === "success_manager" || hasPermission(role, "admin_access") || local.stage === "signed_onboarding") && (
             <Section title="Onboarding" accent={T.green}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>

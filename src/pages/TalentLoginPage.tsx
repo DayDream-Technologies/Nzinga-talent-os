@@ -213,8 +213,8 @@ export function TalentLoginPage() {
               lineHeight: 1.5,
             }}
           >
-            Use the same email and password as your application account. Available after director
-            approval and signed onboarding.
+            Use the same email and password as your application account. Available after your
+            Success Manager approves your packet and publishes a contract.
           </p>
 
           {showDemoHint && (

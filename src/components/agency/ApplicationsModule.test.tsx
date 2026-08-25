@@ -77,4 +77,15 @@ describe('ApplicationsModule', () => {
     expect(navigate).toHaveBeenCalledWith('/applications/app_kai')
     expect(importAppToPipeline).not.toHaveBeenCalled()
   })
+
+  it('keeps Import to Pipeline disabled until the application is submitted and complete', () => {
+    render(
+      <MemoryRouter>
+        <ApplicationsModule />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Row actions' }))
+    expect(screen.getByRole('menuitem', { name: 'Import to Pipeline' })).toBeDisabled()
+  })
 })

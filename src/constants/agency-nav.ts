@@ -1,6 +1,12 @@
 /** Full-menu + sidebar information architecture for agency operations. */
 
 import type { Role } from '@/types'
+import { getRoleDef, hasPermission } from '@/constants/roles'
+import {
+  ACCOUNT_MANAGER_MODULE_PATHS,
+  AGENT_MODULE_PATHS,
+  ALL_MODULE_PATHS,
+} from '@/constants/agency-module-paths'
 
 export interface AgencyNavItem {
   id: string
@@ -146,61 +152,12 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
   },
 ]
 
-/** Agent (scout / team leads): talent ops + roster/applicant reports */
-const AGENT_PATHS = [
-  'prospects',
-  'applications',
-  'renewal-offers',
-  'clients',
-  'active-roster',
-  'pipeline',
-  'prospect-tracking',
-  'send-email',
-  'messaging',
-  'support-tickets',
-  'agency-tasks',
-  'appointments',
-  'new-ticket',
-  'calendar',
-  'settings',
-  'report-roster-scorecard',
-  'report-applicant-pool',
-  'report-onboarding',
-  'report-roster-openings',
-  'reports',
-] as const
-
-/** Account manager (ops): finance modules + AR/AP/escrow reports */
-const ACCOUNT_MANAGER_PATHS = [
-  'escrow-deposit',
-  'client-invoices',
-  'post-retainers',
-  'overdue-interest',
-  'batch-receipts',
-  'retainer-plans',
-  'log-expense',
-  'vendors',
-  'disbursements',
-  'issue-payouts',
-  'settings',
-  'report-escrow-balances',
-  'report-gross-bookings',
-  'report-ar-aging',
-  'report-overdue-accounts',
-  'report-pending-payouts',
-  'reports',
-] as const
-
-const ALL_MODULE_PATHS = [
-  ...new Set([...AGENT_PATHS, ...ACCOUNT_MANAGER_PATHS]),
-]
-
 /** Allowed agency paths per role. `workspace` is always allowed separately. */
-export const AGENCY_MODULE_ACCESS: Record<Role, readonly string[]> = {
-  scout: AGENT_PATHS,
-  team1_lead: AGENT_PATHS,
-  team2_lead: AGENT_PATHS,
-  ops_specialist: ACCOUNT_MANAGER_PATHS,
+export const AGENCY_MODULE_ACCESS: Record<string, readonly string[]> = {
+  scout: AGENT_MODULE_PATHS,
+  team1_lead: AGENT_MODULE_PATHS,
+  team2_lead: AGENT_MODULE_PATHS,
+  ops_specialist: ACCOUNT_MANAGER_MODULE_PATHS,
   success_manager: ALL_MODULE_PATHS,
   director: ALL_MODULE_PATHS,
 }
@@ -210,14 +167,13 @@ export function canAccessAgencyPath(role: Role, path: string): boolean {
   if (!normalized || normalized === 'workspace') return true
   if (normalized === 'settings') return true
   if (normalized === 'talent' || normalized.startsWith('talent/')) return true
+  const paths = getRoleDef(role).module_paths
   if (normalized === 'applications' || normalized.startsWith('applications/')) {
-    return (AGENCY_MODULE_ACCESS[role] || []).includes('applications')
+    return paths.includes('applications')
   }
-  // Nested admin routes remain director-only (handled elsewhere); deny here for agency gate
-  if (normalized.startsWith('admin')) return role === 'director'
-  // Legacy roster → clients
+  if (normalized.startsWith('admin')) return hasPermission(role, 'admin_access') || role === 'director'
   if (normalized === 'roster') return canAccessAgencyPath(role, 'clients')
-  return (AGENCY_MODULE_ACCESS[role] || []).includes(normalized)
+  return paths.includes(normalized)
 }
 
 export function filterAgencyNav(role: Role): AgencyNavCategory[] {
@@ -230,14 +186,22 @@ export function filterAgencyNav(role: Role): AgencyNavCategory[] {
         items: g.items
           .filter((item) => item.path !== 'active-roster')
           .filter((item) => {
-            if (cat.id === 'admin' && item.path.startsWith('admin')) return role === 'director'
+            if (cat.id === 'admin' && item.path.startsWith('admin')) {
+              return hasPermission(role, 'admin_access') || role === 'director'
+            }
             if (cat.id === 'admin' && item.path === 'settings') return true
             return canAccessAgencyPath(role, item.path)
           }),
       }))
       .filter((g) => g.items.length > 0),
   })).filter((cat) => {
-    if (cat.id === 'admin') return role === 'director' || cat.groups.some((g) => g.items.some((i) => i.path === 'settings'))
+    if (cat.id === 'admin') {
+      return (
+        hasPermission(role, 'admin_access') ||
+        role === 'director' ||
+        cat.groups.some((g) => g.items.some((i) => i.path === 'settings'))
+      )
+    }
     return cat.groups.length > 0
   })
 }

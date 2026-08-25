@@ -5,6 +5,7 @@ import { useAppData } from '@/context/AppDataContext'
 import { BulkActionsMenu, RowActionsMenu, stubGroups } from '@/components/agency/RowActionsMenu'
 import { Badge, Btn, Panel, SelectAllCheckbox, Table, inputStyle } from '@/components/agency/AgencyUI'
 import { getVisibleSections, isAppComplete, validateSection } from '@/constants/app-sections'
+import { isApplicationReadyToImport } from '@/lib/application-prefill'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
 import { T } from '@/lib/tokens'
@@ -34,7 +35,7 @@ function isPendingParent(app: Application): boolean {
 }
 
 function isReadyToImport(app: Application): boolean {
-  return app.status === 'submitted' && isAppComplete(app) && !isPendingParent(app)
+  return isApplicationReadyToImport(app)
 }
 
 function matchesFilter(app: Application, filter: StatusFilter): boolean {
@@ -165,9 +166,14 @@ export function ApplicationsModule() {
           ? `Import to Pipeline (${readySelected.length})`
           : 'Import to Pipeline',
         disabled: readySelected.length === 0,
-        onClick: () => {
-          for (const app of readySelected) importAppToPipeline(app)
+        onClick: async () => {
+          let last = null
+          for (const app of readySelected) {
+            last = await importAppToPipeline(app)
+          }
           setSelected(new Set())
+          if (last?.account_number) navigate(talentAccountPath(last.account_number))
+          else if (last) navigate('/pipeline')
         },
       },
       'Send Email': {
@@ -307,7 +313,11 @@ export function ApplicationsModule() {
                     id: 'import',
                     label: 'Import to Pipeline',
                     disabled: !isReadyToImport(app),
-                    onClick: () => importAppToPipeline(app),
+                    onClick: async () => {
+                      const imported = await importAppToPipeline(app)
+                      if (imported?.account_number) navigate(talentAccountPath(imported.account_number))
+                      else if (imported) navigate('/pipeline')
+                    },
                   },
                   {
                     id: 'profile',

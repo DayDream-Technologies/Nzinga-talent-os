@@ -8,20 +8,40 @@ import {
 } from '../shared/auth.ts'
 
 interface AdminUsersRequest {
-  action: 'update_role' | 'deactivate' | 'reactivate' | 'list'
+  action:
+    | 'update_role'
+    | 'deactivate'
+    | 'reactivate'
+    | 'list'
+    | 'list_roles'
+    | 'create_role'
+    | 'update_role_def'
+    | 'delete_role'
   user_id?: string
   role?: string
+  slug?: string
+  name?: string
+  description?: string
+  is_system?: boolean
+  stage_access?: string[]
+  module_paths?: string[]
+  permissions?: string[]
+  action_stage?: string
 }
 
-async function requireDirector(authUid: string) {
+async function requireAdmin(authUid: string) {
   const admin = getSupabaseAdmin()
   const { data, error } = await admin
     .from('users')
     .select('id, role, company_code, name')
     .eq('auth_uid', authUid)
     .single()
-  if (error || !data || data.role !== 'director') return null
-  return data
+  if (error || !data) return null
+  if (data.role === 'director') return data
+  const { data: roleRow } = await admin.from('roles').select('permissions').eq('slug', data.role).maybeSingle()
+  const perms = (roleRow?.permissions as string[] | undefined) || []
+  if (perms.includes('admin_access')) return data
+  return null
 }
 
 async function writeAudit(
@@ -41,6 +61,16 @@ async function writeAudit(
   })
 }
 
+function slugify(name: string): string {
+  const base = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40)
+  return base || 'custom_role'
+}
+
 serve(async (req) => {
   const origin = req.headers.get('origin') ?? undefined
 
@@ -57,7 +87,7 @@ serve(async (req) => {
     return errorResponse('Unauthorized', 401, origin)
   }
 
-  const director = await requireDirector(authUser.id)
+  const director = await requireAdmin(authUser.id)
   if (!director) {
     return errorResponse('Forbidden — director access required', 403, origin)
   }
@@ -82,6 +112,86 @@ serve(async (req) => {
     return jsonResponse({ users: data ?? [] }, 200, origin)
   }
 
+  if (action === 'list_roles') {
+    const { data, error } = await admin.from('roles').select('*').order('name')
+    if (error) return errorResponse(error.message, 500, origin)
+    return jsonResponse({ roles: data ?? [] }, 200, origin)
+  }
+
+  if (action === 'create_role') {
+    if (!body.name?.trim()) return errorResponse('name is required', 400, origin)
+    let slug = (body.slug || slugify(body.name)).trim()
+    const { data: clash } = await admin.from('roles').select('slug').eq('slug', slug).maybeSingle()
+    if (clash) {
+      let n = 2
+      while (true) {
+        const candidate = `${slug}_${n}`
+        const { data: exists } = await admin.from('roles').select('slug').eq('slug', candidate).maybeSingle()
+        if (!exists) {
+          slug = candidate
+          break
+        }
+        n += 1
+      }
+    }
+    const permissions = (body.permissions || []).filter((p) => p !== 'admin_access')
+    const { data, error } = await admin
+      .from('roles')
+      .insert({
+        slug,
+        name: body.name.trim(),
+        description: body.description || '',
+        is_system: false,
+        stage_access: body.stage_access || [],
+        module_paths: body.module_paths || [],
+        permissions,
+        action_stage: body.action_stage || 'holding_entry',
+      })
+      .select()
+      .single()
+    if (error) return errorResponse(error.message, 500, origin)
+    await writeAudit(director.id, 'role_created', 'role', slug, { name: body.name, slug })
+    return jsonResponse({ role: data }, 200, origin)
+  }
+
+  if (action === 'update_role_def') {
+    if (!body.slug) return errorResponse('slug is required', 400, origin)
+    const { data: existing, error: existingErr } = await admin.from('roles').select('*').eq('slug', body.slug).single()
+    if (existingErr || !existing) return errorResponse('Role not found', 404, origin)
+    const permissions = existing.is_system
+      ? body.permissions || existing.permissions
+      : (body.permissions || existing.permissions || []).filter((p: string) => p !== 'admin_access')
+    const { data, error } = await admin
+      .from('roles')
+      .update({
+        name: body.name?.trim() || existing.name,
+        description: body.description !== undefined ? body.description : existing.description,
+        stage_access: body.stage_access || existing.stage_access,
+        module_paths: body.module_paths || existing.module_paths,
+        permissions,
+        action_stage: body.action_stage || existing.action_stage,
+      })
+      .eq('slug', body.slug)
+      .select()
+      .single()
+    if (error) return errorResponse(error.message, 500, origin)
+    await writeAudit(director.id, 'role_updated', 'role', body.slug, { name: data.name })
+    return jsonResponse({ role: data }, 200, origin)
+  }
+
+  if (action === 'delete_role') {
+    if (!body.slug) return errorResponse('slug is required', 400, origin)
+    const { data: existing } = await admin.from('roles').select('*').eq('slug', body.slug).maybeSingle()
+    if (!existing) return errorResponse('Role not found', 404, origin)
+    if (existing.is_system) return errorResponse('System roles cannot be deleted', 400, origin)
+    const { count } = await admin.from('users').select('id', { count: 'exact', head: true }).eq('role', body.slug)
+    if ((count || 0) > 0) return errorResponse('Cannot delete a role that is still assigned to users', 400, origin)
+    const { error } = await admin.from('roles').delete().eq('slug', body.slug)
+    if (error) return errorResponse(error.message, 500, origin)
+    await writeAudit(director.id, 'role_deleted', 'role', body.slug, { name: existing.name })
+    return jsonResponse({ ok: true }, 200, origin)
+  }
+
   if (!user_id) {
     return errorResponse('user_id is required', 400, origin)
   }
@@ -102,18 +212,11 @@ serve(async (req) => {
 
   if (action === 'update_role') {
     if (!role) return errorResponse('role is required', 400, origin)
-    const validRoles = [
-      'scout',
-      'team1_lead',
-      'ops_specialist',
-      'team2_lead',
-      'director',
-      'success_manager',
-    ]
-    if (!validRoles.includes(role)) {
+    const { data: roleRow } = await admin.from('roles').select('slug').eq('slug', role).maybeSingle()
+    if (!roleRow) {
       return errorResponse('Invalid role', 400, origin)
     }
-    if (target.id === director.id && role !== 'director') {
+    if (target.id === director.id && role !== director.role && director.role === 'director') {
       return errorResponse('Cannot demote yourself', 400, origin)
     }
 

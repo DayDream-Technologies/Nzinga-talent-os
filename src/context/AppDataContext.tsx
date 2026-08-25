@@ -11,6 +11,11 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Application, ApplicationsMap, HistoryEntry, Talent, Task } from '@/types'
 import { applyApplicationToTalent, isAppComplete, talentFromApp } from '@/constants/app-sections'
+import { SOP_STATUS } from '@/constants/sop-status'
+import {
+  findLinkedTalent,
+  isApplicationReadyToImport,
+} from '@/lib/application-prefill'
 import { assignAccountNumber, nextAccountNumber } from '@/lib/account-number'
 import { fetchTalents, updateTalents, upsertTalent } from '@/services/talent.service'
 import { fetchApplications, saveApplication } from '@/services/application.service'
@@ -35,8 +40,8 @@ interface AppDataContextValue {
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>
   setHistory: React.Dispatch<React.SetStateAction<HistoryEntry[]>>
   saveApp: (app: Application) => void
-  handleSendApp: (app: Application) => void
-  importAppToPipeline: (app: Application) => void
+  handleSendApp: (app: Application, opts?: { accountNumber?: string }) => void
+  importAppToPipeline: (app: Application) => Promise<Talent | null>
   handleNewTalent: (t: Talent) => void
   refreshAll: () => void
 }
@@ -172,17 +177,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (app.status === 'submitted' && isAppComplete(app) && app.guardian_status !== 'pending') {
           const existingFull = talentsRef.current.find((t) => t.application_id === app.id)
           if (existingFull) {
-            const fullTalent = talentFromApp(
-              { ...app, id: app.id },
-              existingFull.account_number,
-            )
-            const upgraded: Talent = {
-              ...existingFull,
-              ...fullTalent,
-              id: existingFull.id,
-              application_id: app.id,
-              application_status: 'submitted',
-            }
+            const upgraded: Talent = applyApplicationToTalent(existingFull, saved)
             try {
               await upsertTalent(upgraded)
               const next = talentsRef.current.map((t) =>
@@ -236,22 +231,58 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   )
 
   const handleSendApp = useCallback(
-    (app: Application) => {
+    (app: Application, opts?: { accountNumber?: string }) => {
       void (async () => {
         try {
-          await saveApplication(app)
+          const saved = await saveApplication(app)
           queryClient.setQueryData(['applications'], {
             ...applicationsRef.current,
-            [app.id]: app,
+            [saved.id]: saved,
           })
-          if (app.talent_id) {
+          const existing = findLinkedTalent(talentsRef.current, saved)
+          if (existing) {
             const next = talentsRef.current.map((t) =>
-              t.id === app.talent_id
-                ? { ...t, application_id: app.id, application_status: 'sent' }
+              t.id === existing.id
+                ? { ...t, application_id: saved.id, application_status: saved.status }
                 : t,
             )
             await persistTalents(next)
+            if (saved.talent_id !== existing.id) {
+              const linked = await saveApplication({ ...saved, talent_id: existing.id })
+              queryClient.setQueryData(['applications'], {
+                ...applicationsRef.current,
+                [linked.id]: linked,
+              })
+            }
+            return
           }
+          const stub = {
+            ...talentFromApp(
+              saved,
+              opts?.accountNumber ||
+                nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
+            ),
+            id: `t_stub_${saved.id}`,
+            stage: 'holding_entry' as const,
+            application_id: saved.id,
+            application_status: saved.status,
+            applicant_stage_status: 'New / Lead',
+            audit_log: [
+              {
+                user: saved.talent_name,
+                role: 'Prospect',
+                action: 'Application invitation sent — profile created from known information',
+                stage: 'holding_entry',
+                ts: new Date().toISOString(),
+              },
+            ],
+          }
+          await persistTalents([...talentsRef.current, stub])
+          const linked = await saveApplication({ ...saved, talent_id: stub.id })
+          queryClient.setQueryData(['applications'], {
+            ...applicationsRef.current,
+            [linked.id]: linked,
+          })
         } catch (e) {
           showToast(persistErrorMessage(e), 'error')
         }
@@ -261,37 +292,68 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   )
 
   const importAppToPipeline = useCallback(
-    (app: Application) => {
-      if (!isAppComplete(app)) return
-      void (async () => {
-        try {
-          const existing = talentsRef.current.find((t) => t.application_id === app.id)
-          if (existing) {
-            const upgraded = {
-              ...existing,
-              ...talentFromApp(app, existing.account_number),
+    async (app: Application): Promise<Talent | null> => {
+      if (!isApplicationReadyToImport(app)) {
+        showToast(
+          app.status === 'pending_guardian' || app.guardian_status === 'pending'
+            ? 'Cannot import until parent/guardian approval is complete.'
+            : 'Application must be submitted and complete before importing to pipeline.',
+          'error',
+        )
+        return null
+      }
+      try {
+        const existing = findLinkedTalent(talentsRef.current, app)
+        const imported: Talent = existing
+          ? {
+              ...applyApplicationToTalent(existing, app),
               id: existing.id,
               account_number: existing.account_number,
+              stage: existing.stage,
             }
-            await upsertTalent(upgraded)
-            await persistTalents(
-              talentsRef.current.map((t) => (t.id === existing.id ? upgraded : t)),
-            )
-          } else {
-            const newTalent = talentFromApp(
+          : talentFromApp(
               app,
               nextAccountNumber(talentsRef.current.map((t) => t.account_number)),
             )
-            await persistTalents([...talentsRef.current, newTalent])
-            await saveApplication({ ...app, talent_id: newTalent.id })
-          }
-          setReviewingApp(null)
-        } catch (e) {
-          showToast(persistErrorMessage(e), 'error')
+        if (existing) {
+          await upsertTalent(imported)
+          await persistTalents(
+            talentsRef.current.map((t) => (t.id === existing.id ? imported : t)),
+          )
+        } else {
+          await persistTalents([...talentsRef.current, imported])
         }
-      })()
+        if (app.talent_id !== imported.id) {
+          const linked = await saveApplication({ ...app, talent_id: imported.id })
+          queryClient.setQueryData(['applications'], {
+            ...applicationsRef.current,
+            [linked.id]: linked,
+          })
+        }
+        const hist: HistoryEntry = {
+          id: 'h' + Date.now(),
+          talent_id: imported.id,
+          account_number: imported.account_number || null,
+          user_id: null,
+          type: 'system',
+          text: `Imported to pipeline as ${SOP_STATUS.underVetting}.`,
+          ts: new Date().toISOString(),
+          flagged: false,
+          is_document: false,
+        }
+        const newHist = [hist, ...history]
+        setLocalHistory(newHist)
+        await saveHistory([hist])
+        setReviewingApp(null)
+        setSelectedTalent(imported)
+        showToast(`Imported to pipeline as ${SOP_STATUS.underVetting}.`, 'success')
+        return imported
+      } catch (e) {
+        showToast(persistErrorMessage(e), 'error')
+        return null
+      }
     },
-    [persistTalents, showToast],
+    [persistTalents, queryClient, history, showToast],
   )
 
   const handleNewTalent = useCallback(

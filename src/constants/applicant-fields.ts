@@ -84,8 +84,13 @@ export const APPLICANT_STAGE_STATUSES = [
   'New / Lead',
   'Under Review',
   'Qualification in Progress',
+  'Application Submitted / Under Vetting',
   'Qualified',
   'Client Packet Pending',
+  'In Manager Review',
+  'Approved - Future',
+  'Contract Published / Pending Signature',
+  'Active',
   'Withdrawn',
 ] as const
 

@@ -10,7 +10,7 @@ export const USERS: User[] = [
     role: 'scout',
     email: 'jordan@nzinga.co',
     password: 'scout123',
-    title: 'Talent Scout',
+    title: 'Scouting Agent',
     color: '#7c3aed',
     company_code: 'NZG',
   },

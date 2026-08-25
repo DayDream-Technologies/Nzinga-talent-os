@@ -1,14 +1,14 @@
 import type { Role } from '@/types'
-import { ROLE_LABELS } from '@/constants/roles'
+import { roleLabel } from '@/constants/roles'
 import { T } from '@/lib/tokens'
 import { PageContent } from '@/components/layout/PageContent'
 
 const TRAINING_BY_ROLE: Record<
-  Role,
+  string,
   { title: string; items: { label: string; description: string; url?: string }[] }
 > = {
   scout: {
-    title: 'Scout Training',
+    title: 'Scouting Agent Training',
     items: [
       {
         label: 'Jordan Score Guide',
@@ -84,6 +84,10 @@ const TRAINING_BY_ROLE: Record<
     title: 'Success Manager Training',
     items: [
       {
+        label: 'Client Packet QA',
+        description: 'Approve complete packets as Approved - Future, return incomplete packets, and publish contracts to the client portal.',
+      },
+      {
         label: 'Onboarding Checklist',
         description: 'Portal setup, technical routing, and warm handoff confirmation.',
       },
@@ -100,7 +104,7 @@ interface TrainingPanelProps {
 }
 
 export function TrainingPanel({ role }: TrainingPanelProps) {
-  const content = TRAINING_BY_ROLE[role]
+  const content = TRAINING_BY_ROLE[role] || TRAINING_BY_ROLE.scout
 
   return (
     <PageContent>
@@ -109,7 +113,7 @@ export function TrainingPanel({ role }: TrainingPanelProps) {
           My Training
         </div>
         <div style={{ fontSize: 13, color: T.t3, marginTop: 3 }}>
-          Resources for {ROLE_LABELS[role]}s
+          Resources for {roleLabel(role)}s
         </div>
       </div>
 

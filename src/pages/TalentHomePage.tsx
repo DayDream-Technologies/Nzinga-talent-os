@@ -3,6 +3,7 @@ import { STAGE_COLORS, STAGE_LABELS } from '@/types/stages'
 import { TMXLogo } from '@/components/branding'
 import { portalCard, portalMuted, useTalentPortalPrefs } from '@/components/talent-portal/TalentPortalShell'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
+import { useResolvedImageUrl } from '@/hooks/useResolvedImageUrl'
 import { isImageDoc, resolveProfilePhoto } from '@/lib/profile-photo'
 import {
   agentContact,
@@ -27,13 +28,14 @@ export function TalentHomePage() {
     escrow,
   } = useTalentPortal()
   const { prefs } = useTalentPortalPrefs()
-  if (!profile || !talent) return null
-
   const photo = resolveProfilePhoto({
     pipelineTalent: talent,
     rosterTalent,
     prospect,
   })
+  const photoUrl = useResolvedImageUrl(photo)
+  if (!profile || !talent) return null
+
   const stageColor = STAGE_COLORS[talent.stage] ?? '#6b7280'
   const stageLabel = STAGE_LABELS[talent.stage] ?? talent.stage
   const agent = agentContact(prospect)
@@ -83,8 +85,8 @@ export function TalentHomePage() {
             fontSize: 22,
           }}
         >
-          {photo && isImageDoc(photo) && photo.data?.startsWith('data:') ? (
-            <img src={photo.data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {photo && isImageDoc(photo) && photoUrl ? (
+            <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             displayName
               .split(/\s+/)

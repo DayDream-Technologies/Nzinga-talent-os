@@ -133,6 +133,8 @@ export interface AgencyProspect {
   /** Linked pipeline application id when synced from Applications */
   linkedApplicationId?: string | null
   lost?: boolean
+  /** SOP display sub-status (Approved - Future, Contract Published, etc.) */
+  sopSubStatus?: string | null
   /** Staff-maintained headshot / avatar */
   profilePhoto?: import('./talent').UploadedDoc | null
   /** Staff-maintained roster sheet */
@@ -145,7 +147,7 @@ export interface ProspectContractDocument {
   type: string
 }
 
-export type ProspectContractStatus = 'current' | 'past'
+export type ProspectContractStatus = 'current' | 'past' | 'pending_signature'
 
 export interface ProspectContract {
   id: string
@@ -159,6 +161,8 @@ export interface ProspectContract {
   termLengthYears?: TermLengthYears
   uploadedAt: string
   document: ProspectContractDocument
+  signedAt?: string | null
+  signedName?: string | null
 }
 
 export interface SupportTicket {

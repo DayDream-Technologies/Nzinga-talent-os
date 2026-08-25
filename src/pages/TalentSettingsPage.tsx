@@ -8,7 +8,8 @@ import {
   useTalentPortalPrefs,
 } from '@/components/talent-portal/TalentPortalShell'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
-import { isImageDoc, readImageFileAsDoc, resolveProfilePhoto } from '@/lib/profile-photo'
+import { useResolvedImageUrl } from '@/hooks/useResolvedImageUrl'
+import { isImageDoc, resolveProfilePhoto, uploadProfilePhoto } from '@/lib/profile-photo'
 import { mergeUdf } from '@/lib/talent-udf'
 import type { TalentUdf } from '@/types/udf'
 
@@ -56,6 +57,7 @@ export function TalentSettingsPage() {
     rosterTalent,
     prospect,
   })
+  const photoUrl = useResolvedImageUrl(photo)
 
   function fieldValue(key: keyof TalentUdf): string {
     const raw = values[key]
@@ -89,13 +91,13 @@ export function TalentSettingsPage() {
       return
     }
     try {
-      const doc = await readImageFileAsDoc(file)
-      const photoDoc = { ...doc, uploaded_by: 'talent' as const, status: 'received' as const }
+      const ownerId = rosterTalent?.id || prospect?.id || talent?.id || 'unassigned'
+      const photoDoc = await uploadProfilePhoto(file, ownerId, 'talent')
       if (rosterTalent) updateTalent(rosterTalent.id, { profilePhoto: photoDoc })
       if (prospect) updateProspect(prospect.id, { profilePhoto: photoDoc })
       setNotice('Profile photo updated.')
     } catch {
-      setPhotoError('Could not read that image. Try another file.')
+      setPhotoError('Could not upload that image. Try another file.')
     }
   }
 
@@ -127,8 +129,8 @@ export function TalentSettingsPage() {
                 fontSize: 24,
               }}
             >
-              {photo && isImageDoc(photo) && photo.data?.startsWith('data:') ? (
-                <img src={photo.data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {photo && isImageDoc(photo) && photoUrl ? (
+                <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 displayName
                   .split(/\s+/)

@@ -94,6 +94,7 @@ describe('AccountProfileTemplate', () => {
     expect(screen.getByRole('heading', { name: 'Kai Johnson' })).toBeInTheDocument()
     expect(screen.getByText('PAYOUT DUE')).toBeInTheDocument()
     expect(screen.getByText('Add Charge')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Import to pipeline' })).toBeDisabled()
     fireEvent.click(screen.getByText('Add Charge'))
     const dialog = screen.getByRole('dialog', { name: 'New invoice' })
     expect(dialog).toBeInTheDocument()
