@@ -150,3 +150,4 @@ No `.env` required for the demo. Auth emails are configured in the Supabase dash
 - RBAC is enforced at the data layer (`ROLE_STAGE_ACCESS`) AND at the UI layer (conditional renders)
 - Never add global CSS files — all styles are inline style objects using `T` tokens
 - When adding new components, follow the same import pattern (ui.jsx for atoms, constants.js for data)
+- When adding or changing user-visible behavior, update `FEATURES.md` in the same change

@@ -2,6 +2,8 @@
 
 Enterprise talent management system for Nzinga Talent Group. Manages talent through a 7-stage pipeline with role-based access control, a self-serve prospect application portal, file uploads, document management, and automated pipeline transitions.
 
+Product capabilities: see [FEATURES.md](FEATURES.md).
+
 ## Tech Stack
 
 - **React 18** + **Vite 6** + **TypeScript**
