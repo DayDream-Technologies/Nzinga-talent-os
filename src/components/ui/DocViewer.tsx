@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { UploadedDoc } from '@/types'
 import { downloadUploadedDoc } from '@/lib/representation-agreement'
 import { resolveUploadedDocUrl } from '@/services/storage.service'
@@ -45,7 +46,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70"
       role="dialog"
@@ -103,6 +104,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

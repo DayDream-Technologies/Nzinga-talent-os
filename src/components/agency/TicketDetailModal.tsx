@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { SupportTicket, TicketType } from '@/types/agency'
 import { T } from '@/lib/tokens'
 import { Badge, Btn, Field, StatusColor, TicketTypeColor, inputStyle } from './AgencyUI'
@@ -64,8 +65,11 @@ export function TicketDetailModal({
   const dueOverdue =
     !isClosed && ticket.dueDate && ticket.dueDate < new Date().toISOString().slice(0, 10)
 
-  return (
+  return createPortal(
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={ticket.subject}
       style={{
         position: 'fixed',
         inset: 0,
@@ -278,6 +282,7 @@ export function TicketDetailModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

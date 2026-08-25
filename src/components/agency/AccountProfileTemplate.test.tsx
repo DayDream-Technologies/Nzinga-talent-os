@@ -79,7 +79,9 @@ describe('AccountProfileTemplate', () => {
     expect(screen.getByText('PAYOUT DUE')).toBeInTheDocument()
     expect(screen.getByText('Add Charge')).toBeInTheDocument()
     fireEvent.click(screen.getByText('Add Charge'))
-    expect(screen.getByText('New invoice')).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'New invoice' })
+    expect(dialog).toBeInTheDocument()
+    expect(dialog.parentElement).toBe(document.body)
   })
 
   it('shows Application answers and gates Model UDF fields', () => {

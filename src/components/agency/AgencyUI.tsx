@@ -1,4 +1,5 @@
 import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { T } from '@/lib/tokens'
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
@@ -403,8 +404,14 @@ export function ModalShell({
   children: ReactNode
   width?: number
 }) {
-  return (
+  // Portal to body so position:fixed is viewport-relative. Panel/page enter
+  // animations keep a CSS transform, which would otherwise pin "fixed" overlays
+  // to the full scrollable page instead of the visible window.
+  return createPortal(
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
       style={{
         position: 'fixed',
         inset: 0,
@@ -453,7 +460,8 @@ export function ModalShell({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
