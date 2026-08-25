@@ -1,8 +1,9 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Navigate, Outlet } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
 import { AgencyDataProvider } from '@/context/AgencyDataContext'
+import { useTalentAuth } from '@/context/TalentAuthContext'
 import { TMXMark } from '@/components/branding'
-import { TalentPortalGate, useTalentPortal } from '@/hooks/useTalentPortal'
+import { useTalentPortal } from '@/hooks/useTalentPortal'
 
 export const portalPage: React.CSSProperties = {
   minHeight: '100vh',
@@ -63,6 +64,28 @@ const NAV = [
   { to: '/talent/files', label: 'Files & media' },
   { to: '/talent/messages', label: 'Messages' },
 ]
+
+function TalentPortalGate({ children }: { children: React.ReactNode }) {
+  const { loading, session } = useTalentAuth()
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0c1520',
+          color: 'rgba(232,238,244,0.65)',
+        }}
+      >
+        Loading your talent portal…
+      </div>
+    )
+  }
+  if (!session) return <Navigate to="/talent/login" replace />
+  return <>{children}</>
+}
 
 function ShellInner() {
   const { handleLogout, displayName } = useTalentPortal()

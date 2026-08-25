@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useTalentAuth } from '@/context/TalentAuthContext'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { matchTalentRecords } from '@/lib/talent-portal'
@@ -33,26 +33,4 @@ export function useTalentPortal() {
     ...agency,
     handleLogout,
   }
-}
-
-export function TalentPortalGate({ children }: { children: React.ReactNode }) {
-  const { loading, session } = useTalentAuth()
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0c1520',
-          color: 'rgba(232,238,244,0.65)',
-        }}
-      >
-        Loading your talent portal…
-      </div>
-    )
-  }
-  if (!session) return <Navigate to="/talent/login" replace />
-  return <>{children}</>
 }
