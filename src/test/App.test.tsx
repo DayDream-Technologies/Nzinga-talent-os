@@ -22,6 +22,8 @@ describe('public auth paths', () => {
     expect(isPublicAuthPath('/login')).toBe(true)
     expect(isPublicAuthPath('/portal')).toBe(true)
     expect(isPublicAuthPath('/talent/login')).toBe(true)
+    expect(isPublicAuthPath('/talent/money')).toBe(true)
+    expect(isPublicAuthPath('/talent/NZG-200101')).toBe(false)
     expect(isPublicAuthPath('/workspace')).toBe(false)
   })
 })

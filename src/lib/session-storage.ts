@@ -1,5 +1,7 @@
 /** Session / idle persistence keys for staff auth. */
 
+import { isTalentPortalPath } from '@/lib/talent-portal'
+
 export const STORAGE_COMPANY_CODE = 'nto_company_code'
 export const STORAGE_LAST_PATH = 'nto_last_path'
 export const STORAGE_LAST_ACTIVITY = 'nto_last_activity'
@@ -21,7 +23,7 @@ export function isPublicAuthPath(pathname: string): boolean {
   }
   if (pathname.startsWith('/auth/')) return true
   if (pathname.startsWith('/guardian')) return true
-  if (pathname === '/talent/login' || pathname === '/talent/home') return true
+  if (isTalentPortalPath(pathname)) return true
   return false
 }
 

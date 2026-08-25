@@ -79,6 +79,8 @@ export interface AgencyTalent {
   linkedProspectId?: string | null
   /** Staff-maintained headshot / avatar */
   profilePhoto?: import('./talent').UploadedDoc | null
+  /** Agency-uploaded photos, videos, and other talent-facing assets */
+  portalAssets?: import('./talent').UploadedDoc[]
   /** Staff-maintained roster sheet */
   udf?: Partial<import('./udf').TalentUdf>
 }
@@ -268,6 +270,7 @@ export interface EscrowDeposit {
   status: EscrowStatus
   invoiceId?: string
   notes: string
+  talentName?: string
 }
 
 export interface ExpensePayoutLog {

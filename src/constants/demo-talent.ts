@@ -1,10 +1,13 @@
-/** Demo-mode talent portal credentials (no Supabase). */
+/** Demo talent portal credentials for the NZG organization. */
 
 export const DEMO_TALENT_LOGIN = {
   email: 'maya@example.com',
   password: 'talent123',
   name: 'Maya Rivera',
   talentId: 't_maya',
+  companyCode: 'NZG',
+  agentName: 'Sarah Chen',
+  agentEmail: 'sarah.chen@nzinga.co',
 } as const
 
 export const DEMO_TALENT_SESSION_KEY = 'nto_demo_talent_email'

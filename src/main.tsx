@@ -11,6 +11,11 @@ import { EmailConfirmedPage } from '@/pages/EmailConfirmedPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { TalentLoginPage } from '@/pages/TalentLoginPage'
 import { TalentHomePage } from '@/pages/TalentHomePage'
+import { TalentActivityPage } from '@/pages/TalentActivityPage'
+import { TalentMoneyPage } from '@/pages/TalentMoneyPage'
+import { TalentFilesPage } from '@/pages/TalentFilesPage'
+import { TalentMessagesPage } from '@/pages/TalentMessagesPage'
+import { TalentAppLayout } from '@/components/talent-portal/TalentPortalShell'
 import { GuardianVerifyPage } from '@/pages/GuardianVerifyPage'
 import { installChunkLoadRecovery, lazyWithReload } from '@/lib/lazy-with-reload'
 import { readStorage, STORAGE_THEME } from '@/lib/session-storage'
@@ -90,7 +95,16 @@ const router = createBrowserRouter([
         element: <TalentPortalLayout />,
         children: [
           { path: 'login', element: <TalentLoginPage /> },
-          { path: 'home', element: <TalentHomePage /> },
+          {
+            element: <TalentAppLayout />,
+            children: [
+              { path: 'home', element: <TalentHomePage /> },
+              { path: 'activity', element: <TalentActivityPage /> },
+              { path: 'money', element: <TalentMoneyPage /> },
+              { path: 'files', element: <TalentFilesPage /> },
+              { path: 'messages', element: <TalentMessagesPage /> },
+            ],
+          },
         ],
       },
       {

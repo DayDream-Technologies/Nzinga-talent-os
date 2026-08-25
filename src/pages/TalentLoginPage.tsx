@@ -10,6 +10,7 @@ import {
   sendPasswordResetEmail,
   TALENT_LOGIN_DEMO_MESSAGE,
 } from '@/services/auth.service'
+import { STORAGE_COMPANY_CODE, readStorage } from '@/lib/session-storage'
 import { supabaseConfigured } from '@/lib/supabase'
 
 const pageShell: React.CSSProperties = {
@@ -36,36 +37,39 @@ const inputStyle: React.CSSProperties = {
   fontFamily: 'inherit',
 }
 
+function talentLoginOrg(): string {
+  return (readStorage(STORAGE_COMPANY_CODE) || DEMO_TALENT_LOGIN.companyCode).toUpperCase()
+}
+
 export function TalentLoginPage() {
   const navigate = useNavigate()
   const { session, loading: sessionLoading, setSession } = useTalentAuth()
-  const [email, setEmail] = useState(() =>
-    !supabaseConfigured || import.meta.env.DEV ? DEMO_TALENT_LOGIN.email : '',
-  )
+  const orgCode = talentLoginOrg()
+  const isNzgOrg = orgCode === DEMO_TALENT_LOGIN.companyCode
+  const [email, setEmail] = useState(() => (isNzgOrg ? DEMO_TALENT_LOGIN.email : ''))
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
   const demoMode = !supabaseConfigured
-  const showDemoHint = demoMode || Boolean(import.meta.env.DEV)
+  const showDemoHint = isNzgOrg && (demoMode || Boolean(import.meta.env.DEV))
 
   if (!sessionLoading && session) {
     return <Navigate to="/talent/home" replace />
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function signIn(nextEmail: string, nextPassword: string) {
     setError('')
     setInfo('')
-    if (!email.trim() || !password) {
+    if (!nextEmail.trim() || !nextPassword) {
       setError('Enter your email and password.')
       return
     }
 
     setLoading(true)
     try {
-      const result = await loginApprovedTalent(email.trim(), password)
+      const result = await loginApprovedTalent(nextEmail.trim(), nextPassword)
       if (result.error || !result.profile || !result.talent) {
         setError(result.error || 'Login failed.')
         return
@@ -77,6 +81,17 @@ export function TalentLoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await signIn(email, password)
+  }
+
+  async function handleMayaLogin() {
+    setEmail(DEMO_TALENT_LOGIN.email)
+    setPassword(DEMO_TALENT_LOGIN.password)
+    await signIn(DEMO_TALENT_LOGIN.email, DEMO_TALENT_LOGIN.password)
   }
 
   async function handleReset() {
@@ -220,7 +235,7 @@ export function TalentLoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={(e) => void handleSubmit(e)}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'rgba(232,238,244,0.65)', marginBottom: 6 }}>
               Email
             </label>
@@ -275,6 +290,29 @@ export function TalentLoginPage() {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+
+          {isNzgOrg && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => void handleMayaLogin()}
+              style={{
+                width: '100%',
+                marginTop: 10,
+                padding: '12px 16px',
+                borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.18)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#e8eef4',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Log in as Maya Rivera
+            </button>
+          )}
 
           <div style={{ marginTop: 16, textAlign: 'center' }}>
             <button

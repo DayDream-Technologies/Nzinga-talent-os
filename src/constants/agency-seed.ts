@@ -64,6 +64,7 @@ export const AGENCY_STAFF = {
   id: 'staff_sarah',
   name: 'Sarah Chen',
   title: 'Senior Booking Agent',
+  email: 'sarah.chen@nzinga.co',
 }
 
 /** Agents who can be assigned support tickets (excludes director & ops). */
@@ -108,6 +109,27 @@ export const AGENCY_TALENT_SEED: AgencyTalent[] = [
     contractEnd: null,
     linkedProspectId: 'pros_maya',
     profilePhoto: seedProfilePhoto('Maya Rivera', 'MR', '#7c3aed'),
+    portalAssets: [
+      {
+        name: 'Nike_Commercial_Lookbook.svg',
+        data: seedProfilePhoto('Maya Rivera', 'MR', '#0f766e').data,
+        type: 'image/svg+xml',
+        doc_type: 'lookbook',
+        uploaded_at: '2026-08-10T12:00:00Z',
+        uploaded_by: 'Sarah Chen',
+        status: 'verified',
+      },
+      {
+        ...makeTextContractDocument(
+          'Nike_Aug_Call_Sheet.txt',
+          'NIKE COMMERCIAL — CALL SHEET\n\nTalent: Maya Rivera\nDates: 12–13 Aug 2026\nCall time: 7:00 AM\nLocation: Northlight Studios, Atlanta\nAgent: Sarah Chen\n',
+        ),
+        doc_type: 'call_sheet',
+        uploaded_at: '2026-08-11T09:00:00Z',
+        uploaded_by: 'Sarah Chen',
+        status: 'received',
+      },
+    ],
     udf: {
       stageName: 'Maya Rivera',
       talentTypes: ['Modeling'],
@@ -424,6 +446,7 @@ export const CALENDAR_EVENTS_SEED: CalendarEvent[] = [
     id: 'cal_1',
     title: 'Nike briefing call',
     date: '2026-08-05',
+    talentName: 'Maya Rivera',
     clientName: 'Nike',
     type: 'meeting',
   },
@@ -534,13 +557,71 @@ export const INVOICES_SEED: ClientInvoice[] = [
     notes: 'Tax-exempt usage buyout.',
     document: null,
   },
+  {
+    id: 'inv_maya_paid',
+    clientId: 'client_nike',
+    clientName: 'Nike',
+    talentName: 'Maya Rivera',
+    project: 'Spring Lookbook Day Rate',
+    amount: 3500,
+    commissionPct: 20,
+    status: 'paid',
+    issuedAt: '2026-06-02',
+    dueAt: '2026-07-02',
+    paidAt: '2026-06-28',
+    interestApplied: 0,
+    taxId: '13-1234567',
+    taxRatePct: 0,
+    taxAmount: 0,
+    invoiceNumber: 'INV-2026-000',
+    poNumber: 'PO-NIKE-8010',
+    paymentTerms: 'Net 30',
+    billingAddress: 'One Bowerman Dr, Beaverton, OR 97005',
+    notes: 'Paid day rate — demo payment history.',
+    document: null,
+  },
 ]
 
 export const RETAINER_PLANS_SEED: RetainerPlan[] = []
 
-export const ESCROW_SEED: EscrowDeposit[] = []
+export const ESCROW_SEED: EscrowDeposit[] = [
+  {
+    id: 'esc_maya_1',
+    clientName: 'Nike',
+    talentName: 'Maya Rivera',
+    project: '$10,000 Commercial Shoot',
+    amount: 8000,
+    receivedAt: '2026-08-14',
+    status: 'pending',
+    invoiceId: 'inv_nike_1',
+    notes: 'Talent share held in trust pending shoot wrap and usage delivery.',
+  },
+]
 
-export const EXPENSE_LOGS_SEED: ExpensePayoutLog[] = []
+export const EXPENSE_LOGS_SEED: ExpensePayoutLog[] = [
+  {
+    id: 'exp_maya_1',
+    project: '$10,000 Commercial Shoot',
+    clientName: 'Nike',
+    talentName: 'Maya Rivera',
+    gross: 10000,
+    agencyCommission: 2000,
+    talentShare: 8000,
+    status: 'pending',
+    loggedAt: '2026-08-14',
+  },
+  {
+    id: 'exp_maya_2',
+    project: 'Spring Lookbook Day Rate',
+    clientName: 'Nike',
+    talentName: 'Maya Rivera',
+    gross: 3500,
+    agencyCommission: 700,
+    talentShare: 2800,
+    status: 'completed',
+    loggedAt: '2026-06-28',
+  },
+]
 
 export const VENDORS_SEED: Vendor[] = [
   {
@@ -561,7 +642,17 @@ export const VENDORS_SEED: Vendor[] = [
   },
 ]
 
-export const DISBURSEMENTS_SEED: Disbursement[] = []
+export const DISBURSEMENTS_SEED: Disbursement[] = [
+  {
+    id: 'dis_maya_1',
+    payee: 'Maya Rivera',
+    amount: 2800,
+    method: 'ACH',
+    status: 'completed',
+    paidAt: '2026-06-28',
+    project: 'Spring Lookbook Day Rate',
+  },
+]
 
 export const MESSAGES_SEED: MessageThread[] = [
   {

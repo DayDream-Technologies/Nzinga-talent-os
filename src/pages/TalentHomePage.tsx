@@ -1,389 +1,157 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { PLATFORM_BRAND } from '@/constants/company-branding'
-import { REQUIRED_DOCS } from '@/constants/stages'
+import { Link } from 'react-router-dom'
 import { STAGE_COLORS, STAGE_LABELS } from '@/types/stages'
-import { TMXLogo, TMXMark } from '@/components/branding'
-import { DocViewer } from '@/components/ui/DocViewer'
-import { AgencyDataProvider, useAgencyData } from '@/context/AgencyDataContext'
-import { useTalentAuth } from '@/context/TalentAuthContext'
-import { downloadUploadedDoc } from '@/lib/representation-agreement'
+import { TMXLogo } from '@/components/branding'
+import { portalCard } from '@/components/talent-portal/TalentPortalShell'
+import { useTalentPortal } from '@/hooks/useTalentPortal'
 import { isImageDoc, resolveProfilePhoto } from '@/lib/profile-photo'
-import type { UploadedDoc } from '@/types'
-import type { ProspectContract } from '@/types/agency'
-
-const pageShell: React.CSSProperties = {
-  minHeight: '100vh',
-  display: 'flex',
-  flexDirection: 'column',
-  background: '#0c1520',
-  color: '#e8eef4',
-  fontFamily: "'Outfit', 'Segoe UI', sans-serif",
-}
-
-const cardStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: 12,
-  padding: '20px 22px',
-}
-
-const ghostBtn: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.14)',
-  borderRadius: 6,
-  color: '#e8eef4',
-  fontSize: 12,
-  fontWeight: 600,
-  padding: '6px 10px',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-}
-
-function TalentHomeInner() {
-  const navigate = useNavigate()
-  const { session, loading, logout } = useTalentAuth()
-  const { prospects, talent: roster } = useAgencyData()
-  const [viewDoc, setViewDoc] = useState<UploadedDoc | null>(null)
-
-  const agencyMatch = useMemo(() => {
-    if (!session) return null
-    const email = session.profile.email.toLowerCase()
-    const accountId = session.talent.account_number
-    return (
-      prospects.find((p) => p.email.toLowerCase() === email) ??
-      prospects.find((p) => Boolean(accountId) && p.accountId === accountId) ??
-      prospects.find((p) => {
-        const linked = roster.find(
-          (t) =>
-            (t.email || '').toLowerCase() === email ||
-            (accountId && t.accountId === accountId),
-        )
-        return Boolean(linked?.linkedProspectId) && p.id === linked?.linkedProspectId
-      }) ??
-      null
-    )
-  }, [prospects, roster, session])
-
-  const contracts: ProspectContract[] = agencyMatch?.contracts ?? []
-
-  useEffect(() => {
-    if (!loading && !session) {
-      navigate('/talent/login', { replace: true })
-    }
-  }, [loading, session, navigate])
-
-  if (loading) {
-    return (
-      <div style={{ ...pageShell, alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'rgba(232,238,244,0.65)' }}>Loading your talent home…</p>
-      </div>
-    )
-  }
-
-  if (!session) {
-    return <Navigate to="/talent/login" replace />
-  }
-
-  const { profile, talent } = session
-  const stageColor = STAGE_COLORS[talent.stage] ?? '#6b7280'
-  const stageLabel = STAGE_LABELS[talent.stage] ?? talent.stage
-  const rosterMatch = roster.find(
-    (item) =>
-      (item.email || '').toLowerCase() === profile.email.toLowerCase() ||
-      (talent.account_number && item.accountId === talent.account_number),
-  )
-  const agentName = agencyMatch?.assignedAgentName || rosterMatch?.udf?.assignedAgent
-  const agentContact = talent.email || profile.email
-  const profilePhoto = resolveProfilePhoto({
-    pipelineTalent: talent,
-    rosterTalent: rosterMatch,
-    prospect: agencyMatch,
-  })
-
-  const docs = REQUIRED_DOCS.map((d) => {
-    const uploaded = talent.uploaded_docs?.[d.id] ?? null
-    return { key: d.id, label: d.label, doc: uploaded }
-  }).filter((row) => row.doc)
-
-  async function handleLogout() {
-    await logout()
-    navigate('/talent/login', { replace: true })
-  }
-
-  return (
-    <div style={pageShell}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '16px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}
-      >
-        <Link
-          to="/"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            textDecoration: 'none',
-            color: 'inherit',
-          }}
-        >
-          <TMXMark size="sm" />
-          <span style={{ fontSize: 15, fontWeight: 700 }}>{PLATFORM_BRAND.name}</span>
-        </Link>
-        <button
-          type="button"
-          onClick={() => void handleLogout()}
-          style={{
-            background: 'none',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: 8,
-            color: 'rgba(232,238,244,0.85)',
-            fontSize: 13,
-            padding: '8px 14px',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          Sign out
-        </button>
-      </header>
-
-      <main style={{ flex: 1, maxWidth: 1100, width: '100%', margin: '0 auto', padding: '36px 32px 64px' }}>
-        <div style={{ marginBottom: 28 }}>
-          <TMXLogo size="sm" theme="dark" />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
-          <div
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              overflow: 'hidden',
-              flexShrink: 0,
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: 22,
-              color: '#e8eef4',
-            }}
-          >
-            {profilePhoto && isImageDoc(profilePhoto) && profilePhoto.data?.startsWith('data:') ? (
-              <img
-                src={profilePhoto.data}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              (talent.name || profile.name)
-                .split(/\s+/)
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((part) => part[0]?.toUpperCase() || '')
-                .join('')
-            )}
-          </div>
-          <h1
-            style={{
-              fontFamily: "'Syne', 'Outfit', sans-serif",
-              fontSize: 28,
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              margin: 0,
-            }}
-          >
-            Welcome, {talent.name || profile.name}
-          </h1>
-        </div>
-        <p style={{ color: 'rgba(232,238,244,0.65)', fontSize: 14, marginBottom: 28, lineHeight: 1.5 }}>
-          Your talent home — status, contracts, documents, and how to reach your agent.
-        </p>
-
-        <div style={{ display: 'grid', gap: 16 }}>
-          <section style={cardStyle}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Status</h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  background: `${stageColor}22`,
-                  border: `1px solid ${stageColor}66`,
-                  color: stageColor,
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: stageColor,
-                  }}
-                />
-                {stageLabel}
-              </span>
-              {talent.account_number && (
-                <span style={{ fontSize: 13, color: 'rgba(232,238,244,0.7)' }}>
-                  Account {talent.account_number}
-                </span>
-              )}
-            </div>
-          </section>
-
-          <section style={cardStyle}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Contracts</h2>
-            {contracts.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.55)', lineHeight: 1.5 }}>
-                No representation contracts are available in your portal yet. Your agency can attach
-                them to your talent account.
-              </p>
-            ) : (
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
-                {contracts.map((c) => (
-                  <li
-                    key={c.id}
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 14px',
-                      borderRadius: 8,
-                      background: 'rgba(0,0,0,0.25)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{c.title}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(232,238,244,0.55)', marginTop: 4 }}>
-                        {c.status === 'current' ? 'Current' : 'Past'}
-                        {c.startDate ? ` · ${c.startDate}` : ''}
-                        {c.endDate ? ` → ${c.endDate}` : ''}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setViewDoc({
-                            name: c.document.name,
-                            data: c.document.data,
-                            type: c.document.type,
-                          })
-                        }
-                        style={ghostBtn}
-                      >
-                        View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          downloadUploadedDoc({
-                            name: c.document.name,
-                            data: c.document.data,
-                            type: c.document.type,
-                          })
-                        }
-                        style={ghostBtn}
-                      >
-                        Download
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section style={cardStyle}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Documents</h2>
-            {docs.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.55)', lineHeight: 1.5 }}>
-                No compliance documents are on file yet.
-              </p>
-            ) : (
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
-                {docs.map((row) => (
-                  <li
-                    key={row.key}
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 14px',
-                      borderRadius: 8,
-                      background: 'rgba(0,0,0,0.25)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{row.label}</div>
-                      <div style={{ fontSize: 12, color: 'rgba(232,238,244,0.55)', marginTop: 4 }}>
-                        {row.doc!.name}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" onClick={() => setViewDoc(row.doc)} style={ghostBtn}>
-                        View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => downloadUploadedDoc(row.doc!)}
-                        style={ghostBtn}
-                      >
-                        Download
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section style={cardStyle}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Contact your agent</h2>
-            <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.7)', lineHeight: 1.55, marginBottom: 8 }}>
-              {agentName
-                ? `Your assigned agent is ${agentName}.`
-                : 'Reach out to your agency contact for scheduling, contracts, and onboarding questions.'}
-            </p>
-            {talent.phone && (
-              <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.65)', marginBottom: 4 }}>
-                Phone on file: {talent.phone}
-              </p>
-            )}
-            <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.65)' }}>
-              Account email: {agentContact}
-            </p>
-          </section>
-        </div>
-      </main>
-
-      <DocViewer doc={viewDoc} onClose={() => setViewDoc(null)} />
-    </div>
-  )
-}
+import {
+  agentContact,
+  belongingToTalent,
+  formatMoney,
+  invoiceCommission,
+  talentCalendarItems,
+  trustBalance,
+} from '@/lib/talent-portal'
 
 export function TalentHomePage() {
+  const {
+    profile,
+    talent,
+    displayName,
+    prospect,
+    rosterTalent,
+    invoices,
+    tickets,
+    calendar,
+    appointments,
+    escrow,
+  } = useTalentPortal()
+  if (!profile || !talent) return null
+
+  const photo = resolveProfilePhoto({
+    pipelineTalent: talent,
+    rosterTalent,
+    prospect,
+  })
+  const stageColor = STAGE_COLORS[talent.stage] ?? '#6b7280'
+  const stageLabel = STAGE_LABELS[talent.stage] ?? talent.stage
+  const agent = agentContact(prospect)
+  const mineInvoices = belongingToTalent(invoices, displayName, (i) => [i.talentName])
+  const openTickets = belongingToTalent(tickets, displayName, (t) => [t.talentName]).filter(
+    (t) => t.status === 'open' || t.status === 'in_progress',
+  )
+  const cal = talentCalendarItems({
+    name: displayName,
+    calendar,
+    appointments,
+    invoices: mineInvoices,
+    bookedDates: rosterTalent?.bookedDates || [],
+  })
+  const nextEvent = cal.find((item) => item.date >= new Date().toISOString().slice(0, 10)) || cal[0]
+  const outstanding = mineInvoices
+    .filter((inv) => inv.status !== 'paid')
+    .reduce((sum, inv) => sum + invoiceCommission(inv).talentShare, 0)
+  const trust = trustBalance(escrow, displayName)
+
+  const tiles = [
+    { to: '/talent/activity', label: 'Career activity', value: cal.filter((i) => i.kind === 'Shoot').length, hint: 'confirmed shoots' },
+    { to: '/talent/money', label: 'Talent share outstanding', value: formatMoney(outstanding), hint: 'unpaid bookings' },
+    { to: '/talent/money', label: 'Trust account', value: formatMoney(trust), hint: 'held for you' },
+    { to: '/talent/messages', label: 'Open updates', value: openTickets.length, hint: 'requests & opportunities' },
+  ]
+
   return (
-    <AgencyDataProvider>
-      <TalentHomeInner />
-    </AgencyDataProvider>
+    <>
+      <div style={{ marginBottom: 20 }}>
+        <TMXLogo size="sm" theme="dark" />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+        <div
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            flexShrink: 0,
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 700,
+            fontSize: 22,
+          }}
+        >
+          {photo && isImageDoc(photo) && photo.data?.startsWith('data:') ? (
+            <img src={photo.data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            displayName
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((p) => p[0]?.toUpperCase() || '')
+              .join('')
+          )}
+        </div>
+        <div>
+          <h1 style={{ fontFamily: "'Syne', 'Outfit', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
+            Welcome, {displayName}
+          </h1>
+          <p style={{ color: 'rgba(232,238,244,0.65)', fontSize: 14, margin: '6px 0 0' }}>
+            Talent dashboard · {talent.account_number || 'Account'} · Agent {agent.name}
+          </p>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 12px',
+          borderRadius: 999,
+          background: `${stageColor}22`,
+          border: `1px solid ${stageColor}66`,
+          color: stageColor,
+          fontSize: 13,
+          fontWeight: 600,
+          margin: '16px 0 22px',
+        }}
+      >
+        {stageLabel}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
+        {tiles.map((tile) => (
+          <Link key={tile.label} to={tile.to} style={{ ...portalCard, textDecoration: 'none', color: 'inherit' }}>
+            <div style={{ fontSize: 11, color: 'rgba(232,238,244,0.55)', fontWeight: 600 }}>{tile.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, margin: '8px 0 4px' }}>{tile.value}</div>
+            <div style={{ fontSize: 12, color: 'rgba(232,238,244,0.55)' }}>{tile.hint}</div>
+          </Link>
+        ))}
+      </div>
+
+      <section style={portalCard}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 10px' }}>Up next</h2>
+        {nextEvent ? (
+          <p style={{ fontSize: 14, lineHeight: 1.5, margin: 0 }}>
+            <strong>{nextEvent.kind}</strong> · {nextEvent.title} · {nextEvent.date}
+            {nextEvent.detail ? ` · ${nextEvent.detail}` : ''}
+          </p>
+        ) : (
+          <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.55)', margin: 0 }}>No upcoming shoots, meetings, or deadlines on your calendar.</p>
+        )}
+        <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          <Link to="/talent/activity" style={{ color: '#86efac', fontSize: 13, fontWeight: 600 }}>
+            Open calendar →
+          </Link>
+          <Link to="/talent/files" style={{ color: '#86efac', fontSize: 13, fontWeight: 600 }}>
+            Contracts & assets →
+          </Link>
+          <Link to="/talent/messages" style={{ color: '#86efac', fontSize: 13, fontWeight: 600 }}>
+            Email {agent.name} →
+          </Link>
+        </div>
+      </section>
+    </>
   )
 }
