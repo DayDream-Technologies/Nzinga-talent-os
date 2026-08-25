@@ -75,6 +75,7 @@ interface AgencyDataValue {
   updateAppointment: (id: string, patch: Partial<Appointment>) => void
   deleteAppointment: (id: string) => void
   addCalendarEvent: (e: Omit<CalendarEvent, 'id'>) => void
+  updateCalendarEvent: (id: string, patch: Partial<CalendarEvent>) => void
   createInvoice: (inv: Omit<ClientInvoice, 'id' | 'interestApplied'> & { interestApplied?: number }) => void
   updateInvoice: (id: string, patch: Partial<ClientInvoice>) => void
   deleteInvoice: (id: string) => void
@@ -243,6 +244,10 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
         ),
       )
     }
+  }, [])
+
+  const updateCalendarEvent = useCallback((id: string, patch: Partial<CalendarEvent>) => {
+    setCalendar((prev) => patchById(prev, id, patch))
   }, [])
 
   const createInvoice = useCallback(
@@ -740,6 +745,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       updateAppointment,
       deleteAppointment,
       addCalendarEvent,
+      updateCalendarEvent,
       createInvoice,
       updateInvoice,
       deleteInvoice,
@@ -804,6 +810,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       updateAppointment,
       deleteAppointment,
       addCalendarEvent,
+      updateCalendarEvent,
       createInvoice,
       updateInvoice,
       deleteInvoice,

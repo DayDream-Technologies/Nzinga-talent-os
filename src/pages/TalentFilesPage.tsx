@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DocViewer } from '@/components/ui/DocViewer'
-import { portalCard, portalGhost } from '@/components/talent-portal/TalentPortalShell'
+import { portalCard, portalGhost, portalMuted } from '@/components/talent-portal/TalentPortalShell'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
 import { downloadUploadedDoc } from '@/lib/representation-agreement'
 import { collectPortalFiles } from '@/lib/talent-portal'
@@ -28,7 +28,7 @@ export function TalentFilesPage() {
       <h1 style={{ fontFamily: "'Syne', 'Outfit', sans-serif", fontSize: 26, fontWeight: 700, margin: '0 0 8px' }}>
         Files & media
       </h1>
-      <p style={{ color: 'rgba(232,238,244,0.65)', fontSize: 14, marginBottom: 22 }}>
+      <p style={{ color: portalMuted, fontSize: 14, marginBottom: 22 }}>
         Contracts, photos, videos, and materials your agency has shared with {displayName}.
       </p>
 
@@ -39,7 +39,7 @@ export function TalentFilesPage() {
             <section key={group} style={portalCard}>
               <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>{group}</h2>
               {rows.length === 0 ? (
-                <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.55)', margin: 0 }}>Nothing in this folder yet.</p>
+                <p style={{ fontSize: 13, color: portalMuted, margin: 0 }}>Nothing in this folder yet.</p>
               ) : (
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
                   {rows.map((row) => (
@@ -53,13 +53,13 @@ export function TalentFilesPage() {
                         alignItems: 'center',
                         padding: '12px 14px',
                         borderRadius: 8,
-                        background: 'rgba(0,0,0,0.25)',
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        background: 'var(--tp-inset)',
+                        border: '1px solid var(--tp-border)',
                       }}
                     >
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 600 }}>{row.label}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(232,238,244,0.55)', marginTop: 4 }}>{row.doc.name}</div>
+                        <div style={{ fontSize: 12, color: portalMuted, marginTop: 4 }}>{row.doc.name}</div>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button type="button" style={portalGhost} onClick={() => setViewDoc(row.doc)}>

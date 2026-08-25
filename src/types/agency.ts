@@ -175,6 +175,8 @@ export interface SupportTicket {
   dueDate: string
   body: string
   assignee: string
+  /** Talent portal confirm/decline on an opportunity ticket. */
+  talentDecision?: 'confirmed' | 'declined'
 }
 
 export interface AgencyTask {
@@ -215,6 +217,10 @@ export interface CalendarEvent {
   talentName?: string
   clientName?: string
   type: 'booking' | 'meeting' | 'block'
+  /** Call time as HH:mm (24h). */
+  callTime?: string
+  /** Talent confirmation of the posted call time. */
+  talentCallResponse?: 'pending' | 'confirmed' | 'declined'
 }
 
 export interface InvoiceDocument {

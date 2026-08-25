@@ -24,13 +24,16 @@ export function useTalentPortal() {
     navigate('/talent/login', { replace: true })
   }
 
+  const { talent: roster, ...agencyRest } = agency
+
   return {
     loading,
     session,
     profile: session?.profile as ProspectProfile | undefined,
     talent: session?.talent as Talent | undefined,
+    roster,
     ...records,
-    ...agency,
+    ...agencyRest,
     handleLogout,
   }
 }

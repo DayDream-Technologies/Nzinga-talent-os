@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { STAGE_COLORS, STAGE_LABELS } from '@/types/stages'
 import { TMXLogo } from '@/components/branding'
-import { portalCard } from '@/components/talent-portal/TalentPortalShell'
+import { portalCard, portalMuted, useTalentPortalPrefs } from '@/components/talent-portal/TalentPortalShell'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
 import { isImageDoc, resolveProfilePhoto } from '@/lib/profile-photo'
 import {
@@ -26,6 +26,7 @@ export function TalentHomePage() {
     appointments,
     escrow,
   } = useTalentPortal()
+  const { prefs } = useTalentPortalPrefs()
   if (!profile || !talent) return null
 
   const photo = resolveProfilePhoto({
@@ -63,7 +64,7 @@ export function TalentHomePage() {
   return (
     <>
       <div style={{ marginBottom: 20 }}>
-        <TMXLogo size="sm" theme="dark" />
+        <TMXLogo size="sm" theme={prefs.theme} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
         <div
@@ -96,7 +97,7 @@ export function TalentHomePage() {
           <h1 style={{ fontFamily: "'Syne', 'Outfit', sans-serif", fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
             Welcome, {displayName}
           </h1>
-          <p style={{ color: 'rgba(232,238,244,0.65)', fontSize: 14, margin: '6px 0 0' }}>
+          <p style={{ color: portalMuted, fontSize: 14, margin: '6px 0 0' }}>
             Talent dashboard · {talent.account_number || 'Account'} · Agent {agent.name}
           </p>
         </div>
@@ -123,9 +124,9 @@ export function TalentHomePage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 18 }}>
         {tiles.map((tile) => (
           <Link key={tile.label} to={tile.to} style={{ ...portalCard, textDecoration: 'none', color: 'inherit' }}>
-            <div style={{ fontSize: 11, color: 'rgba(232,238,244,0.55)', fontWeight: 600 }}>{tile.label}</div>
+            <div style={{ fontSize: 11, color: portalMuted, fontWeight: 600 }}>{tile.label}</div>
             <div style={{ fontSize: 22, fontWeight: 800, margin: '8px 0 4px' }}>{tile.value}</div>
-            <div style={{ fontSize: 12, color: 'rgba(232,238,244,0.55)' }}>{tile.hint}</div>
+            <div style={{ fontSize: 12, color: portalMuted }}>{tile.hint}</div>
           </Link>
         ))}
       </div>
@@ -138,17 +139,20 @@ export function TalentHomePage() {
             {nextEvent.detail ? ` · ${nextEvent.detail}` : ''}
           </p>
         ) : (
-          <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.55)', margin: 0 }}>No upcoming shoots, meetings, or deadlines on your calendar.</p>
+          <p style={{ fontSize: 13, color: portalMuted, margin: 0 }}>No upcoming shoots, meetings, or deadlines on your calendar.</p>
         )}
         <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <Link to="/talent/activity" style={{ color: '#86efac', fontSize: 13, fontWeight: 600 }}>
+          <Link to="/talent/activity" style={{ color: '#16a34a', fontSize: 13, fontWeight: 600 }}>
             Open calendar →
           </Link>
-          <Link to="/talent/files" style={{ color: '#86efac', fontSize: 13, fontWeight: 600 }}>
+          <Link to="/talent/files" style={{ color: '#16a34a', fontSize: 13, fontWeight: 600 }}>
             Contracts & assets →
           </Link>
-          <Link to="/talent/messages" style={{ color: '#86efac', fontSize: 13, fontWeight: 600 }}>
+          <Link to="/talent/messages" style={{ color: '#16a34a', fontSize: 13, fontWeight: 600 }}>
             Email {agent.name} →
+          </Link>
+          <Link to="/talent/settings" style={{ color: '#16a34a', fontSize: 13, fontWeight: 600 }}>
+            Settings →
           </Link>
         </div>
       </section>

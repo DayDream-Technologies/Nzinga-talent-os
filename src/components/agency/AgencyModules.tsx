@@ -23,6 +23,7 @@ import {
 } from '@/components/agency/FinanceFormModals'
 import { DocViewer } from '@/components/ui/DocViewer'
 import type { UploadedDoc } from '@/types'
+import { formatCallTime } from '@/lib/talent-portal'
 import {
   Badge,
   Btn,
@@ -958,7 +959,7 @@ function CalendarModule() {
     >
       <Card>
         <Table
-          headers={['Date', 'Title', 'Talent', 'Client', 'Type']}
+          headers={['Date', 'Title', 'Talent', 'Client', 'Type', 'Call time']}
           rows={[...calendar]
             .sort((a, b) => a.date.localeCompare(b.date))
             .map((e) => [
@@ -967,6 +968,9 @@ function CalendarModule() {
               e.talentName ? <TalentLink key={`tn-${e.id}`} name={e.talentName} /> : '—',
               e.clientName || '—',
               <Badge key={e.id} color={e.type === 'booking' ? T.purple : T.blue}>{e.type}</Badge>,
+              e.callTime
+                ? `${formatCallTime(e.callTime)}${e.talentCallResponse && e.talentCallResponse !== 'pending' ? ` · ${e.talentCallResponse}` : ''}`
+                : '—',
             ])}
         />
       </Card>

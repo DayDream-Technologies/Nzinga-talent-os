@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AGENCY_STAFF } from '@/constants/agency-seed'
-import { portalCard, portalInput, portalPrimary } from '@/components/talent-portal/TalentPortalShell'
+import { portalCard, portalInput, portalMuted, portalPrimary, useTalentPortalPrefs } from '@/components/talent-portal/TalentPortalShell'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
 import { agentContact, agentMailto, belongingToTalent, opportunityStatusLabel } from '@/lib/talent-portal'
 import type { TicketType } from '@/types/agency'
@@ -15,11 +16,14 @@ const REQUEST_TYPES: { id: TicketType; label: string }[] = [
 
 export function TalentMessagesPage() {
   const { displayName, prospect, tickets, invoices, calendar, addTicket } = useTalentPortal()
+  const { prefs } = useTalentPortalPrefs()
   const agent = agentContact(prospect)
   const [type, setType] = useState<TicketType>('general')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [notice, setNotice] = useState('')
+  const showEmail = prefs.notifications !== 'portal'
+  const showPortalAlerts = prefs.notifications !== 'email'
 
   const mineTickets = belongingToTalent(tickets, displayName, (t) => [t.talentName])
   const mailto = agentMailto({
@@ -73,39 +77,52 @@ export function TalentMessagesPage() {
       <h1 style={{ fontFamily: "'Syne', 'Outfit', sans-serif", fontSize: 26, fontWeight: 700, margin: '0 0 8px' }}>
         Communication
       </h1>
-      <p style={{ color: 'rgba(232,238,244,0.65)', fontSize: 14, marginBottom: 22 }}>
+      <p style={{ color: portalMuted, fontSize: 14, marginBottom: 22 }}>
         Email your agent, submit a structured request, and review notifications.
       </p>
 
       <div style={{ display: 'grid', gap: 16 }}>
-        <section style={portalCard}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Message your assigned agent</h2>
-          <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.7)', lineHeight: 1.5, margin: '0 0 12px' }}>
-            {agent.name} is your booking agent. Open your email app with a prefilled address and subject — this is the
-            fastest way to reach them.
-          </p>
-          <a
-            href={mailto}
-            style={{
-              display: 'inline-block',
-              background: '#16a34a',
-              color: '#fff',
-              textDecoration: 'none',
-              borderRadius: 8,
-              padding: '10px 14px',
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            Email {agent.name}
-          </a>
-          <p style={{ fontSize: 12, color: 'rgba(232,238,244,0.5)', margin: '10px 0 0' }}>{agent.email}</p>
-        </section>
+        {showEmail ? (
+          <section style={portalCard}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Message your assigned agent</h2>
+            <p style={{ fontSize: 13, color: portalMuted, lineHeight: 1.5, margin: '0 0 12px' }}>
+              {agent.name} is your booking agent. Open your email app with a prefilled address and subject — this is the
+              fastest way to reach them.
+            </p>
+            <a
+              href={mailto}
+              style={{
+                display: 'inline-block',
+                background: '#16a34a',
+                color: '#fff',
+                textDecoration: 'none',
+                borderRadius: 8,
+                padding: '10px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Email {agent.name}
+            </a>
+            <p style={{ fontSize: 12, color: portalMuted, margin: '10px 0 0' }}>{agent.email}</p>
+          </section>
+        ) : (
+          <section style={portalCard}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Email is off</h2>
+            <p style={{ fontSize: 13, color: portalMuted, margin: 0 }}>
+              You chose portal-only notifications.{' '}
+              <Link to="/talent/settings" style={{ color: '#16a34a', fontWeight: 600 }}>
+                Change this in Settings
+              </Link>
+              .
+            </p>
+          </section>
+        )}
 
         <section style={portalCard}>
           <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>Submit a structured request</h2>
           <form onSubmit={submitRequest} style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
-            <label style={{ fontSize: 12, color: 'rgba(232,238,244,0.65)' }}>
+            <label style={{ fontSize: 12, color: portalMuted }}>
               Type
               <select value={type} onChange={(e) => setType(e.target.value as TicketType)} style={{ ...portalInput, marginTop: 6 }}>
                 {REQUEST_TYPES.map((opt) => (
@@ -115,29 +132,37 @@ export function TalentMessagesPage() {
                 ))}
               </select>
             </label>
-            <label style={{ fontSize: 12, color: 'rgba(232,238,244,0.65)' }}>
+            <label style={{ fontSize: 12, color: portalMuted }}>
               Subject
               <input value={subject} onChange={(e) => setSubject(e.target.value)} style={{ ...portalInput, marginTop: 6 }} />
             </label>
-            <label style={{ fontSize: 12, color: 'rgba(232,238,244,0.65)' }}>
+            <label style={{ fontSize: 12, color: portalMuted }}>
               Details
               <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={4} style={{ ...portalInput, marginTop: 6, resize: 'vertical' }} />
             </label>
             <button type="submit" style={{ ...portalPrimary, width: 'fit-content' }}>
               Send request
             </button>
-            {notice && <p style={{ fontSize: 13, color: '#86efac', margin: 0 }}>{notice}</p>}
+            {notice && <p style={{ fontSize: 13, color: '#16a34a', margin: 0 }}>{notice}</p>}
           </form>
         </section>
 
         <section style={portalCard}>
           <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>Notifications & updates</h2>
-          {notifications.length === 0 ? (
-            <p style={{ fontSize: 13, color: 'rgba(232,238,244,0.55)', margin: 0 }}>You are all caught up.</p>
+          {!showPortalAlerts ? (
+            <p style={{ fontSize: 13, color: portalMuted, margin: 0 }}>
+              You chose email-only notifications, so portal alerts are hidden.{' '}
+              <Link to="/talent/settings" style={{ color: '#16a34a', fontWeight: 600 }}>
+                Change this in Settings
+              </Link>
+              .
+            </p>
+          ) : notifications.length === 0 ? (
+            <p style={{ fontSize: 13, color: portalMuted, margin: 0 }}>You are all caught up.</p>
           ) : (
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
               {notifications.map((n) => (
-                <li key={n.id} style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <li key={n.id} style={{ fontSize: 13, padding: '8px 0', borderBottom: '1px solid var(--tp-border)' }}>
                   {n.text}
                 </li>
               ))}

@@ -20,6 +20,7 @@ export const TALENT_PORTAL_PATHS = [
   '/talent/money',
   '/talent/files',
   '/talent/messages',
+  '/talent/settings',
 ] as const
 
 export function isTalentPortalPath(pathname: string): boolean {
@@ -94,12 +95,13 @@ export function talentCalendarItems(opts: {
 }): Array<{ id: string; date: string; title: string; kind: string; detail?: string }> {
   const items: Array<{ id: string; date: string; title: string; kind: string; detail?: string }> = []
   for (const event of belongingToTalent(opts.calendar, opts.name, (e) => [e.talentName])) {
+    const call = event.callTime ? `Call ${formatCallTime(event.callTime)}` : ''
     items.push({
       id: event.id,
       date: event.date,
       title: event.title,
       kind: event.type === 'booking' ? 'Shoot' : event.type === 'meeting' ? 'Meeting' : 'Blocked',
-      detail: event.clientName,
+      detail: [event.clientName, call].filter(Boolean).join(' · ') || undefined,
     })
   }
   for (const appt of belongingToTalent(opts.appointments, opts.name, (a) => a.talentNames)) {
@@ -173,6 +175,147 @@ export function opportunityStatusLabel(status: SupportTicket['status']): string 
   if (status === 'in_progress') return 'In review'
   if (status === 'resolved') return 'Confirmed'
   return 'Closed'
+}
+
+export type OpportunityDecision = 'confirm' | 'decline'
+
+export function isTalentOpportunity(ticket: SupportTicket): boolean {
+  return ticket.type === 'availability' || ticket.type === 'scheduling'
+}
+
+export function canRespondToOpportunity(ticket: SupportTicket): boolean {
+  return isTalentOpportunity(ticket) && (ticket.status === 'open' || ticket.status === 'in_progress')
+}
+
+export function opportunityDecisionPatch(
+  ticket: SupportTicket,
+  decision: OpportunityDecision,
+  at = new Date().toISOString(),
+): Partial<SupportTicket> {
+  const stamp = at.slice(0, 10)
+  const line = decision === 'confirm' ? `\n\nTalent confirmed on ${stamp}.` : `\n\nTalent declined on ${stamp}.`
+  const alreadyNoted = /Talent (confirmed|declined) on /.test(ticket.body)
+  return {
+    status: decision === 'confirm' ? 'resolved' : 'closed',
+    talentDecision: decision === 'confirm' ? 'confirmed' : 'declined',
+    body: alreadyNoted ? ticket.body : `${ticket.body}${line}`,
+  }
+}
+
+export function formatCallTime(callTime?: string): string {
+  if (!callTime) return ''
+  const [hStr, mStr = '00'] = callTime.split(':')
+  const hour24 = Number(hStr)
+  if (!Number.isFinite(hour24)) return callTime
+  const suffix = hour24 >= 12 ? 'PM' : 'AM'
+  const hour = ((hour24 + 11) % 12) + 1
+  return `${hour}:${String(mStr).padStart(2, '0')} ${suffix}`
+}
+
+const USAGE_RE = /usage|buyout|rights/i
+
+export type UsageRightsItem = {
+  id: string
+  source: 'contract' | 'invoice' | 'roster'
+  title: string
+  detail: string
+  date: string
+}
+
+export function usageRightsTimeline(opts: {
+  name: string
+  tickets: SupportTicket[]
+  invoices: ClientInvoice[]
+  usageRights?: string
+}): UsageRightsItem[] {
+  const items: UsageRightsItem[] = []
+  for (const ticket of belongingToTalent(opts.tickets, opts.name, (t) => [t.talentName])) {
+    if (ticket.type === 'contract' || USAGE_RE.test(ticket.subject) || USAGE_RE.test(ticket.body)) {
+      items.push({
+        id: ticket.id,
+        source: 'contract',
+        title: ticket.subject,
+        detail: ticket.body,
+        date: ticket.createdAt.slice(0, 10),
+      })
+    }
+  }
+  for (const inv of belongingToTalent(opts.invoices, opts.name, (i) => [i.talentName])) {
+    if (USAGE_RE.test(inv.project) || USAGE_RE.test(inv.notes || '')) {
+      items.push({
+        id: inv.id,
+        source: 'invoice',
+        title: inv.project,
+        detail: `${inv.invoiceNumber || inv.id} · ${inv.status}${inv.paidAt ? ` · paid ${inv.paidAt}` : ''}`,
+        date: inv.paidAt || inv.issuedAt,
+      })
+    }
+  }
+  if (opts.usageRights?.trim()) {
+    items.push({
+      id: 'udf_usage',
+      source: 'roster',
+      title: 'Roster usage-rights notes',
+      detail: opts.usageRights.trim(),
+      date: '',
+    })
+  }
+  return items.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+}
+
+export function invoiceCalendarYear(inv: ClientInvoice): string {
+  return (inv.paidAt || inv.issuedAt || '').slice(0, 4)
+}
+
+export function paidEarningsForYear(invoices: ClientInvoice[], name: string, year: string): ClientInvoice[] {
+  return belongingToTalent(invoices, name, (i) => [i.talentName]).filter(
+    (inv) => inv.status === 'paid' && invoiceCalendarYear(inv) === year,
+  )
+}
+
+export function csvCell(value: string | number): string {
+  const text = String(value)
+  if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`
+  return text
+}
+
+export function yearEnd1099Csv(invoices: ClientInvoice[], name: string, year: string): string {
+  const rows = paidEarningsForYear(invoices, name, year)
+  const header = 'Booking,Client,Invoice,Paid date,Gross,Commission,Talent share'
+  const lines = rows.map((inv) => {
+    const split = invoiceCommission(inv)
+    return [
+      csvCell(inv.project),
+      csvCell(inv.clientName),
+      csvCell(inv.invoiceNumber || inv.id),
+      csvCell(inv.paidAt || inv.issuedAt),
+      csvCell(split.gross),
+      csvCell(split.commission),
+      csvCell(split.talentShare),
+    ].join(',')
+  })
+  const totals = rows.reduce(
+    (acc, inv) => {
+      const split = invoiceCommission(inv)
+      acc.gross += split.gross
+      acc.commission += split.commission
+      acc.talentShare += split.talentShare
+      return acc
+    },
+    { gross: 0, commission: 0, talentShare: 0 },
+  )
+  const totalLine = ['Total', '', '', '', csvCell(totals.gross), csvCell(totals.commission), csvCell(totals.talentShare)].join(',')
+  return [header, ...lines, totalLine].join('\n')
+}
+
+export function downloadTextFile(filename: string, contents: string, mime = 'text/csv;charset=utf-8'): void {
+  const blob = new Blob([contents], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
 }
 
 export type TalentPayoutRequest = Pick<Disbursement, 'payee' | 'amount' | 'method' | 'project'>

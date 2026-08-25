@@ -1,31 +1,70 @@
+import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, NavLink, Navigate, Outlet } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
 import { AgencyDataProvider } from '@/context/AgencyDataContext'
 import { useTalentAuth } from '@/context/TalentAuthContext'
 import { TMXMark } from '@/components/branding'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
+import {
+  DEFAULT_TALENT_PORTAL_PREFS,
+  readTalentPortalPrefs,
+  writeTalentPortalPrefs,
+  type TalentPortalPrefs,
+  type TalentPortalTheme,
+} from '@/lib/talent-settings'
 
-export const portalPage: React.CSSProperties = {
+export const portalMuted = 'var(--tp-muted)'
+
+export function portalThemeVars(theme: TalentPortalTheme): CSSProperties {
+  if (theme === 'light') {
+    return {
+      '--tp-bg': '#f0f2f5',
+      '--tp-fg': '#111827',
+      '--tp-muted': 'rgba(17,24,39,0.58)',
+      '--tp-card': '#ffffff',
+      '--tp-border': '#e5e7eb',
+      '--tp-input': '#ffffff',
+      '--tp-inset': '#f8fafc',
+      '--tp-nav-idle': 'rgba(17,24,39,0.65)',
+      '--tp-header-border': '#e5e7eb',
+      '--tp-danger': '#b91c1c',
+    } as CSSProperties
+  }
+  return {
+    '--tp-bg': '#0c1520',
+    '--tp-fg': '#e8eef4',
+    '--tp-muted': 'rgba(232,238,244,0.65)',
+    '--tp-card': 'rgba(255,255,255,0.04)',
+    '--tp-border': 'rgba(255,255,255,0.1)',
+    '--tp-input': 'rgba(255,255,255,0.04)',
+    '--tp-inset': 'rgba(0,0,0,0.25)',
+    '--tp-nav-idle': 'rgba(232,238,244,0.7)',
+    '--tp-header-border': 'rgba(255,255,255,0.08)',
+    '--tp-danger': '#fca5a5',
+  } as CSSProperties
+}
+
+export const portalPage: CSSProperties = {
   minHeight: '100vh',
   display: 'flex',
   flexDirection: 'column',
-  background: '#0c1520',
-  color: '#e8eef4',
+  background: 'var(--tp-bg)',
+  color: 'var(--tp-fg)',
   fontFamily: "'Outfit', 'Segoe UI', sans-serif",
 }
 
-export const portalCard: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.1)',
+export const portalCard: CSSProperties = {
+  background: 'var(--tp-card)',
+  border: '1px solid var(--tp-border)',
   borderRadius: 12,
   padding: '20px 22px',
 }
 
-export const portalGhost: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.14)',
+export const portalGhost: CSSProperties = {
+  background: 'transparent',
+  border: '1px solid var(--tp-border)',
   borderRadius: 6,
-  color: '#e8eef4',
+  color: 'var(--tp-fg)',
   fontSize: 12,
   fontWeight: 600,
   padding: '6px 10px',
@@ -33,7 +72,7 @@ export const portalGhost: React.CSSProperties = {
   fontFamily: 'inherit',
 }
 
-export const portalPrimary: React.CSSProperties = {
+export const portalPrimary: CSSProperties = {
   background: '#16a34a',
   border: 'none',
   borderRadius: 8,
@@ -45,13 +84,25 @@ export const portalPrimary: React.CSSProperties = {
   fontFamily: 'inherit',
 }
 
-export const portalInput: React.CSSProperties = {
+export const portalDanger: CSSProperties = {
+  background: 'transparent',
+  border: '1px solid var(--tp-danger)',
+  borderRadius: 6,
+  color: 'var(--tp-danger)',
+  fontSize: 12,
+  fontWeight: 600,
+  padding: '6px 10px',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+}
+
+export const portalInput: CSSProperties = {
   width: '100%',
   padding: '10px 12px',
   borderRadius: 8,
-  border: '1px solid rgba(255,255,255,0.12)',
-  background: 'rgba(255,255,255,0.04)',
-  color: '#e8eef4',
+  border: '1px solid var(--tp-border)',
+  background: 'var(--tp-input)',
+  color: 'var(--tp-fg)',
   fontSize: 13,
   fontFamily: 'inherit',
   boxSizing: 'border-box',
@@ -63,9 +114,41 @@ const NAV = [
   { to: '/talent/money', label: 'Money' },
   { to: '/talent/files', label: 'Files & media' },
   { to: '/talent/messages', label: 'Messages' },
+  { to: '/talent/settings', label: 'Settings' },
 ]
 
-function TalentPortalGate({ children }: { children: React.ReactNode }) {
+type PrefsContextValue = {
+  prefs: TalentPortalPrefs
+  setPrefs: (next: TalentPortalPrefs) => void
+}
+
+const TalentPortalPrefsContext = createContext<PrefsContextValue | null>(null)
+
+export function useTalentPortalPrefs(): PrefsContextValue {
+  return (
+    useContext(TalentPortalPrefsContext) ?? {
+      prefs: DEFAULT_TALENT_PORTAL_PREFS,
+      setPrefs: () => {},
+    }
+  )
+}
+
+export function TalentPortalPrefsProvider({ email, children }: { email: string; children: ReactNode }) {
+  const [prefs, setPrefsState] = useState<TalentPortalPrefs>(() => readTalentPortalPrefs(email))
+
+  useEffect(() => {
+    setPrefsState(readTalentPortalPrefs(email))
+  }, [email])
+
+  function setPrefs(next: TalentPortalPrefs) {
+    setPrefsState(next)
+    writeTalentPortalPrefs(email, next)
+  }
+
+  return <TalentPortalPrefsContext.Provider value={{ prefs, setPrefs }}>{children}</TalentPortalPrefsContext.Provider>
+}
+
+function TalentPortalGate({ children }: { children: ReactNode }) {
   const { loading, session } = useTalentAuth()
   if (loading) {
     return (
@@ -87,11 +170,12 @@ function TalentPortalGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-function ShellInner() {
+function ThemedShell() {
   const { handleLogout, displayName } = useTalentPortal()
+  const { prefs } = useTalentPortalPrefs()
 
   return (
-    <div style={portalPage}>
+    <div style={{ ...portalPage, ...portalThemeVars(prefs.theme) }} data-talent-theme={prefs.theme}>
       <header
         style={{
           display: 'flex',
@@ -99,7 +183,7 @@ function ShellInner() {
           justifyContent: 'space-between',
           gap: 16,
           padding: '14px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid var(--tp-header-border)',
           flexWrap: 'wrap',
         }}
       >
@@ -118,7 +202,7 @@ function ShellInner() {
                 textDecoration: 'none',
                 padding: '7px 12px',
                 borderRadius: 8,
-                color: isActive ? '#fff' : 'rgba(232,238,244,0.7)',
+                color: isActive ? '#fff' : 'var(--tp-nav-idle)',
                 background: isActive ? 'rgba(22,163,74,0.28)' : 'transparent',
                 border: isActive ? '1px solid rgba(22,163,74,0.45)' : '1px solid transparent',
               })}
@@ -128,15 +212,15 @@ function ShellInner() {
           ))}
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 12, color: 'rgba(232,238,244,0.55)' }}>{displayName}</span>
+          <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{displayName}</span>
           <button
             type="button"
             onClick={() => void handleLogout()}
             style={{
               background: 'none',
-              border: '1px solid rgba(255,255,255,0.15)',
+              border: '1px solid var(--tp-border)',
               borderRadius: 8,
-              color: 'rgba(232,238,244,0.85)',
+              color: 'var(--tp-fg)',
               fontSize: 13,
               padding: '8px 14px',
               cursor: 'pointer',
@@ -151,6 +235,15 @@ function ShellInner() {
         <Outlet />
       </main>
     </div>
+  )
+}
+
+function ShellInner() {
+  const { profile } = useTalentPortal()
+  return (
+    <TalentPortalPrefsProvider email={profile?.email || ''}>
+      <ThemedShell />
+    </TalentPortalPrefsProvider>
   )
 }
 

@@ -176,6 +176,11 @@ export function TicketDetailModal({
               <Badge color={ticket.priority === 'high' ? T.red : ticket.priority === 'medium' ? T.amber : T.t3}>
                 {ticket.priority}
               </Badge>
+              {ticket.talentDecision && (
+                <Badge color={ticket.talentDecision === 'confirmed' ? T.green : T.red}>
+                  Talent {ticket.talentDecision}
+                </Badge>
+              )}
             </>
           )}
         </div>
