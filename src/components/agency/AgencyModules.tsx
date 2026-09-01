@@ -4,7 +4,7 @@ import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { AGENCY_STAFF, AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
-import { filterAgencyNav, type AgencyNavGroup } from '@/constants/agency-nav'
+import { filterAgencyNav, canAccessAgencyPath, type AgencyNavGroup } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
 import type { SupportTicket, TicketType } from '@/types/agency'
 import { TalentLink } from '@/components/talent/TalentLink'
@@ -20,6 +20,7 @@ import {
   InvoiceFormModal,
   RetainerFormModal,
   VendorFormModal,
+  ApprovePayoutModal,
   invoiceTotal,
 } from '@/components/agency/FinanceFormModals'
 import { DocViewer } from '@/components/ui/DocViewer'
@@ -1904,24 +1905,65 @@ function ReportOverdue() {
 }
 
 function ReportPendingPayouts() {
-  const { expenseLogs } = useAgencyData()
+  const { expenseLogs, vendors, talent, issuePayout } = useAgencyData()
+  const { user } = useAuth()
   const pending = expenseLogs.filter((e) => e.status === 'pending')
+  const canApprove = Boolean(user && canAccessAgencyPath(user.role, 'issue-payouts'))
+  const [approveId, setApproveId] = useState<string | null>(null)
+  const approving = expenseLogs.find((e) => e.id === approveId) || null
+  const vendor = vendors.find((v) => v.name === approving?.talentName) || null
+  const roster = talent.find((t) => t.name === approving?.talentName)
+
+  function agingLabel(loggedAt: string): string {
+    const ms = Date.parse(loggedAt)
+    if (!Number.isFinite(ms)) return '—'
+    const days = Math.max(0, Math.floor((Date.now() - ms) / 86_400_000))
+    return `${days}d`
+  }
+
   return (
-    <Panel title="Pending Talent Payouts (AP Aging)" subtitle="Ensure completed gigs are queued for payday.">
+    <Panel title="Pending Talent Payouts (AP Aging)" subtitle="Ensure completed gigs are queued for payday. Admins approve a payout after reviewing the split and payee details.">
       <Card>
         <Table
-          headers={['Talent', 'Project', 'Amount owed', 'Logged']}
-          rows={pending.map((e) => [
-            <TalentLink key={e.id} name={e.talentName} />,
-            e.project,
-            <Money key={e.id} value={e.talentShare} />,
-            new Date(e.loggedAt).toLocaleString(),
-          ])}
+          headers={canApprove
+            ? ['Talent', 'Project', 'Amount owed', 'Logged', 'Aging', '']
+            : ['Talent', 'Project', 'Amount owed', 'Logged', 'Aging']}
+          rows={pending.map((e) => {
+            const cells = [
+              <TalentLink key={e.id} name={e.talentName} />,
+              e.project,
+              <Money key={`m-${e.id}`} value={e.talentShare} />,
+              new Date(e.loggedAt).toLocaleString(),
+              agingLabel(e.loggedAt),
+            ]
+            if (canApprove) {
+              cells.push(
+                <Btn key={`a-${e.id}`} variant="success" onClick={() => setApproveId(e.id)}>
+                  Approve
+                </Btn>,
+              )
+            }
+            return cells
+          })}
         />
         {pending.length === 0 && (
           <div style={{ padding: 16, color: T.t3 }}>No pending AP. All logged splits have been paid or none logged yet.</div>
         )}
       </Card>
+      {approving && user && (
+        <ApprovePayoutModal
+          log={approving}
+          vendor={vendor}
+          bankReady={roster?.bankReady}
+          taxFormsReady={roster?.taxFormsReady}
+          approverName={user.name}
+          onClose={() => setApproveId(null)}
+          onApprove={(details) => {
+            issuePayout(approving.id, details)
+            setApproveId(null)
+          }}
+        />
+      )}
     </Panel>
   )
 }

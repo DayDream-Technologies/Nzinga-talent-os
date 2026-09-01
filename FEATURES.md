@@ -165,7 +165,7 @@ Role-scoped hub under **My Reports**:
 
 - Roster & booking: roster scorecard, applicant pool & pipeline log (application created / last saved / submitted timestamps), onboarding & offboarding, roster openings & availability, escrow balances (ops).
 - Receivables: gross bookings & commission, AR aging, overdue accounts.
-- Payables: pending talent payouts (AP aging).
+- Payables: pending talent payouts (AP aging). Ops and directors approve from the report with a review modal (split, aging, tax/banking, method, and notes).
 
 ### Admin
 

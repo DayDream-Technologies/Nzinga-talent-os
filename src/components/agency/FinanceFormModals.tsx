@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type {
   ClientInvoice,
   Disbursement,
@@ -10,7 +10,7 @@ import type {
   RetainerPlan,
   Vendor,
 } from '@/types/agency'
-import { Btn, Field, ModalShell, inputStyle } from './AgencyUI'
+import { Btn, Field, ModalShell, Money, inputStyle } from './AgencyUI'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { T } from '@/lib/tokens'
 import { uploadOwnedFile } from '@/services/storage.service'
@@ -875,6 +875,131 @@ export function DisbursementFormModal({
           })
         }
       />
+    </ModalShell>
+  )
+}
+
+const PAYOUT_METHODS = ['Direct deposit', 'ACH', 'Wire', 'Check'] as const
+
+function payoutAgingDays(loggedAt: string, asOf = new Date()): number {
+  const ms = Date.parse(loggedAt)
+  if (!Number.isFinite(ms)) return 0
+  return Math.max(0, Math.floor((asOf.getTime() - ms) / 86_400_000))
+}
+
+function PayoutInfoRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '6px 0', fontSize: 13 }}>
+      <span style={{ color: T.t3 }}>{label}</span>
+      <span style={{ color: T.t1, fontWeight: 600, textAlign: 'right' }}>{children}</span>
+    </div>
+  )
+}
+
+export function ApprovePayoutModal({
+  log,
+  vendor,
+  bankReady,
+  taxFormsReady,
+  approverName,
+  onClose,
+  onApprove,
+}: {
+  log: ExpensePayoutLog
+  vendor?: Vendor | null
+  bankReady?: boolean
+  taxFormsReady?: boolean
+  approverName: string
+  onClose: () => void
+  onApprove: (details: { notes: string; method: string; approvedBy: string }) => void
+}) {
+  const [method, setMethod] = useState(log.payoutMethod || 'Direct deposit')
+  const [notes, setNotes] = useState(log.notes || '')
+  const [error, setError] = useState('')
+  const aging = payoutAgingDays(log.loggedAt)
+  const taxReady = vendor?.taxFormsReady ?? taxFormsReady ?? false
+  const bankingReady = bankReady ?? Boolean(vendor?.bankLast4)
+  const payeeReady = taxReady && bankingReady
+
+  function submit() {
+    const trimmed = notes.trim()
+    if (!trimmed) {
+      setError('Add a short note so this approval has a record of why it was released.')
+      return
+    }
+    onApprove({ notes: trimmed, method, approvedBy: approverName })
+  }
+
+  return (
+    <ModalShell title="Approve talent payout" onClose={onClose} width={520}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: T.t1, marginBottom: 4 }}>{log.talentName}</div>
+      <div style={{ fontSize: 13, color: T.t3, marginBottom: 14 }}>{log.project}</div>
+
+      <div
+        style={{
+          border: `1px solid ${T.cardBorder}`,
+          borderRadius: 8,
+          padding: '8px 12px',
+          marginBottom: 14,
+          background: T.mutedBg,
+        }}
+      >
+        <PayoutInfoRow label="Client">{log.clientName || '—'}</PayoutInfoRow>
+        <PayoutInfoRow label="Logged">{new Date(log.loggedAt).toLocaleString()}</PayoutInfoRow>
+        <PayoutInfoRow label="Aging">{aging} day{aging === 1 ? '' : 's'}</PayoutInfoRow>
+        <PayoutInfoRow label="Gross booking"><Money value={log.gross} /></PayoutInfoRow>
+        <PayoutInfoRow label="Agency commission"><Money value={log.agencyCommission} /></PayoutInfoRow>
+        <PayoutInfoRow label="Amount owed"><Money value={log.talentShare} /></PayoutInfoRow>
+      </div>
+
+      <div
+        style={{
+          border: `1px solid ${payeeReady ? T.cardBorder : `${T.amber}66`}`,
+          background: payeeReady ? T.cardBg : T.amberL,
+          borderRadius: 8,
+          padding: '8px 12px',
+          marginBottom: 14,
+          fontSize: 13,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>Payee readiness</div>
+        <PayoutInfoRow label="Tax forms">{taxReady ? 'Ready' : 'Not on file'}</PayoutInfoRow>
+        <PayoutInfoRow label="Banking">
+          {vendor?.bankLast4 ? `•••• ${vendor.bankLast4}` : bankingReady ? 'Roster bank ready' : 'Not on file'}
+        </PayoutInfoRow>
+        {!payeeReady && (
+          <div style={{ color: T.amber, fontSize: 12, marginTop: 6 }}>
+            Tax or banking is incomplete. You can still approve if you have confirmed details offline.
+          </div>
+        )}
+      </div>
+
+      <Field label="Payment method">
+        <select style={inputStyle} value={method} onChange={(e) => setMethod(e.target.value)}>
+          {PAYOUT_METHODS.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Approval notes *">
+        <textarea
+          style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Reference, payday batch, or confirmation that the gig wrapped…"
+        />
+      </Field>
+      {error && <div style={{ color: T.red, fontSize: 12, marginBottom: 10 }}>{error}</div>}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <Btn variant="secondary" onClick={onClose}>
+          Cancel
+        </Btn>
+        <Btn variant="success" onClick={submit}>
+          Approve payout
+        </Btn>
+      </div>
     </ModalShell>
   )
 }

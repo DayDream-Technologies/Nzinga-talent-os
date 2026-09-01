@@ -299,6 +299,10 @@ export interface ExpensePayoutLog {
   talentShare: number
   status: PayoutStatus
   loggedAt: string
+  notes?: string
+  approvedBy?: string
+  approvedAt?: string
+  payoutMethod?: string
 }
 
 export interface Vendor {

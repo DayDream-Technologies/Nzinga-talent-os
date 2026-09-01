@@ -101,6 +101,5 @@ Items from the original to-do list that have NOT yet been implemented.
 
 
 Create renewal offer with a confirmation offer and option to change duration (NEED TEMPLATE)
-On the report-pending-payouts page, create admin actions to approve with a modal for more information
 add stripe payment collection (NEED STRIPE)
 add application hold for screening (NEED API)

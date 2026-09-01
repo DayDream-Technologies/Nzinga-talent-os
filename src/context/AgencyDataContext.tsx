@@ -100,7 +100,7 @@ interface AgencyDataValue {
   addExpenseLog: (e: Omit<ExpensePayoutLog, 'id'>) => void
   updateExpenseLog: (id: string, patch: Partial<ExpensePayoutLog>) => void
   deleteExpenseLog: (id: string) => void
-  issuePayout: (logId: string) => void
+  issuePayout: (logId: string, details?: { notes?: string; method?: string; approvedBy?: string }) => void
   addVendor: (v: Omit<Vendor, 'id'>) => void
   updateVendor: (id: string, patch: Partial<Vendor>) => void
   deleteVendor: (id: string) => void
@@ -425,16 +425,17 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     setExpenseLogs((prev) => prev.filter((x) => x.id !== id))
   }, [])
 
-  const issuePayout = useCallback((logId: string) => {
+  const issuePayout = useCallback((logId: string, details?: { notes?: string; method?: string; approvedBy?: string }) => {
     setExpenseLogs((prev) => {
       const log = prev.find((l) => l.id === logId)
       if (!log) return prev
+      const method = details?.method?.trim() || 'Direct deposit'
       setDisbursements((d) => [
         {
           id: uid('dis'),
           payee: log.talentName,
           amount: log.talentShare,
-          method: 'Direct deposit',
+          method,
           status: 'completed',
           paidAt: new Date().toISOString(),
           project: log.project,
@@ -442,7 +443,16 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
         ...d,
       ])
       return prev.map((l) =>
-        l.id === logId ? { ...l, status: 'completed' as const } : l,
+        l.id === logId
+          ? {
+              ...l,
+              status: 'completed' as const,
+              notes: details?.notes?.trim() || l.notes,
+              approvedBy: details?.approvedBy || l.approvedBy,
+              approvedAt: new Date().toISOString(),
+              payoutMethod: method,
+            }
+          : l,
       )
     })
   }, [])
