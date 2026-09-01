@@ -1,3 +1,6 @@
+import { isS3Ref } from '@/lib/application-files'
+import { resolveS3Url } from '@/lib/s3-storage'
+
 /** Shared representation agreement body used for portal consent and downloadable contracts. */
 export const REPRESENTATION_AGREEMENT_TEXT = `TALENT REPRESENTATION AGREEMENT
 
@@ -52,11 +55,13 @@ export function makeTextContractDocument(fileName: string, body: string) {
   return { name: fileName, data, type: 'text/plain' }
 }
 
-export function downloadUploadedDoc(doc: { name: string; data: string; type?: string }) {
+export function downloadUploadedDoc(doc: { name: string; data: string; type?: string; cdnUrl?: string }) {
+  const href = doc.cdnUrl || (isS3Ref(doc.data) ? resolveS3Url(doc.data) : doc.data)
   const a = document.createElement('a')
-  a.href = doc.data
+  a.href = href
   a.download = doc.name || 'contract.txt'
   a.rel = 'noopener'
+  if (href.startsWith('http://') || href.startsWith('https://')) a.target = '_blank'
   document.body.appendChild(a)
   a.click()
   a.remove()

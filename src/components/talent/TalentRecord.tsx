@@ -13,17 +13,21 @@ import { TalentLink } from "@/components/talent/TalentLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useResolvedImageUrl } from "@/hooks/useResolvedImageUrl";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useImageCropper } from "@/components/ui/ImageCropper";
+import { cropAspectForField } from "@/lib/crop-image";
 import { canSubmitClientPacket, clientPacketSubmitBlockers } from "@/lib/client-packet";
 import { CONTRACT_PUBLISHED_EMAIL, markContractPendingSignature } from "@/lib/sop-workflow";
 import { useAgencyData } from "@/context/AgencyDataContext";
 import { sendGeneralEmail } from "@/lib/email";
 import { uploadProfilePhoto } from "@/lib/profile-photo";
+import { uploadDocument, uploadOwnedFile } from "@/services/storage.service";
 
 const NICHE_OPTIONS = ["Modeling", "Acting", "Sports & Athletics", "Influencing / Content Creation", "Model", "Actor", "Influencer", "Athlete"];
 
 function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
   const { companyCode } = useAuth();
   const { upsertProspectSop, addProspectContract, prospects } = useAgencyData();
+  const { cropImage, cropper } = useImageCropper();
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(talent)));
   const [err, setErr] = useState("");
   const [showSendApp, setShowSendApp] = useState(false);
@@ -168,9 +172,14 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
   async function onProfilePhoto(file) {
     if (!file) return;
     try {
-      const doc = await uploadProfilePhoto(file, local.id, currentUser.name);
+      const aspect = cropAspectForField("profile_photo");
+      const cropped = await cropImage(file, { aspect, title: "Crop profile photo" });
+      if (!cropped) return;
+      const doc = await uploadProfilePhoto(cropped, local.id, currentUser.name);
       uploadDocToProfile("profile_photo", doc.data, doc.name, doc.type, {
         storagePath: doc.storagePath,
+        cdnUrl: doc.cdnUrl,
+        thumbnailUrl: doc.thumbnailUrl,
         uploaded_at: doc.uploaded_at,
         uploaded_by: doc.uploaded_by,
         status: doc.status,
@@ -257,10 +266,13 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
     if (!local.team1_notes) { setErr("Correction notes required for revision."); return; }
     void save({ ...local, stage: "scout_complete", team1_decision: "revision", applicant_stage_status: SOP_STATUS.underVetting, audit_log: auditLog("Returned for more information", "scout_complete") }, true);
   }
-  function publishContract(file) {
+  async function publishContract(file) {
     if (!file) return;
-    const r = new FileReader();
-    r.onload = async (ev) => {
+    try {
+      const stored = await uploadOwnedFile(file, `talents/${local.id}/contracts`, {
+        uploadedBy: currentUser.name,
+        docType: "contract",
+      });
       const prospect = upsertProspectSop({
         email: local.email,
         name: local.name,
@@ -273,7 +285,14 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           title: file.name.replace(/\.[^.]+$/, "") || "Representation agreement",
           status: "pending_signature",
           startDate: new Date().toISOString().slice(0, 10),
-          document: { name: file.name, data: ev.target.result, type: file.type || "application/pdf" },
+          document: {
+            name: stored.name,
+            data: stored.data,
+            type: stored.type,
+            storagePath: stored.storagePath,
+            cdnUrl: stored.cdnUrl,
+            thumbnailUrl: stored.thumbnailUrl,
+          },
         }));
       }
       if (local.email) {
@@ -290,8 +309,9 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
         applicant_stage_status: SOP_STATUS.contractPending,
         audit_log: auditLog("Published contract to client portal", "team2_audit"),
       }, false);
-    };
-    r.readAsDataURL(file);
+    } catch (e) {
+      setErr(e?.message || "Could not upload contract.");
+    }
   }
   function ops() {
     if (Object.values(local.compliance || {}).filter(Boolean).length < 6) { setErr("At least 6/8 compliance items must be verified."); return; }
@@ -361,6 +381,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
         />
       )}
       {viewingDoc && <DocViewer doc={viewingDoc} onClose={() => setViewingDoc(null)} />}
+      {cropper}
 
       <div style={{ width: 980, maxWidth: "96vw", background: T.pageBg, borderRadius: 12, overflow: "hidden", flexShrink: 0, boxShadow: "0 12px 48px rgba(0,0,0,0.18)", marginBottom: 24 }}>
         {/* Sticky header */}
@@ -719,7 +740,21 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                     {canUploadDocs && (
                       <label style={{ display: "block", border: "1px dashed #d1d5db", borderRadius: 5, padding: "5px 8px", fontSize: 11, color: T.t3, textAlign: "center", cursor: "pointer" }}>
                         {docData ? "Replace" : "Upload"}
-                        <input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = (ev) => uploadDocToProfile(doc.id, ev.target.result, file.name, file.type); r.readAsDataURL(file); }} />
+                        <input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          e.target.value = "";
+                          if (!file) return;
+                          try {
+                            const stored = await uploadDocument(local.id, doc.id, file, currentUser.name);
+                            uploadDocToProfile(doc.id, stored.data, stored.name, stored.type, {
+                              storagePath: stored.storagePath,
+                              cdnUrl: stored.cdnUrl,
+                              thumbnailUrl: stored.thumbnailUrl,
+                            });
+                          } catch (err) {
+                            setErr(err?.message || "Could not upload document.");
+                          }
+                        }} />
                       </label>
                     )}
                   </div>

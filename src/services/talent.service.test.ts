@@ -59,4 +59,15 @@ describe('talent row mapping', () => {
     expect(roundTrip.first_name).toBe('Jordan')
     expect(roundTrip.application_data?.sport_primary).toBe('Track')
   })
+
+  it('stores parent contact on the profile blob', () => {
+    const row = toTalentRow({
+      ...base,
+      parent_name: 'Pat Lee',
+      parent_email: 'pat@example.com',
+      parent_phone: '555-010-1111',
+    })
+    expect((row.profile as { parent_email?: string }).parent_email).toBe('pat@example.com')
+    expect(fromTalentRow(row).parent_name).toBe('Pat Lee')
+  })
 })

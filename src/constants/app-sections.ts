@@ -1,4 +1,5 @@
-import { parseApplicationStoragePath } from '@/lib/application-files'
+import { parseApplicationStoragePath, parseS3Key, toS3Ref } from '@/lib/application-files'
+import { resolveS3Url, thumbnailUrl } from '@/lib/s3-storage'
 import { SOP_STATUS, shouldAdvanceSopStatus } from '@/constants/sop-status'
 import type {
   AppField,
@@ -823,11 +824,14 @@ function docFromApp(
   const data = d[id]
   if (!data) return null
   const value = String(data)
+  const s3Key = parseS3Key(value)
   return {
     name: String(d[`${id}_name`] || fallbackName),
     data: value,
     type: String(d[`${id}_type`] || 'application/octet-stream'),
-    storagePath: parseApplicationStoragePath(value) || undefined,
+    storagePath: s3Key || parseApplicationStoragePath(value) || undefined,
+    cdnUrl: s3Key ? resolveS3Url(toS3Ref(s3Key)) : undefined,
+    thumbnailUrl: s3Key ? thumbnailUrl(toS3Ref(s3Key)) : undefined,
     doc_type: id.replace(/^doc_/, ''),
     uploaded_at: new Date().toISOString(),
     uploaded_by: 'applicant',

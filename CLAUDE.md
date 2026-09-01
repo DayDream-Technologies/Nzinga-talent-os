@@ -99,7 +99,7 @@ Company Code: **NZG** (also: NZINGA, TCG)
 - Each pillar requires a written rationale
 
 ## File Uploads
-Files are read as base64 `data:` URLs via `FileReader`. Stored in React state on the talent's `uploaded_docs` object. `DocViewer` renders images directly or PDFs in an iframe.
+Photos and documents upload to Amazon S3 via a presigned PUT URL from the `s3-upload-url` Edge Function. The browser stores an `s3:{key}` ref (plus optional CloudFront URLs) on `uploaded_docs` / application data. Profile photos and headshots open a cropper first. Demo mode still embeds `data:` URLs. Training videos remain in the Supabase `training-videos` bucket. Setup: [S3_SETUP.md](./S3_SETUP.md).
 
 ## Email (Supabase Auth + Resend)
 Signup confirmation, password reset, and guardian magic links are sent by **Supabase Auth** using the project's custom SMTP (Google).

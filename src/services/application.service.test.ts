@@ -41,14 +41,16 @@ describe('application data persistence', () => {
     expect(merged.last_touch).toBe('new')
   })
 
-  it('strips embedded data URLs but keeps storage refs and text', () => {
+  it('strips embedded data URLs and legacy storage refs but keeps S3 refs and text', () => {
     const cleaned = sanitizeApplicationData({
       acting_training: 'Meisner studio',
       doc_acting_headshot: 'data:image/png;base64,aaaa',
-      doc_acting_resume: 'storage:application-docs/x/resume.pdf',
+      doc_acting_resume: 's3:applications/x/doc_acting_resume/resume.pdf',
+      doc_old: 'storage:application-docs/x/resume.pdf',
     })
     expect(cleaned.acting_training).toBe('Meisner studio')
     expect(cleaned.doc_acting_headshot).toBeUndefined()
-    expect(cleaned.doc_acting_resume).toBe('storage:application-docs/x/resume.pdf')
+    expect(cleaned.doc_acting_resume).toBe('s3:applications/x/doc_acting_resume/resume.pdf')
+    expect(cleaned.doc_old).toBeUndefined()
   })
 })

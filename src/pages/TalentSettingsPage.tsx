@@ -10,6 +10,8 @@ import {
 import { useTalentPortal } from '@/hooks/useTalentPortal'
 import { useResolvedImageUrl } from '@/hooks/useResolvedImageUrl'
 import { isImageDoc, resolveProfilePhoto, uploadProfilePhoto } from '@/lib/profile-photo'
+import { useImageCropper } from '@/components/ui/ImageCropper'
+import { cropAspectForField } from '@/lib/crop-image'
 import { mergeUdf } from '@/lib/talent-udf'
 import type { TalentUdf } from '@/types/udf'
 
@@ -44,6 +46,7 @@ const CONTACT_FIELDS: Array<{ key: keyof TalentUdf; label: string }> = [
 export function TalentSettingsPage() {
   const { profile, talent, displayName, prospect, rosterTalent, updateTalent, updateProspect } = useTalentPortal()
   const { prefs, setPrefs } = useTalentPortalPrefs()
+  const { cropImage, cropper } = useImageCropper()
   const [notice, setNotice] = useState('')
   const [photoError, setPhotoError] = useState('')
   const [phone, setPhone] = useState(rosterTalent?.phone || prospect?.phone || '')
@@ -91,8 +94,10 @@ export function TalentSettingsPage() {
       return
     }
     try {
+      const cropped = await cropImage(file, { aspect: cropAspectForField('profile_photo'), title: 'Crop profile photo' })
+      if (!cropped) return
       const ownerId = rosterTalent?.id || prospect?.id || talent?.id || 'unassigned'
-      const photoDoc = await uploadProfilePhoto(file, ownerId, 'talent')
+      const photoDoc = await uploadProfilePhoto(cropped, ownerId, 'talent')
       if (rosterTalent) updateTalent(rosterTalent.id, { profilePhoto: photoDoc })
       if (prospect) updateProspect(prospect.id, { profilePhoto: photoDoc })
       setNotice('Profile photo updated.')
@@ -103,6 +108,7 @@ export function TalentSettingsPage() {
 
   return (
     <>
+      {cropper}
       <h1 style={{ fontFamily: "'Syne', 'Outfit', sans-serif", fontSize: 26, fontWeight: 700, margin: '0 0 8px' }}>
         Settings
       </h1>

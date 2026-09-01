@@ -98,6 +98,18 @@ describe('application prefill', () => {
     expect(data.model_height).toBe('5\'11"')
   })
 
+  it('prefills guardian email from a pipeline talent parent contact', () => {
+    const data = prefillApplicationData({
+      talent: {
+        name: 'Alex Rivera',
+        email: 'alex@example.com',
+        dob: '2012-06-01',
+        parent_email: 'pat@example.com',
+      },
+    })
+    expect(data.guardian_invite_email).toBe('pat@example.com')
+  })
+
   it('marks complete sections when required personal fields are present', () => {
     const data = prefillApplicationData({
       prospect: prospect({ workArea: 'Modeling' }),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canManageTrainingVideos,
   canRoleAccessStage,
   getRoleDef,
   hasPermission,
@@ -41,6 +42,12 @@ describe('role catalog and permissions', () => {
     expect(SYSTEM_ROLE_DEFINITIONS.filter((r) => r.permissions.includes('admin_access')).map((r) => r.slug)).toEqual([
       'director',
     ])
+  })
+
+  it('lets only directors manage TMX Academy videos', () => {
+    expect(canManageTrainingVideos('director')).toBe(true)
+    expect(canManageTrainingVideos('scout')).toBe(false)
+    expect(canManageTrainingVideos('success_manager')).toBe(false)
   })
 
   it('lets a custom role copied from scout submit packets without slug scout', () => {

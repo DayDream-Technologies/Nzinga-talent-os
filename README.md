@@ -39,9 +39,10 @@ By default `VITE_DEMO_MODE=true` (or leave Supabase vars unset). All data uses i
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_DEMO_MODE=false
+VITE_CDN_URL=https://dxxxx.cloudfront.net
 ```
 
-5. Create a `documents` storage bucket (private) for file uploads
+5. Create the S3 media bucket and CloudFront distribution ([S3_SETUP.md](./S3_SETUP.md))
 
 ## Demo Credentials
 

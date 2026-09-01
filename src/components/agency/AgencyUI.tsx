@@ -50,7 +50,7 @@ export function Panel({
   children: ReactNode
 }) {
   return (
-    <div style={{ padding: 20, overflow: 'auto', height: '100%', background: T.pageBg }}>
+    <div data-scroll-container="" style={{ padding: 20, overflow: 'auto', height: '100%', background: T.pageBg }}>
       <div
         className="animate-fade-in-up"
         style={{

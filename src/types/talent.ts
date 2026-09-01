@@ -19,6 +19,9 @@ export interface UploadedDoc {
   data: string
   type: string
   storagePath?: string
+  /** CloudFront URL cached at upload time */
+  cdnUrl?: string
+  thumbnailUrl?: string
   /** Document classification (gov_id, headshot, etc.) */
   doc_type?: string
   uploaded_at?: string
@@ -63,6 +66,9 @@ export interface ApplicantProfile {
   current_agency?: string
   union_affiliation?: string
   parent_guardian_required?: string
+  parent_name?: string
+  parent_email?: string
+  parent_phone?: string
   onboarding_fee_status?: string
   reference_check_status?: string
   height?: string

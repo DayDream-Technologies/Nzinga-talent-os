@@ -1,7 +1,26 @@
 export const APPLICATION_FILE_PREFIX = 'storage:'
+export const S3_FILE_PREFIX = 's3:'
 
 export function isEmbeddedDataUrl(value: unknown): boolean {
   return typeof value === 'string' && value.startsWith('data:') && value.includes(',')
+}
+
+export function isS3Ref(value: unknown): boolean {
+  return typeof value === 'string' && value.startsWith(S3_FILE_PREFIX)
+}
+
+/** Extract the S3 object key from an `s3:` ref or a known prefix key. */
+export function parseS3Key(value: string): string | null {
+  if (!value) return null
+  if (value.startsWith(S3_FILE_PREFIX)) return value.slice(S3_FILE_PREFIX.length).replace(/^\/+/, '')
+  if (/^(talents|applications|guardian|agency|thumbnails)\//.test(value) && !value.includes('://')) {
+    return value
+  }
+  return null
+}
+
+export function toS3Ref(key: string): string {
+  return `${S3_FILE_PREFIX}${key.replace(/^\/+/, '')}`
 }
 
 export function isApplicationStorageRef(value: string): boolean {

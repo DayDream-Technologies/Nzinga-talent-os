@@ -10,6 +10,7 @@ import { T } from '@/lib/tokens'
 import { DocViewer } from '@/components/ui/DocViewer'
 import { getProspectProfileByEmail, sendPasswordResetEmail } from '@/services/auth.service'
 import { downloadUploadedDoc } from '@/lib/representation-agreement'
+import { uploadOwnedFile } from '@/services/storage.service'
 import type { UploadedDoc } from '@/types'
 import type { ProspectContract } from '@/types/agency'
 
@@ -134,6 +135,31 @@ export function TalentAccountPage() {
     void getProspectProfileByEmail(talentEmail)
   }, [talentEmail, accountId])
 
+  async function attachContract(file: File) {
+    if (!prospect) return
+    const stored = await uploadOwnedFile(file, `agency/${prospect.id}/contracts`, {
+      uploadedBy: user?.name || 'staff',
+      docType: 'contract',
+    })
+    const today = new Date().toISOString().slice(0, 10)
+    addProspectContract(prospect.id, {
+      title: file.name.replace(/\.[^.]+$/, '') || 'Uploaded contract',
+      status: 'current',
+      startDate: today,
+      endDate: null,
+      representationType: prospect.representationType,
+      termLengthYears: prospect.termLengthYears,
+      document: {
+        name: stored.name,
+        data: stored.data,
+        type: stored.type,
+        storagePath: stored.storagePath,
+        cdnUrl: stored.cdnUrl,
+        thumbnailUrl: stored.thumbnailUrl,
+      },
+    })
+  }
+
   async function handleSendPasswordReset() {
     if (!talentEmail) {
       setResetState('error')
@@ -216,24 +242,7 @@ export function TalentAccountPage() {
                 onUpload={
                   prospect
                     ? (file) => {
-                        const reader = new FileReader()
-                        reader.onload = () => {
-                          const today = new Date().toISOString().slice(0, 10)
-                          addProspectContract(prospect.id, {
-                            title: file.name.replace(/\.[^.]+$/, '') || 'Uploaded contract',
-                            status: 'current',
-                            startDate: today,
-                            endDate: null,
-                            representationType: prospect.representationType,
-                            termLengthYears: prospect.termLengthYears,
-                            document: {
-                              name: file.name,
-                              data: reader.result as string,
-                              type: file.type || 'application/octet-stream',
-                            },
-                          })
-                        }
-                        reader.readAsDataURL(file)
+                        void attachContract(file)
                       }
                     : undefined
                 }
@@ -244,24 +253,7 @@ export function TalentAccountPage() {
         onUploadContract={
           prospect
             ? (file) => {
-                const reader = new FileReader()
-                reader.onload = () => {
-                  const today = new Date().toISOString().slice(0, 10)
-                  addProspectContract(prospect.id, {
-                    title: file.name.replace(/\.[^.]+$/, '') || 'Uploaded contract',
-                    status: 'current',
-                    startDate: today,
-                    endDate: null,
-                    representationType: prospect.representationType,
-                    termLengthYears: prospect.termLengthYears,
-                    document: {
-                      name: file.name,
-                      data: reader.result as string,
-                      type: file.type || 'application/octet-stream',
-                    },
-                  })
-                }
-                reader.readAsDataURL(file)
+                void attachContract(file)
               }
             : undefined
         }

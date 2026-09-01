@@ -12,8 +12,9 @@ import {
   PREFERRED_OUTREACH_CHANNELS,
   UNION_AFFILIATIONS,
   REFERENCE_CHECK_STATUSES,
-  YES_NO,
   MEDIA_UPLOAD_TYPES,
+  ageFromDob,
+  isMinor,
 } from '@/constants'
 import { T, Btn, Lbl, FInput, FTextarea, FSelect, FileUpload } from '@/components/ui-compat'
 import { PageContent } from '@/components/layout/PageContent'
@@ -46,6 +47,9 @@ const EMPTY_FORM = {
   current_agency: '',
   union_affiliation: 'Non-Union',
   parent_guardian_required: 'No',
+  parent_name: '',
+  parent_email: '',
+  parent_phone: '',
   onboarding_fee_status: '',
   reference_check_status: 'Not Started',
   height: '',
@@ -104,12 +108,13 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
   const [docs, setDocs] = useState({})
   const [media, setMedia] = useState({})
   const [err, setErr] = useState('')
+  const [entryId] = useState(() => `ne_${Date.now()}`)
 
   const p = (k, v) => setF((x) => ({ ...x, [k]: v }))
-  const saveDoc = (docId, data, name, type) =>
-    setDocs((x) => ({ ...x, [docId]: { data, name, type } }))
-  const saveMedia = (docId, data, name, type) =>
-    setMedia((x) => ({ ...x, [docId]: { data, name, type } }))
+  const saveDoc = (docId, data, name, type, extra = {}) =>
+    setDocs((x) => ({ ...x, [docId]: { data, name, type, ...extra } }))
+  const saveMedia = (docId, data, name, type, extra = {}) =>
+    setMedia((x) => ({ ...x, [docId]: { data, name, type, ...extra } }))
 
   const agentOptions = USERS.filter((u) =>
     ['scout', 'director', 'success_manager'].includes(u.role),
@@ -119,10 +124,27 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
     return [f.first_name, f.last_name].filter(Boolean).join(' ').trim()
   }
 
+  const age = ageFromDob(f.dob)
+  const isMinorApplicant = isMinor(f.dob)
+
   function validateRequired() {
     if (!f.first_name || !f.last_name || !f.phone || !f.email || !f.city || !f.state) {
       setErr('First name, last name, email, mobile phone, city, and state are required.')
       return false
+    }
+    if (!f.dob || age == null) {
+      setErr('Date of birth is required.')
+      return false
+    }
+    if (isMinorApplicant) {
+      if (!f.parent_name.trim() || !f.parent_email.trim() || !f.parent_phone.trim()) {
+        setErr('Parent name, email, and phone are required for applicants under 18.')
+        return false
+      }
+      if (!f.parent_email.includes('@')) {
+        setErr('A valid parent email is required.')
+        return false
+      }
     }
     setErr('')
     return true
@@ -155,7 +177,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
       min_day_rate: f.min_day_rate,
       contract_duration_pref: f.contract_duration_pref,
       term_length: f.contract_duration_pref || '',
-      legal_minor_status: f.legal_minor_status,
+      legal_minor_status: isMinorApplicant ? 'Yes' : 'No',
       animal_skill_onset: f.animal_skill_onset,
       travel_logistics: f.travel_logistics,
       applicant_stage_status: f.applicant_stage_status,
@@ -165,7 +187,10 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
       prior_annual_revenue: f.prior_annual_revenue,
       current_agency: f.current_agency,
       union_affiliation: f.union_affiliation,
-      parent_guardian_required: f.parent_guardian_required,
+      parent_guardian_required: isMinorApplicant ? 'Yes' : 'No',
+      parent_name: isMinorApplicant ? f.parent_name.trim() : '',
+      parent_email: isMinorApplicant ? f.parent_email.trim() : '',
+      parent_phone: isMinorApplicant ? f.parent_phone.trim() : '',
       onboarding_fee_status: f.onboarding_fee_status,
       reference_check_status: f.reference_check_status,
       height: f.height,
@@ -351,8 +376,14 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                   type="tel"
                 />
               </Field>
-              <Field label="Date of Birth">
+              <Field label="Date of Birth" required>
                 <FInput value={f.dob} onChange={(v) => p('dob', v)} type="date" />
+                {age != null && (
+                  <div style={{ fontSize: 11, color: isMinorApplicant ? T.amber : T.t3, marginTop: 4 }}>
+                    Age {age}
+                    {isMinorApplicant ? ' — minor; parent/guardian contact required' : ''}
+                  </div>
+                )}
               </Field>
               <Field label="Primary Base — City" required>
                 <FInput value={f.city} onChange={(v) => p('city', v)} placeholder="Atlanta" />
@@ -368,6 +399,47 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                 />
               </Field>
             </div>
+
+            {isMinorApplicant && (
+              <div
+                style={{
+                  border: `1px solid ${T.amber}55`,
+                  background: T.amberL,
+                  borderRadius: 8,
+                  padding: '12px 14px',
+                  marginBottom: 14,
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 700, color: T.t1, marginBottom: 8 }}>
+                  Parent / guardian (required under 18)
+                </div>
+                <div style={grid}>
+                  <Field label="Parent name" required full>
+                    <FInput
+                      value={f.parent_name}
+                      onChange={(v) => p('parent_name', v)}
+                      placeholder="Parent or legal guardian full name"
+                    />
+                  </Field>
+                  <Field label="Parent email" required>
+                    <FInput
+                      value={f.parent_email}
+                      onChange={(v) => p('parent_email', v)}
+                      placeholder="parent@email.com"
+                      type="email"
+                    />
+                  </Field>
+                  <Field label="Parent phone" required>
+                    <FInput
+                      value={f.parent_phone}
+                      onChange={(v) => p('parent_phone', v)}
+                      placeholder="(555) 000-1111"
+                      type="tel"
+                    />
+                  </Field>
+                </div>
+              </div>
+            )}
 
             {/* ROSTER & CASTING PREFERENCES */}
             <SectionHeader title="Roster & Casting Preferences" />
@@ -408,11 +480,9 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                 />
               </Field>
               <Field label="Legal Minor / Guardian Status">
-                <FSelect
-                  value={f.legal_minor_status}
-                  onChange={(v) => p('legal_minor_status', v)}
-                  options={[...YES_NO]}
-                />
+                <div style={{ fontSize: 13, fontWeight: 600, color: isMinorApplicant ? T.amber : T.t1, padding: '8px 0' }}>
+                  {!f.dob ? 'Set date of birth to detect' : isMinorApplicant ? 'Yes — under 18' : 'No'}
+                </div>
               </Field>
               <Field label="Animal / Exotic Skill On-Set">
                 <FInput
@@ -477,11 +547,9 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                 />
               </Field>
               <Field label="Parent / Guardian Required?">
-                <FSelect
-                  value={f.parent_guardian_required}
-                  onChange={(v) => p('parent_guardian_required', v)}
-                  options={[...YES_NO]}
-                />
+                <div style={{ fontSize: 13, fontWeight: 600, color: isMinorApplicant ? T.amber : T.t1, padding: '8px 0' }}>
+                  {isMinorApplicant ? 'Yes' : 'No'}
+                </div>
               </Field>
               <Field label="Reference & Background Check">
                 <FSelect
@@ -563,10 +631,11 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                     <Lbl>{doc.label}</Lbl>
                     <FileUpload
                       fieldId={doc.id}
+                      uploadPath={`talents/${entryId}/media/${doc.id}`}
                       value={media[doc.id]?.data}
                       valueName={media[doc.id]?.name}
                       valueType={media[doc.id]?.type}
-                      onChange={(id, data, name, type) => saveMedia(id, data, name, type)}
+                      onChange={(id, data, name, type, extra) => saveMedia(id, data, name, type, extra)}
                       label={doc.label}
                       compact
                     />
@@ -595,10 +664,11 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                       <Lbl>{doc.label}</Lbl>
                       <FileUpload
                         fieldId={doc.id}
+                        uploadPath={`talents/${entryId}/documents/${doc.id}`}
                         value={docs[doc.id]?.data}
                         valueName={docs[doc.id]?.name}
                         valueType={docs[doc.id]?.type}
-                        onChange={(id, data, name, type) => saveDoc(id, data, name, type)}
+                        onChange={(id, data, name, type, extra) => saveDoc(id, data, name, type, extra)}
                         label={doc.label}
                         note={doc.note}
                         compact

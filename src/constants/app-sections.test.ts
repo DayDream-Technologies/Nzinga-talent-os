@@ -160,7 +160,7 @@ describe('NZG short application', () => {
         state: 'Y',
         country: 'USA',
         current_market: 'X',
-        doc_profile_photo: 'storage:application-docs/x/doc_profile_photo/1.jpg',
+        doc_profile_photo: 's3:applications/x/doc_profile_photo/1.jpg',
       }),
     ).toContain('dob')
 
@@ -176,7 +176,7 @@ describe('NZG short application', () => {
         state: 'Y',
         country: 'USA',
         current_market: 'X',
-        doc_profile_photo: 'storage:application-docs/x/doc_profile_photo/1.jpg',
+        doc_profile_photo: 's3:applications/x/doc_profile_photo/1.jpg',
       }),
     ).toContain('phone')
 
@@ -194,7 +194,7 @@ describe('NZG short application', () => {
         sport_level: 'College',
         sport_years: 'abc',
         sport_highlights: 'Wins',
-        doc_sport_photo: 'storage:application-docs/x/doc_sport_photo/1.jpg',
+        doc_sport_photo: 's3:applications/x/doc_sport_photo/1.jpg',
       }),
     ).toContain('sport_years')
   })

@@ -1,5 +1,5 @@
 import type { Application, ApplicationData, ApplicationsMap } from '@/types'
-import { isEmbeddedDataUrl } from '@/lib/application-files'
+import { isApplicationStorageRef, isEmbeddedDataUrl, isS3Ref } from '@/lib/application-files'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { demoStore } from './demo-store'
 
@@ -7,6 +7,7 @@ export function sanitizeApplicationData(data: ApplicationData | undefined): Appl
   const next: ApplicationData = {}
   for (const [key, value] of Object.entries(data || {})) {
     if (isEmbeddedDataUrl(value)) continue
+    if (typeof value === 'string' && isApplicationStorageRef(value) && !isS3Ref(value)) continue
     next[key] = value
   }
   return next

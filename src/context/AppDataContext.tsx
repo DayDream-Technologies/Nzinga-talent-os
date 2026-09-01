@@ -186,10 +186,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
               await persistTalents(next)
             } catch (e) {
               showToast(persistErrorMessage(e), 'error')
+              return
             }
             const hist: HistoryEntry = {
               id: 'h' + Date.now(),
               talent_id: existingFull.id,
+              account_number: existingFull.account_number || null,
               user_id: null,
               type: 'system',
               text: 'Application submitted and 100% complete — profile upgraded as New / Lead.',
@@ -210,6 +212,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             const hist: HistoryEntry = {
               id: 'h' + Date.now(),
               talent_id: newTalent.id,
+              account_number: newTalent.account_number || null,
               user_id: null,
               type: 'system',
               text: 'Application auto-imported to New / Lead.',

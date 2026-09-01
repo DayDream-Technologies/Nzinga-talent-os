@@ -39,7 +39,8 @@ https://rvuchforbheotenhkxnm.supabase.co/functions/v1/<function-name>
   ├── ringcentral-oauth   → RingCentral OAuth + token storage
   ├── ringcentral-call    → RingOut (click-to-call)
   ├── ringcentral-sms     → SMS send
-  └── ringcentral-webhook → Inbound call events (RingCentral → Supabase)
+  ├── ringcentral-webhook → Inbound call events (RingCentral → Supabase)
+  └── s3-upload-url       → Presigned S3 PUT URLs for photos/documents
 ```
 
 Staff must be logged in with **Supabase Auth** (not demo mode) for all functions except `ringcentral-oauth?action=callback` (browser redirect from RingCentral) and `ringcentral-webhook` (RingCentral POST).
@@ -163,6 +164,7 @@ supabase functions deploy ringcentral-oauth
 supabase functions deploy ringcentral-call
 supabase functions deploy ringcentral-sms
 supabase functions deploy ringcentral-webhook
+supabase functions deploy s3-upload-url
 ```
 
 **Redeploy after any code or `config.toml` change.** An outdated `ringcentral-oauth` deployment is a common cause of `Invalid action` 400 errors.

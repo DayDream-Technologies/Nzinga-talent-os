@@ -43,6 +43,7 @@ vi.mock('@/context/AppDataContext', () => ({
     importAppToPipeline: vi.fn(),
     handleSendApp: vi.fn(),
     updateTalent: updatePipelineTalent,
+    talents: [],
   }),
 }))
 
@@ -93,6 +94,7 @@ describe('AccountProfileTemplate', () => {
 
     expect(screen.getByRole('heading', { name: 'Kai Johnson' })).toBeInTheDocument()
     expect(screen.getByText('PAYOUT DUE')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open talent account' })).not.toBeInTheDocument()
     expect(screen.getByText('Add Charge')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Import to pipeline' })).toBeDisabled()
     fireEvent.click(screen.getByText('Add Charge'))

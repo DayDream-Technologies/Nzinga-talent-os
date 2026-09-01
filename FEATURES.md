@@ -96,6 +96,8 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Company code selects the tenant (NZG, NZINGA, TCG). Staff then sign in with email and password.
 - Signup confirmation, password reset, and guardian links are sent by Supabase Auth (custom SMTP).
 - Per-user settings: display name/title, light/dark theme, sidebar preference, password reset request.
+- Command Launch in the top nav finds people, applications, and pages. Pages match by title or path substring, not by letter-sequence matches against names (searching “Rico” does not suggest Applicant Pool).
+- Staff **My Workspace** home uses larger welcome, Favorites, Reports, and group titles.
 - RingCentral account pairing on Settings for click-to-call and SMS (OAuth). TOTP MFA is configured in Supabase Auth; demo mode shows it as coming soon.
 
 ### Prospect CRM
@@ -109,7 +111,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 ### Applications
 
 - NZG short application: Basic Information, Representation Interest, About You, then conditional Modeling / Acting / Sports / Influencing sections, Representation & Conflicts, Availability, Social & Portfolio, ID Verification, Final & Signature.
-- Access-code lookup, autosave, file uploads, duplicate-email protection, and guardian flow for minors.
+- Access-code lookup, autosave, file uploads to Amazon S3 (with a cropper for profile photos and headshots), duplicate-email protection, and guardian flow for minors.
 - Staff Applications list with progress, filters (in progress, pending parent, ready to import, incomplete), and applicant account profile.
 - **Import to Pipeline** only for complete submitted apps (not pending guardian). Opens the pipeline record as **Application Submitted / Under Vetting** and does not rewind a later SOP stage.
 
@@ -119,9 +121,9 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Talent record tabs: Details, Scoring, Compliance, Documents, Framework, Executive, Onboarding, History, Tasks, Audit Log.
 - **Jordan Score**: five pillars, each 1–5 with written rationale; all ≥ 3 and average ≥ 3.5 to advance.
 - Scout Client Packet gate: Jordan Score, Discovery Call notes, and government ID. Submit sends the record to Success Manager review.
-- Documents: government ID, tax, banking, proof of income, plus application uploads (headshots, reels, portfolio). Staff can add a profile photo.
+- Documents: government ID, tax, banking, proof of income, plus application uploads (headshots, reels, portfolio). Staff can add a cropped profile photo. Files are stored in Amazon S3 and served through CloudFront (demo mode still embeds data URLs).
 - History captures notes, calls, emails, and system events (including follow-up flags). Tasks attach to the record.
-- New Entry: manual holding-entry create, or create-and-send application.
+- New Entry: manual holding-entry create, or create-and-send application. Date of birth is required; applicants under 18 must include parent name, email, and phone.
 
 ### Contracts and onboarding
 
@@ -132,7 +134,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 
 ### Clients / roster
 
-- Shared account profile for applicants and clients: contacts, addresses, application answers, UDF roster sheet, charges, tickets, documents.
+- Shared account profile for applicants and clients: photo and name first, then account number, status, and payout due; contacts, addresses, application answers, UDF roster sheet, charges, tickets, documents. A **Back to top** button appears after scrolling. Row click on Prospects, Clients, and Applications opens the account (there is no separate Open talent account button).
 - UDF (user-defined roster fields) is staff-maintained; application answers prefill empty fields only.
 - Clients list with lifecycle (current / future / past), contracts, and account number.
 - Some client row actions remain **Coming soon** (publish signable documents from the list, add screening, send application from the clients grid).
@@ -161,7 +163,7 @@ Visible to Ops Specialist, Success Manager, and Director (account-manager module
 
 Role-scoped hub under **My Reports**:
 
-- Roster & booking: roster scorecard, applicant pool & pipeline log, onboarding & offboarding, roster openings & availability, escrow balances (ops).
+- Roster & booking: roster scorecard, applicant pool & pipeline log (application created / last saved / submitted timestamps), onboarding & offboarding, roster openings & availability, escrow balances (ops).
 - Receivables: gross bookings & commission, AR aging, overdue accounts.
 - Payables: pending talent payouts (AP aging).
 
@@ -171,7 +173,7 @@ Directors (and roles with `admin_access`):
 
 - Team users, invite team member, **Roles** (create / copy / edit / delete catalog roles and assign users).
 - Audit log of admin and sensitive actions.
-- System settings and in-app training.
+- System settings and **TMX Academy** (role guides plus training videos). Directors add, edit, and remove videos — YouTube, Vimeo, Loom, or a direct URL, or an uploaded MP4/WebM when storage is connected — and can target them to specific roles or all staff.
 
 ### Talent portal
 

@@ -79,12 +79,23 @@ export async function fetchHistory(): Promise<HistoryEntry[]> {
 async function fetchValidIds(table: 'talents' | 'users', ids: string[]): Promise<Set<string>> {
   if (!supabase || ids.length === 0) return new Set()
   const unique = [...new Set(ids)]
+  const allowed = new Set(unique)
   const { data, error } = await supabase.from(table).select('id').in('id', unique)
   if (error) {
     console.warn(`[history] could not verify ${table} ids:`, error.message)
     return new Set()
   }
-  return new Set((data ?? []).map((row) => String((row as { id: string }).id)))
+  return new Set(
+    (data ?? [])
+      .map((row) => String((row as { id: string }).id))
+      .filter((id) => allowed.has(id)),
+  )
+}
+
+function isHistoryFkError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false
+  if (error.code === '23503') return true
+  return /history_(talent_id|user_id)_fkey/i.test(error.message || '')
 }
 
 /**
@@ -121,7 +132,12 @@ export async function saveHistory(
       rows.map((r) => r.user_id).filter((id): id is string => Boolean(id)),
     ),
   ])
-  const cleaned = sanitizeHistoryRows(rows, validTalents, validUsers)
-  const { error } = await supabase.from('history').upsert(cleaned)
+  let cleaned = sanitizeHistoryRows(rows, validTalents, validUsers)
+  let { error } = await supabase.from('history').upsert(cleaned)
+  if (isHistoryFkError(error)) {
+    cleaned = cleaned.map((row) => ({ ...row, talent_id: null, user_id: null }))
+    const retry = await supabase.from('history').upsert(cleaned)
+    error = retry.error
+  }
   if (error) throw error
 }

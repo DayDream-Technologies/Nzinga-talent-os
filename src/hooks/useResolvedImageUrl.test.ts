@@ -10,6 +10,17 @@ describe('useResolvedImageUrl', () => {
     expect(result.current).toBe(doc.data)
   })
 
+  it('returns S3 refs immediately when a CDN URL is stored', () => {
+    const doc = {
+      name: 'headshot.webp',
+      data: 's3:talents/t1/profile/1.webp',
+      type: 'image/webp',
+      cdnUrl: 'https://cdn.example.com/talents/t1/profile/1.webp',
+    }
+    const { result } = renderHook(() => useResolvedImageUrl(doc))
+    expect(result.current).toBe('https://cdn.example.com/talents/t1/profile/1.webp')
+  })
+
   it('returns null when there is no document', () => {
     const { result } = renderHook(() => useResolvedImageUrl(null))
     expect(result.current).toBeNull()

@@ -145,6 +145,9 @@ export interface ProspectContractDocument {
   name: string
   data: string
   type: string
+  storagePath?: string
+  cdnUrl?: string
+  thumbnailUrl?: string
 }
 
 export type ProspectContractStatus = 'current' | 'past' | 'pending_signature'
@@ -231,6 +234,9 @@ export interface InvoiceDocument {
   name: string
   data: string
   type: string
+  storagePath?: string
+  cdnUrl?: string
+  thumbnailUrl?: string
 }
 
 export interface ClientInvoice {

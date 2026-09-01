@@ -55,6 +55,16 @@ describe('history persistence sanitization', () => {
     expect(cleaned[0].talent_id).toBe('t1')
     expect(cleaned[0].user_id).toBe('u5')
   })
+
+  it('does not treat unverified ids as valid even if extra rows are returned', () => {
+    const cleaned = sanitizeHistoryRows(
+      [toHistoryRow(entry({ talent_id: 'pros_rico', user_id: 'auth-uuid' }))],
+      new Set(['t1', 't2']),
+      new Set(['u1']),
+    )
+    expect(cleaned[0].talent_id).toBeNull()
+    expect(cleaned[0].user_id).toBeNull()
+  })
 })
 
 describe('resolvePipelineTalentId', () => {

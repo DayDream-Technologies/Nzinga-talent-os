@@ -3,14 +3,23 @@ import { createPortal } from 'react-dom'
 import type { UploadedDoc } from '@/types'
 import { downloadUploadedDoc } from '@/lib/representation-agreement'
 import { resolveUploadedDocUrl } from '@/services/storage.service'
+import { isS3Ref } from '@/lib/application-files'
+import { resolveS3Url } from '@/lib/s3-storage'
 
 interface DocViewerProps {
   doc: UploadedDoc | null
   onClose: () => void
 }
 
+function initialSrc(doc: UploadedDoc | null): string {
+  if (!doc) return ''
+  if (doc.cdnUrl) return doc.cdnUrl
+  if (isS3Ref(doc.data)) return resolveS3Url(doc.data)
+  return doc.data || ''
+}
+
 export function DocViewer({ doc, onClose }: DocViewerProps) {
-  const [src, setSrc] = useState(doc?.data || '')
+  const [src, setSrc] = useState(() => initialSrc(doc))
 
   useEffect(() => {
     if (!doc) {
@@ -18,7 +27,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
       return
     }
     let cancelled = false
-    setSrc(doc.data)
+    setSrc(initialSrc(doc))
     void resolveUploadedDocUrl(doc).then((url) => {
       if (!cancelled) setSrc(url)
     })

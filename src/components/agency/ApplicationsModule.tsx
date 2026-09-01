@@ -320,14 +320,6 @@ export function ApplicationsModule() {
                     },
                   },
                   {
-                    id: 'profile',
-                    label: 'Open Profile',
-                    disabled: !accountId,
-                    onClick: () => {
-                      if (accountId) navigate(talentAccountPath(accountId))
-                    },
-                  },
-                  {
                     id: 'email',
                     label: 'Send Email',
                     onClick: () => navigate('/send-email'),

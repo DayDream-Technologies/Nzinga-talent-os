@@ -123,7 +123,7 @@ export function prefillApplicationData(input: {
       udf.talentTypes,
     ),
   )
-  setIfEmpty(data, 'guardian_invite_email', text(prospect?.parentEmail) || text(udf.emergencyEmail))
+  setIfEmpty(data, 'guardian_invite_email', text(prospect?.parentEmail) || text(talent.parent_email) || text(udf.emergencyEmail))
   setIfEmpty(data, 'model_height', text(talent.height) || text(udf.height))
   setIfEmpty(data, 'model_shoe_size', text(talent.shoe_size) || text(udf.shoeSize))
   setIfEmpty(data, 'model_eye_color', text(talent.eye_color) || text(udf.eyeColor))

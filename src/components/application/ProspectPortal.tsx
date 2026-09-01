@@ -8,6 +8,8 @@ import { checkDuplicateEmail, checkDuplicateApplicant, fetchApplicationByCode, f
 import { inviteGuardian } from "@/services/guardian.service";
 import { uploadApplicationFile } from "@/services/storage.service";
 import { AgreementViewer } from "@/components/application/AgreementViewer";
+import { useImageCropper } from "@/components/ui/ImageCropper";
+import { cropAspectForField } from "@/lib/crop-image";
 
 function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }) {
   const [mode,setMode]=useState("landing");
@@ -212,6 +214,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   const [showSubmitConfirm,setShowSubmitConfirm]=useState(false);
   const [uploading,setUploading]=useState({});
   const [uploadErr,setUploadErr]=useState({});
+  const { cropImage, cropper } = useImageCropper();
   const autoRef=useRef(null);
   const pendingSaveRef=useRef(null);
   const savingRef=useRef(false);
@@ -430,6 +433,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
 
   return (
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",fontFamily:"'Outfit','Segoe UI',sans-serif",display:"flex",flexDirection:"column" }}>
+      {cropper}
       <div style={{ background:"rgba(255,255,255,0.04)",borderBottom:"1px solid rgba(255,255,255,0.07)",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,gap:8,flexWrap:"wrap" }}>
         <div style={{ display:"flex",alignItems:"center",gap:10 }}>
           <div style={{ width:28,height:28,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#fff",fontFamily:"'Syne',sans-serif",fontWeight:800 }}>N</div>
@@ -605,8 +609,15 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                         setUploading(u=>({...u,[field.id]:true}));
                         setUploadErr(u=>({...u,[field.id]:""}));
                         try{
-                          const {url}=await uploadApplicationFile(app.id,field.id,file);
-                          updateField(field.id,url,file.name,file.type);
+                          const aspect=cropAspectForField(field.id);
+                          let toUpload=file;
+                          if(file.type.startsWith("image/") && aspect){
+                            const cropped=await cropImage(file,{aspect,title:field.label||"Crop photo"});
+                            if(!cropped){ setUploading(u=>({...u,[field.id]:false})); e.target.value=""; return; }
+                            toUpload=cropped;
+                          }
+                          const {url}=await uploadApplicationFile(app.id,field.id,toUpload);
+                          updateField(field.id,url,toUpload.name,toUpload.type);
                         }catch(err){
                           setUploadErr(u=>({...u,[field.id]:err?.message||"Upload failed. Log in and try again."}));
                         }finally{

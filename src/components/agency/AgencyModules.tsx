@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
+import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { AGENCY_STAFF, AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
 import { filterAgencyNav, type AgencyNavGroup } from '@/constants/agency-nav'
@@ -94,22 +95,22 @@ function WorkspaceNavGroup({
         background: T.cardBg,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <div
           style={{
-            width: 26,
-            height: 26,
-            borderRadius: 7,
+            width: 32,
+            height: 32,
+            borderRadius: 8,
             background: iconBg,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 13,
+            fontSize: 15,
           }}
         >
           {icon}
         </div>
-        <span style={{ fontSize: 12, fontWeight: 700, color: T.t1 }}>{group.label}</span>
+        <span style={{ fontSize: 16, fontWeight: 700, color: T.t1 }}>{group.label}</span>
       </div>
       {group.items.map((item) => (
         <div
@@ -119,11 +120,11 @@ function WorkspaceNavGroup({
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && onNav(item.path)}
           style={{
-            fontSize: 12,
+            fontSize: 13,
             color: WS.accent,
             cursor: 'pointer',
-            padding: '2px 0',
-            paddingLeft: 33,
+            padding: '4px 0',
+            paddingLeft: 40,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.textDecoration = 'underline'
@@ -164,10 +165,10 @@ export function AgencyWorkspace() {
         backgroundImage: WS.pagePattern,
       }}
     >
-      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div
           style={{
-            fontSize: 26,
+            fontSize: 36,
             fontWeight: 700,
             color: T.t1,
             fontFamily: "'Syne', sans-serif",
@@ -175,7 +176,7 @@ export function AgencyWorkspace() {
         >
           Welcome, {firstName}
         </div>
-        <div style={{ fontSize: 13, color: T.t3, marginTop: 3 }}>Let&apos;s get to work.</div>
+        <div style={{ fontSize: 16, color: T.t3, marginTop: 8 }}>Let&apos;s get to work.</div>
       </div>
 
       <div
@@ -192,12 +193,12 @@ export function AgencyWorkspace() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-start',
-                padding: '11px 14px',
+                padding: '14px 16px',
                 background: T.cardBg,
                 borderBottom: `2px solid ${WS.accent}`,
               }}
             >
-              <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>My Favorites</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.t1 }}>My Favorites</span>
             </div>
             <div
               style={{
@@ -227,18 +228,18 @@ export function AgencyWorkspace() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '11px 14px',
+                padding: '14px 16px',
                 background: T.cardBg,
                 borderBottom: `2px solid ${WS.accent}`,
               }}
             >
-              <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>My Reports</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: T.t1 }}>My Reports</span>
               <span
                 onClick={() => go('reports')}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && go('reports')}
-                style={{ fontSize: 12, color: WS.accent, cursor: 'pointer' }}
+                style={{ fontSize: 13, color: WS.accent, cursor: 'pointer' }}
               >
                 View all
               </span>
@@ -281,17 +282,17 @@ export function AgencyWorkspace() {
           alignItems: 'center',
         }}
       >
-        <span style={{ fontSize: 12, color: T.t3 }}>
-          📢 <strong style={{ color: T.t1 }}>Announcements</strong> — No new announcements
+        <span style={{ fontSize: 14, color: T.t3 }}>
+          📢 <strong style={{ color: T.t1, fontSize: 15 }}>Announcements</strong> — No new announcements
         </span>
         <span
           onClick={() => go('training')}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && go('training')}
-          style={{ fontSize: 12, color: WS.accent, cursor: 'pointer' }}
+          style={{ fontSize: 14, color: WS.accent, cursor: 'pointer' }}
         >
-          🎓 My Training
+          🎓 TMX Academy
         </span>
       </div>
     </div>
@@ -1680,13 +1681,29 @@ function ReportRosterScorecard() {
   )
 }
 
+function formatTimestamp(value?: string | null): string {
+  if (!value) return '—'
+  const ms = Date.parse(value)
+  return Number.isFinite(ms) ? new Date(ms).toLocaleString() : '—'
+}
+
 function ReportApplicantPool() {
   const { prospects } = useAgencyData()
+  const { applications } = useAppData()
   const byStage = useMemo(() => {
     const map: Record<string, number> = {}
     for (const p of prospects) map[p.stage] = (map[p.stage] || 0) + 1
     return map
   }, [prospects])
+  const apps = useMemo(
+    () =>
+      Object.values(applications).sort((a, b) => {
+        const aTs = Date.parse(a.last_saved || a.submitted_at || a.created_at || '') || 0
+        const bTs = Date.parse(b.last_saved || b.submitted_at || b.created_at || '') || 0
+        return bTs - aTs
+      }),
+    [applications],
+  )
   return (
     <Panel title="Applicant Pool & Pipeline Log" subtitle="How many applicants are waiting for agent screenings.">
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -1697,18 +1714,50 @@ function ReportApplicantPool() {
           </Card>
         ))}
       </div>
-      <Card>
+      <Card style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Pipeline log</div>
         <Table
-          headers={['Account ID', 'Name', 'Stage', 'Work Area', 'Source', 'Notes']}
+          headers={['Account ID', 'Name', 'Stage', 'Work Area', 'Source', 'Entered', 'Notes']}
           rows={prospects.map((p) => [
             <TalentLink key={`id-${p.id}`} accountId={p.accountId} name={p.name}>{p.accountId}</TalentLink>,
             <TalentLink key={`n-${p.id}`} accountId={p.accountId} name={p.name} />,
             p.stage,
             p.workArea,
             p.source,
+            formatTimestamp(p.submittedAt),
             p.notes,
           ])}
         />
+      </Card>
+      <Card>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Applications</div>
+        <Table
+          headers={['Name', 'Status', 'Created', 'Last saved', 'Submitted']}
+          rows={apps.map((app) => {
+            const linked = prospects.find(
+              (p) =>
+                p.linkedApplicationId === app.id ||
+                (app.talent_email && p.email?.toLowerCase() === app.talent_email.toLowerCase()),
+            )
+            const name = (
+              linked?.accountId ? (
+                <TalentLink key={`app-${app.id}`} accountId={linked.accountId} name={app.talent_name} />
+              ) : (
+                app.talent_name
+              )
+            )
+            return [
+              name,
+              app.status.replace(/_/g, ' '),
+              formatTimestamp(app.created_at),
+              formatTimestamp(app.last_saved),
+              formatTimestamp(app.submitted_at),
+            ]
+          })}
+        />
+        {apps.length === 0 && (
+          <div style={{ padding: 16, color: T.t3, fontSize: 13 }}>No applications on file yet.</div>
+        )}
       </Card>
     </Panel>
   )

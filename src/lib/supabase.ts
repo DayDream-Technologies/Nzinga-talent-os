@@ -16,8 +16,7 @@ export const supabase: SupabaseClient | null = supabaseConfigured
     })
   : null
 
-export const DOCUMENTS_BUCKET = 'documents'
-export const APPLICATION_DOCS_BUCKET = 'application-docs'
+export const TRAINING_VIDEOS_BUCKET = 'training-videos'
 
 /** Clear persisted auth when refresh tokens are invalid / network+CORS fails. */
 export async function clearLocalAuthSession(): Promise<void> {

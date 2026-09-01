@@ -42,6 +42,17 @@ $pairs = @{
   "APP_URL" = $env:APP_URL
 }
 
+$optional = @(
+  "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "S3_BUCKET", "CDN_URL",
+  "RESEND_API_KEY", "EMAIL_FROM_ADDRESS", "EMAIL_FROM_NAME"
+)
+foreach ($key in $optional) {
+  $val = [Environment]::GetEnvironmentVariable($key)
+  if (-not [string]::IsNullOrWhiteSpace($val)) {
+    $pairs[$key] = $val
+  }
+}
+
 foreach ($entry in $pairs.GetEnumerator()) {
   Write-Host "  $($entry.Key)"
   supabase secrets set "$($entry.Key)=$($entry.Value)"

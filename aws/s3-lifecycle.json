@@ -1,0 +1,12 @@
+{
+  "Rules": [
+    {
+      "ID": "to-intelligent-tiering",
+      "Status": "Enabled",
+      "Filter": { "Prefix": "" },
+      "Transitions": [
+        { "Days": 0, "StorageClass": "INTELLIGENT_TIERING" }
+      ]
+    }
+  ]
+}

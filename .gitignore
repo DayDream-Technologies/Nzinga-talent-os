@@ -36,3 +36,7 @@ Thumbs.db
 
 # Vite
 *.local
+
+# Lambda package
+aws/process-image/function.zip
+aws/process-image/package-lock.json

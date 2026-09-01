@@ -4,3 +4,4 @@ export { Avatar, StageBadge, NichePill, PriorityBadge, ScoreBar, HistoryIcon } f
 export { Section, TH, TD, Toggle } from './Section'
 export { FileUpload } from './FileUpload'
 export { DocViewer } from './DocViewer'
+export { ImageCropper, useImageCropper } from './ImageCropper'

@@ -280,6 +280,7 @@ supabase functions deploy ringcentral-oauth
 supabase functions deploy ringcentral-call
 supabase functions deploy ringcentral-sms
 supabase functions deploy ringcentral-webhook
+supabase functions deploy s3-upload-url
 ```
 
 ### Set Supabase Secrets
@@ -299,7 +300,16 @@ supabase secrets set RC_WEBHOOK_VERIFICATION_TOKEN=<your-chosen-token>
 
 # App URL
 supabase secrets set APP_URL=https://your-app-url.amplifyapp.com
+
+# Amazon S3 (photos & documents)
+supabase secrets set AWS_ACCESS_KEY_ID=AKIA...
+supabase secrets set AWS_SECRET_ACCESS_KEY=...
+supabase secrets set AWS_REGION=us-east-1
+supabase secrets set S3_BUCKET=nzinga-talent-os-media
+supabase secrets set CDN_URL=https://dxxxx.cloudfront.net
 ```
+
+Media bucket, CloudFront, and Lambda: [S3_SETUP.md](./S3_SETUP.md).
 
 ### RingCentral App Setup
 

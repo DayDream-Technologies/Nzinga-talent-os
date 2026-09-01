@@ -31,6 +31,8 @@ Database setup: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md).
 | Variable | Example | Notes |
 |----------|---------|--------|
 | `VITE_APP_URL` | `https://talentmanagerx.com` | No trailing slash. Production custom domain. Used for prospect portal links in invitation emails. If omitted, the app uses the current browser origin at runtime. |
+| `VITE_CDN_URL` | `https://dxxxx.cloudfront.net` | CloudFront distribution for photos and documents. No trailing slash. See [S3_SETUP.md](./S3_SETUP.md). |
+| `VITE_S3_REGION` | `us-east-1` | Informational; uploads are signed by the `s3-upload-url` Edge Function. |
 
 Production RingCentral + webhook alignment: [RINGCENTRAL_TALENTMANAGERX_SETUP.md](./RINGCENTRAL_TALENTMANAGERX_SETUP.md).
 
@@ -89,10 +91,10 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 
 1. Supabase migrations and seed applied ([SUPABASE_SETUP.md](./SUPABASE_SETUP.md)).
 2. Staff Auth users created and `users.auth_uid` linked.
-3. Private `documents` storage bucket created.
-4. Amplify env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DEMO_MODE=false`.
+3. Private S3 media bucket + CloudFront ([S3_SETUP.md](./S3_SETUP.md)).
+4. Amplify env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_DEMO_MODE=false`, `VITE_CDN_URL`.
 5. Amplify env: `VITE_APP_URL=https://talentmanagerx.com` (or your custom domain).
-6. Supabase secrets: RingCentral credentials (see SUPABASE_SETUP.md).
+6. Supabase secrets: RingCentral credentials and AWS S3 keys (see SUPABASE_SETUP.md / S3_SETUP.md).
 7. Deploy Edge Functions: `npm run supabase:deploy`.
 8. Redeploy Amplify after saving env vars.
 9. Smoke test: company code → staff login → pipeline → send application (access code saved).
@@ -124,5 +126,7 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 | `src/lib/phone.ts` | Phone/SMS via Supabase Edge Function (RingCentral) |
 | `src/lib/edge-functions.ts` | Typed wrapper for Edge Function invocation |
 | `src/lib/utils.ts` | `isDemoMode()` |
-| `supabase/functions/` | Edge Functions (call, sms, oauth, webhook) |
+| `S3_SETUP.md` | Amazon S3 + CloudFront + Lambda for photos and documents |
+| `src/lib/s3-storage.ts` | Presigned upload + CDN URL helpers |
+| `supabase/functions/` | Edge Functions (call, sms, oauth, webhook, s3-upload-url) |
 | `SUPABASE_SETUP.md` | Database, auth, Edge Functions, and secrets setup |

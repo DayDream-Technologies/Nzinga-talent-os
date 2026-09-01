@@ -7,7 +7,6 @@ import type { Talent } from '@/types/talent'
 vi.mock('@/lib/supabase', () => ({
   supabaseConfigured: false,
   supabase: null,
-  DOCUMENTS_BUCKET: 'documents',
 }))
 
 const appPhoto = {

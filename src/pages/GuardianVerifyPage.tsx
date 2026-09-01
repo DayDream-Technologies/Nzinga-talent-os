@@ -10,6 +10,7 @@ import {
 } from '@/services/guardian.service'
 import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
+import { uploadOwnedFile } from '@/services/storage.service'
 import type { Application } from '@/types'
 
 const shell: React.CSSProperties = {
@@ -44,6 +45,7 @@ export function GuardianVerifyPage() {
   const [success, setSuccess] = useState(false)
   const [authReady, setAuthReady] = useState(!supabaseConfigured)
   const [saving, setSaving] = useState(false)
+  const [uploadingDoc, setUploadingDoc] = useState('')
   const [form, setForm] = useState<GuardianProfilePayload>({
     legal_first: '',
     legal_last: '',
@@ -143,28 +145,36 @@ export function GuardianVerifyPage() {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  function onFile(key: 'doc_gov_id' | 'doc_guardianship', file: File | undefined) {
+  async function onFile(key: 'doc_gov_id' | 'doc_guardianship', file: File | undefined) {
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const data = String(reader.result || '')
+    setError('')
+    setUploadingDoc(key)
+    try {
+      const owner = appId || token || 'guardian'
+      const stored = await uploadOwnedFile(file, `guardian/${owner}`, {
+        uploadedBy: 'guardian',
+        docType: key,
+      })
       if (key === 'doc_gov_id') {
         setForm((f) => ({
           ...f,
-          doc_gov_id: data,
-          doc_gov_id_name: file.name,
-          doc_gov_id_type: file.type,
+          doc_gov_id: stored.data,
+          doc_gov_id_name: stored.name,
+          doc_gov_id_type: stored.type,
         }))
       } else {
         setForm((f) => ({
           ...f,
-          doc_guardianship: data,
-          doc_guardianship_name: file.name,
-          doc_guardianship_type: file.type,
+          doc_guardianship: stored.data,
+          doc_guardianship_name: stored.name,
+          doc_guardianship_type: stored.type,
         }))
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload that file.')
+    } finally {
+      setUploadingDoc('')
     }
-    reader.readAsDataURL(file)
   }
 
   async function submit() {
@@ -327,13 +337,15 @@ export function GuardianVerifyPage() {
 
           <label style={{ display: 'grid', gap: 6, fontSize: 12, color: 'rgba(232,238,244,0.6)' }}>
             Government ID *
-            <input type="file" accept="image/*,.pdf" onChange={(e) => onFile('doc_gov_id', e.target.files?.[0])} />
+            <input type="file" accept="image/*,.pdf" onChange={(e) => void onFile('doc_gov_id', e.target.files?.[0])} />
+            {uploadingDoc === 'doc_gov_id' && <span>Uploading…</span>}
             {form.doc_gov_id_name && <span style={{ color: '#86efac' }}>Uploaded: {form.doc_gov_id_name}</span>}
           </label>
 
           <label style={{ display: 'grid', gap: 6, fontSize: 12, color: 'rgba(232,238,244,0.6)' }}>
             Guardianship documentation (if applicable)
-            <input type="file" accept="image/*,.pdf" onChange={(e) => onFile('doc_guardianship', e.target.files?.[0])} />
+            <input type="file" accept="image/*,.pdf" onChange={(e) => void onFile('doc_guardianship', e.target.files?.[0])} />
+            {uploadingDoc === 'doc_guardianship' && <span>Uploading…</span>}
             {form.doc_guardianship_name && (
               <span style={{ color: '#86efac' }}>Uploaded: {form.doc_guardianship_name}</span>
             )}

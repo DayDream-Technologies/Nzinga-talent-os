@@ -225,6 +225,11 @@ export function canRoleMoveTalent(
   return true
 }
 
+/** Directors own TMX Academy video catalog for their company. */
+export function canManageTrainingVideos(role: Role): boolean {
+  return role === 'director'
+}
+
 export function slugFromRoleName(name: string): string {
   const base = name
     .trim()

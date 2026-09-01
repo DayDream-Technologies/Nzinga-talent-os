@@ -8,6 +8,8 @@ import {
   validateSection,
 } from '@/constants/app-sections'
 import { T } from '@/lib/tokens'
+import { parseS3Key, toS3Ref } from '@/lib/application-files'
+import { resolveS3Url, thumbnailUrl } from '@/lib/s3-storage'
 import type { AppField, Application, ApplicationData } from '@/types/application'
 import type { UploadedDoc } from '@/types/talent'
 
@@ -23,10 +25,14 @@ export function fileFromApplication(data: ApplicationData, fieldId: string, fall
   if (!raw || typeof raw === 'boolean') return null
   const value = String(raw)
   if (!value) return null
+  const key = parseS3Key(value)
   return {
     name: String(data[`${fieldId}_name`] || fallbackName),
     data: value,
     type: String(data[`${fieldId}_type`] || 'application/octet-stream'),
+    storagePath: key || undefined,
+    cdnUrl: key ? resolveS3Url(toS3Ref(key)) : undefined,
+    thumbnailUrl: key ? thumbnailUrl(toS3Ref(key)) : undefined,
     doc_type: fieldId.replace(/^doc_/, ''),
     uploaded_at: new Date().toISOString(),
     uploaded_by: 'applicant',

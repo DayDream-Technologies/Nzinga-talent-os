@@ -1,5 +1,6 @@
-import { sanitizeStorageFileName } from '@/lib/application-files'
-import { DOCUMENTS_BUCKET, supabase, supabaseConfigured } from '@/lib/supabase'
+import { parseS3Key, sanitizeStorageFileName, toS3Ref } from '@/lib/application-files'
+import { resolveS3Url, thumbnailUrl } from '@/lib/s3-storage'
+import { uploadOwnedFile } from '@/services/storage.service'
 import type { Application } from '@/types/application'
 import type { AgencyProspect, AgencyTalent } from '@/types/agency'
 import type { Talent, UploadedDoc } from '@/types/talent'
@@ -10,10 +11,14 @@ function photoFromApplication(app: Application | null | undefined): UploadedDoc 
   if (!raw || typeof raw === 'boolean') return null
   const value = String(raw)
   if (!value) return null
+  const key = parseS3Key(value)
   return {
     name: String(data.doc_profile_photo_name || 'Profile Photo'),
     data: value,
     type: String(data.doc_profile_photo_type || 'image/jpeg'),
+    storagePath: key || undefined,
+    cdnUrl: key ? resolveS3Url(toS3Ref(key)) : undefined,
+    thumbnailUrl: key ? thumbnailUrl(toS3Ref(key)) : undefined,
     doc_type: 'profile_photo',
     uploaded_at: new Date().toISOString(),
     uploaded_by: 'applicant',
@@ -87,44 +92,20 @@ const PROFILE_PHOTO_TYPES = new Set([
   'image/heif',
 ])
 
-/** Upload a profile photo to Supabase Storage, or embed as a data URL in demo/offline mode. */
+/** Upload a profile photo to S3, or embed as a data URL in demo/offline mode. */
 export async function uploadProfilePhoto(
   file: File,
   ownerId: string,
   uploadedBy: string = 'staff',
 ): Promise<UploadedDoc> {
-  if (!supabaseConfigured || !supabase) {
-    return readImageFileAsDoc(file, uploadedBy)
-  }
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session) {
-    throw new Error('Log in to upload a profile photo.')
+  if (file.type && !file.type.startsWith('image/') && !PROFILE_PHOTO_TYPES.has(file.type)) {
+    throw new Error('Choose a JPG, PNG, GIF, or WebP image.')
   }
 
   const safeOwner = sanitizeStorageFileName(ownerId || 'unassigned')
-  const path = `${safeOwner}/profile_photo/${Date.now()}_${sanitizeStorageFileName(file.name)}`
-  const contentType = file.type && PROFILE_PHOTO_TYPES.has(file.type) ? file.type : 'application/octet-stream'
-  const { error: uploadError } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(path, file, {
-    upsert: true,
-    contentType,
+  const doc = await uploadOwnedFile(file, `talents/${safeOwner}/profile`, {
+    uploadedBy,
+    docType: 'profile_photo',
   })
-  if (uploadError) {
-    console.error('[uploadProfilePhoto]', uploadError.message, { path, contentType, size: file.size })
-    throw new Error(uploadError.message || 'Could not upload photo. Please try again.')
-  }
-
-  const { data: urlData } = supabase.storage.from(DOCUMENTS_BUCKET).getPublicUrl(path)
-  return {
-    name: file.name,
-    data: urlData.publicUrl,
-    type: file.type || 'image/jpeg',
-    storagePath: path,
-    doc_type: 'profile_photo',
-    uploaded_at: new Date().toISOString(),
-    uploaded_by: uploadedBy,
-    status: 'received',
-  }
+  return { ...doc, doc_type: 'profile_photo', uploaded_by: uploadedBy }
 }

@@ -175,7 +175,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
               const type=d[fieldKey+"_type"]||"application/octet-stream";
               return <div key={fieldKey} style={{ border:"1px solid #86efac",borderRadius:8,padding:14,background:"#f0fdf4" }}>
                 <div style={{ fontSize:12,fontWeight:700,marginBottom:8 }}>{String(name)}</div>
-                <button onClick={()=>setViewingDoc({name:String(name),data:d[fieldKey],type:String(type),storagePath:typeof d[fieldKey]==="string"&&String(d[fieldKey]).startsWith("storage:")?String(d[fieldKey]).replace(/^storage:application-docs\//,""):undefined,doc_type:fieldKey.replace(/^doc_/,""),uploaded_by:"applicant",status:"received"})} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>View</button>
+                <button onClick={()=>setViewingDoc({name:String(name),data:d[fieldKey],type:String(type),storagePath:typeof d[fieldKey]==="string"?(String(d[fieldKey]).startsWith("s3:")?String(d[fieldKey]).slice(3):String(d[fieldKey]).startsWith("storage:")?String(d[fieldKey]).replace(/^storage:application-docs\//,""):undefined):undefined,doc_type:fieldKey.replace(/^doc_/,""),uploaded_by:"applicant",status:"received"})} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>View</button>
               </div>;
             })}
           </div>}

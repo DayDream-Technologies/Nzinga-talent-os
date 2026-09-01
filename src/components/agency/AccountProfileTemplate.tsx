@@ -17,6 +17,7 @@ import {
 } from '@/components/agency/AgencyUI'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { SendApplicationModal } from '@/components/application/ApplicationModals'
+import { BackToTopButton } from '@/components/ui/BackToTopButton'
 import { DocViewer } from '@/components/ui/DocViewer'
 import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
 import { isApplicationReadyToImport } from '@/lib/application-prefill'
@@ -27,9 +28,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { useResolvedImageUrl } from '@/hooks/useResolvedImageUrl'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
+import { resolvePipelineTalentId } from '@/lib/resolve-history-talent'
 import { interestsToTalentTypes, resolvedUdf } from '@/lib/talent-udf'
 import { T } from '@/lib/tokens'
 import { isImageDoc, resolveProfilePhoto, uploadProfilePhoto } from '@/lib/profile-photo'
+import { useImageCropper } from '@/components/ui/ImageCropper'
+import { cropAspectForField } from '@/lib/crop-image'
 import type { Application } from '@/types/application'
 import type {
   AgencyProspect,
@@ -143,7 +147,8 @@ export function AccountProfileTemplate({
 }) {
   const navigate = useNavigate()
   const { user, companyCode } = useAuth()
-  const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent } = useAppData()
+  const { cropImage, cropper } = useImageCropper()
+  const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent, talents } = useAppData()
   const {
     clients,
     invoices,
@@ -273,9 +278,14 @@ export function AccountProfileTemplate({
     if (!file) return
     if (!file.type.startsWith('image/')) return
     try {
+      const cropped = await cropImage(file, {
+        aspect: cropAspectForField('profile_photo'),
+        title: 'Crop profile photo',
+      })
+      if (!cropped) return
       const ownerId =
         pipelineTalent?.id || rosterTalent?.id || prospect?.id || application?.id || accountId || 'unassigned'
-      const doc = await uploadProfilePhoto(file, ownerId, user?.name || 'staff')
+      const doc = await uploadProfilePhoto(cropped, ownerId, user?.name || 'staff')
       await persistProfilePhoto(doc)
     } catch {
       /* persist errors toast from AppDataContext; upload errors leave the previous photo */
@@ -285,8 +295,13 @@ export function AccountProfileTemplate({
   function addHistoryNote(text: string) {
     const entry: HistoryEntry = {
       id: `h_${Date.now()}`,
-      talent_id: pipelineTalent?.id || null,
-      account_number: accountId || prospect?.accountId || null,
+      talent_id: resolvePipelineTalentId(talents, {
+        id: pipelineTalent?.id,
+        email: email || prospect?.email || pipelineTalent?.email,
+        applicationId: application?.id || pipelineTalent?.application_id,
+        accountId: accountId || prospect?.accountId || pipelineTalent?.account_number,
+      }),
+      account_number: accountId || prospect?.accountId || pipelineTalent?.account_number || null,
       user_id: user?.id || null,
       type: 'note',
       text,
@@ -322,6 +337,8 @@ export function AccountProfileTemplate({
   }
 
   return (
+    <>
+      {cropper}
     <Panel
       title={displayName}
       subtitle={`${kind === 'applicant' ? 'Applicant' : 'Client'} account · ${formatAccountDisplay(accountId)}`}
@@ -336,17 +353,6 @@ export function AccountProfileTemplate({
     >
       <Card hover={false} style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 11, color: T.t3, fontWeight: 600 }}>PAYOUT DUE</div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>
-              <Money value={openBalance} />
-            </div>
-          </div>
-          <Badge color={statusColor}>{statusLabel}</Badge>
-          <div>
-            <div style={{ fontSize: 11, color: T.t3, fontWeight: 600 }}>ACCOUNT #</div>
-            <div style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>{formatAccountDisplay(accountId)}</div>
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
               <button
@@ -409,6 +415,17 @@ export function AccountProfileTemplate({
               </div>
             </div>
           </div>
+          <div>
+            <div style={{ fontSize: 11, color: T.t3, fontWeight: 600 }}>ACCOUNT #</div>
+            <div style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700 }}>{formatAccountDisplay(accountId)}</div>
+          </div>
+          <Badge color={statusColor}>{statusLabel}</Badge>
+          <div>
+            <div style={{ fontSize: 11, color: T.t3, fontWeight: 600 }}>PAYOUT DUE</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>
+              <Money value={openBalance} />
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -437,11 +454,6 @@ export function AccountProfileTemplate({
             }}
           >
             Import to pipeline
-          </Btn>
-        )}
-        {accountId && (
-          <Btn variant="ghost" onClick={() => navigate(talentAccountPath(accountId))}>
-            Open talent account
           </Btn>
         )}
         {extraActions}
@@ -762,6 +774,7 @@ export function AccountProfileTemplate({
         />
       )}
 
+      <BackToTopButton />
       <DocViewer doc={viewDoc} onClose={() => setViewDoc(null)} />
       {selectedTicket && (
         <TicketDetailModal
@@ -773,5 +786,6 @@ export function AccountProfileTemplate({
         />
       )}
     </Panel>
+    </>
   )
 }

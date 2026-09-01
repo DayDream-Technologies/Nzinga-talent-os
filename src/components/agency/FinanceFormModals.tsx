@@ -13,6 +13,7 @@ import type {
 import { Btn, Field, ModalShell, inputStyle } from './AgencyUI'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { T } from '@/lib/tokens'
+import { uploadOwnedFile } from '@/services/storage.service'
 
 function Footer({
   isEdit,
@@ -103,6 +104,7 @@ export function InvoiceFormModal({
   const [billingAddress, setBillingAddress] = useState(initial?.billingAddress || '')
   const [notes, setNotes] = useState(initial?.notes || '')
   const [document, setDocument] = useState<ClientInvoice['document']>(initial?.document ?? null)
+  const [docUploading, setDocUploading] = useState(false)
 
   const amountNum = Number(amount) || 0
   const rateNum = Number(taxRatePct) || 0
@@ -132,18 +134,30 @@ export function InvoiceFormModal({
     setDocument(initial.document ?? null)
   }, [initial])
 
-  function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      setDocument({
-        name: file.name,
-        data: ev.target?.result as string,
-        type: file.type,
+    setDocUploading(true)
+    try {
+      const owner = clientId || initial?.id || 'invoice'
+      const stored = await uploadOwnedFile(file, `agency/${owner}/invoices`, {
+        uploadedBy: 'staff',
+        docType: 'invoice',
       })
+      setDocument({
+        name: stored.name,
+        data: stored.data,
+        type: stored.type,
+        storagePath: stored.storagePath,
+        cdnUrl: stored.cdnUrl,
+        thumbnailUrl: stored.thumbnailUrl,
+      })
+    } catch {
+      /* keep previous document */
+    } finally {
+      setDocUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
   return (
@@ -322,7 +336,9 @@ export function InvoiceFormModal({
             onChange={handleDocUpload}
             style={{ display: 'none' }}
           />
-          {document ? (
+          {docUploading ? (
+            <div style={{ fontSize: 12, fontWeight: 600, color: T.t2 }}>Uploading…</div>
+          ) : document ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>{document.type?.includes('pdf') ? '📄' : '🖼️'}</span>
               <div style={{ flex: 1, minWidth: 0 }}>

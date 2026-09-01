@@ -15,14 +15,16 @@ export type CommandSearchResult = {
   score: number
 }
 
-function scoreMatch(query: string, text: string): number {
+/** Exact / prefix / substring, plus optional subsequence fuzzy (people and apps only). */
+export function scoreMatch(query: string, text: string, options?: { fuzzy?: boolean }): number {
   const q = query.trim().toLowerCase()
   const t = (text || '').toLowerCase()
   if (!q || !t) return 0
   if (t === q) return 100
   if (t.startsWith(q)) return 80
   if (t.includes(q)) return 50
-  // fuzzy: all chars in order
+  if (options?.fuzzy === false) return 0
+  // fuzzy: all chars in order — useful for names, too loose for page titles/slugs
   let qi = 0
   for (let i = 0; i < t.length && qi < q.length; i++) {
     if (t[i] === q[qi]) qi++
@@ -83,7 +85,10 @@ export function useCommandSearch(query: string): CommandSearchResult[] {
       for (const cat of nav) {
         for (const g of cat.groups) {
           for (const item of g.items) {
-            const s = Math.max(scoreMatch(q, item.label), scoreMatch(q, item.path))
+            const s = Math.max(
+              scoreMatch(q, item.label, { fuzzy: false }),
+              scoreMatch(q, item.path, { fuzzy: false }),
+            )
             if (s > 0) {
               results.push({
                 id: `nav-${item.id}`,
@@ -103,7 +108,7 @@ export function useCommandSearch(query: string): CommandSearchResult[] {
         ['Clients', 'clients'],
         ['Prospect Tracking Board', 'prospect-tracking'],
       ] as const) {
-        const s = scoreMatch(q, label)
+        const s = scoreMatch(q, label, { fuzzy: false })
         if (s > 0) {
           results.push({
             id: `nav-extra-${path}`,
