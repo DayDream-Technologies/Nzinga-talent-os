@@ -78,7 +78,7 @@ describe('ApplicationsModule', () => {
     expect(importAppToPipeline).not.toHaveBeenCalled()
   })
 
-  it('keeps Import to Pipeline disabled until the application is submitted and complete', () => {
+  it('keeps Review application disabled until the application is submitted and complete', () => {
     render(
       <MemoryRouter>
         <ApplicationsModule />
@@ -86,6 +86,6 @@ describe('ApplicationsModule', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Row actions' }))
-    expect(screen.getByRole('menuitem', { name: 'Import to Pipeline' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Review application' })).toBeDisabled()
   })
 })

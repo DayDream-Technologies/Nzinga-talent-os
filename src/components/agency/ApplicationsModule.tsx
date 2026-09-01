@@ -96,6 +96,8 @@ export function ApplicationsModule() {
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [importingId, setImportingId] = useState<string | null>(null)
+  const [bulkImporting, setBulkImporting] = useState(false)
 
   const apps = useMemo(
     () =>
@@ -162,18 +164,26 @@ export function ApplicationsModule() {
       },
       'Import to Pipeline': {
         id: 'Import to Pipeline',
-        label: readySelected.length
-          ? `Import to Pipeline (${readySelected.length})`
-          : 'Import to Pipeline',
-        disabled: readySelected.length === 0,
+        label: bulkImporting
+          ? 'Reviewing…'
+          : readySelected.length
+            ? `Review application (${readySelected.length})`
+            : 'Review application',
+        disabled: readySelected.length === 0 || bulkImporting,
         onClick: async () => {
+          if (bulkImporting) return
+          setBulkImporting(true)
           let last = null
-          for (const app of readySelected) {
-            last = await importAppToPipeline(app)
+          try {
+            for (const app of readySelected) {
+              last = await importAppToPipeline(app)
+            }
+            setSelected(new Set())
+            if (last?.account_number) navigate(talentAccountPath(last.account_number))
+            else if (last) navigate('/pipeline')
+          } finally {
+            setBulkImporting(false)
           }
-          setSelected(new Set())
-          if (last?.account_number) navigate(talentAccountPath(last.account_number))
-          else if (last) navigate('/pipeline')
         },
       },
       'Send Email': {
@@ -311,12 +321,18 @@ export function ApplicationsModule() {
                   },
                   {
                     id: 'import',
-                    label: 'Import to Pipeline',
-                    disabled: !isReadyToImport(app),
+                    label: importingId === app.id ? 'Reviewing…' : 'Review application',
+                    disabled: !isReadyToImport(app) || Boolean(importingId),
                     onClick: async () => {
-                      const imported = await importAppToPipeline(app)
-                      if (imported?.account_number) navigate(talentAccountPath(imported.account_number))
-                      else if (imported) navigate('/pipeline')
+                      if (importingId) return
+                      setImportingId(app.id)
+                      try {
+                        const imported = await importAppToPipeline(app)
+                        if (imported?.account_number) navigate(talentAccountPath(imported.account_number))
+                        else if (imported) navigate('/pipeline')
+                      } finally {
+                        setImportingId(null)
+                      }
                     },
                   },
                   {

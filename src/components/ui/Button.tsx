@@ -7,6 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
   full?: boolean
   sm?: boolean
+  loading?: boolean
   children: ReactNode
 }
 
@@ -25,24 +26,29 @@ export function Button({
   variant = 'ghost',
   full,
   sm,
+  loading,
   className,
   children,
   disabled,
   ...props
 }: ButtonProps) {
+  const busy = Boolean(disabled || loading)
   return (
     <button
-      disabled={disabled}
+      disabled={busy}
+      aria-busy={loading || undefined}
       className={cn(
         'inline-flex items-center justify-center gap-1.5 rounded font-medium whitespace-nowrap font-sans',
         sm ? 'px-2.5 py-0.5 text-[11px]' : 'px-3.5 py-1 text-xs',
         variants[variant],
         full && 'w-full',
-        disabled && 'cursor-not-allowed opacity-50',
+        busy && 'cursor-not-allowed opacity-50',
+        loading && 'cursor-wait',
         className,
       )}
       {...props}
     >
+      {loading ? <span className="ui-spinner" aria-hidden /> : null}
       {children}
     </button>
   )

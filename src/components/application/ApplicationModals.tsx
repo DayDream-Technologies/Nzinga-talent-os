@@ -77,6 +77,7 @@ function SendApplicationModal({ talent, prospect, onSend, onClose, companyCode =
 function ApplicationReview({ app, onClose, onImportToPipeline }) {
   const [tab,setTab]=useState("overview");
   const [viewingDoc,setViewingDoc]=useState(null);
+  const [importing,setImporting]=useState(false);
   const d=app.data||{};
   const isSubmitted=app.status==="submitted";
   const isPendingGuardian=app.status==="pending_guardian"||app.guardian_status==="pending";
@@ -106,7 +107,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
               </div>
             </div>
             <div style={{ display:"flex",gap:8 }}>
-              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm onClick={onImportToPipeline}>Import to Pipeline</Btn>}
+              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Reviewing…":"Review application"}</Btn>}
               <button onClick={onClose} style={{ background:"transparent",border:`1px solid ${T.cardBorder}`,borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
             </div>
           </div>

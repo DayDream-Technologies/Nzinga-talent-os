@@ -175,6 +175,7 @@ export function AccountProfileTemplate({
   const [udf, setUdf] = useState<TalentUdf>(() => resolvedUdf(prospect?.udf || rosterTalent?.udf, application, prospect))
   const [udfSaved, setUdfSaved] = useState(false)
   const [localPhoto, setLocalPhoto] = useState<UploadedDoc | null>(null)
+  const [importing, setImporting] = useState(false)
   const contactsRef = useRef<HTMLDivElement>(null)
   const notesRef = useRef<HTMLDivElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
@@ -445,15 +446,21 @@ export function AccountProfileTemplate({
           <Btn
             variant="success"
             disabled={!canImport}
+            loading={importing}
             onClick={async () => {
-              if (!application) return
-              const imported = await importAppToPipeline(application)
-              const account = imported?.account_number || accountId
-              if (account) navigate(talentAccountPath(account))
-              else if (imported) navigate('/pipeline')
+              if (!application || importing) return
+              setImporting(true)
+              try {
+                const imported = await importAppToPipeline(application)
+                const account = imported?.account_number || accountId
+                if (account) navigate(talentAccountPath(account))
+                else if (imported) navigate('/pipeline')
+              } finally {
+                setImporting(false)
+              }
             }}
           >
-            Import to pipeline
+            {importing ? 'Reviewing…' : 'Review application'}
           </Btn>
         )}
         {extraActions}

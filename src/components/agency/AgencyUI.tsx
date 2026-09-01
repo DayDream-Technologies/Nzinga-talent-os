@@ -118,12 +118,14 @@ export function Btn({
   onClick,
   variant = 'primary',
   disabled,
+  loading,
   type = 'button',
 }: {
   children: ReactNode
   onClick?: () => void
   variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'info'
   disabled?: boolean
+  loading?: boolean
   type?: 'button' | 'submit'
 }) {
   const styles: Record<string, CSSProperties> = {
@@ -134,10 +136,12 @@ export function Btn({
     info: { background: T.purple, color: '#fff', border: 'none' },
     ghost: { background: 'transparent', color: T.blue, border: 'none', textDecoration: 'underline' },
   }
+  const busy = Boolean(disabled || loading)
   return (
     <button
       type={type}
-      disabled={disabled}
+      disabled={busy}
+      aria-busy={loading || undefined}
       onClick={onClick}
       className="ui-btn"
       style={{
@@ -146,11 +150,16 @@ export function Btn({
         borderRadius: 7,
         fontSize: 12,
         fontWeight: 600,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.55 : 1,
+        cursor: busy ? (loading ? 'wait' : 'not-allowed') : 'pointer',
+        opacity: busy ? 0.55 : 1,
         fontFamily: 'inherit',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
       }}
     >
+      {loading ? <span className="ui-spinner" aria-hidden /> : null}
       {children}
     </button>
   )
