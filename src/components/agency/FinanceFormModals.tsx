@@ -13,6 +13,7 @@ import type {
 import { Btn, Field, ModalShell, Money, inputStyle } from './AgencyUI'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { T } from '@/lib/tokens'
+import { AUTO_STACK_GRID } from '@/lib/viewport'
 import { uploadOwnedFile } from '@/services/storage.service'
 
 function Footer({
@@ -162,7 +163,7 @@ export function InvoiceFormModal({
 
   return (
     <ModalShell title={initial ? 'Edit invoice' : 'New invoice'} onClose={onClose} width={580}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Invoice #">
           <input style={inputStyle} value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
         </Field>
@@ -206,7 +207,7 @@ export function InvoiceFormModal({
           onChange={(e) => setBillingAddress(e.target.value)}
         />
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Tax ID / EIN">
           <input
             style={inputStyle}
@@ -225,7 +226,7 @@ export function InvoiceFormModal({
           </select>
         </Field>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Subtotal">
           <input style={inputStyle} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </Field>
@@ -289,7 +290,7 @@ export function InvoiceFormModal({
           ))}
         </select>
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Issued">
           <input type="date" style={inputStyle} value={issuedAt} onChange={(e) => setIssuedAt(e.target.value)} />
         </Field>
@@ -460,7 +461,7 @@ export function RetainerFormModal({
           ))}
         </select>
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Monthly amount">
           <input
             style={inputStyle}
@@ -556,7 +557,7 @@ export function EscrowFormModal({
       <Field label="Project">
         <input style={inputStyle} value={project} onChange={(e) => setProject(e.target.value)} />
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Amount">
           <input style={inputStyle} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </Field>
@@ -667,7 +668,7 @@ export function ExpenseFormModal({
           ))}
         </select>
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Gross">
           <input style={inputStyle} type="number" value={gross} onChange={(e) => setGross(e.target.value)} />
         </Field>
@@ -832,7 +833,7 @@ export function DisbursementFormModal({
           ))}
         </select>
       </Field>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
         <Field label="Amount">
           <input style={inputStyle} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </Field>

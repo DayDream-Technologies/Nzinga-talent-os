@@ -472,6 +472,7 @@ export function KanbanBoard({
           justifyContent: 'space-between',
           gap: 12,
           flexShrink: 0,
+          flexWrap: 'wrap',
         }}
       >
         <div>

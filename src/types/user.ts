@@ -1,10 +1,14 @@
 export type SystemRole =
   | 'scout'
-  | 'team1_lead'
-  | 'ops_specialist'
-  | 'team2_lead'
+  | 'account_manager'
   | 'director'
   | 'success_manager'
+  /** @deprecated mapped to success_manager */
+  | 'team1_lead'
+  /** @deprecated mapped to account_manager */
+  | 'ops_specialist'
+  /** @deprecated mapped to account_manager */
+  | 'team2_lead'
 
 /** Staff role slug. System roles keep stable slugs; admins may create additional slugs. */
 export type Role = string

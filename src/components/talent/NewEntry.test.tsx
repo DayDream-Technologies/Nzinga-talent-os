@@ -22,7 +22,7 @@ describe('NewEntry minor parent contact', () => {
   it('requires parent name, email, and phone when date of birth is under 18', () => {
     const onSave = vi.fn()
     render(
-      <NewEntry currentUser={currentUser} onSave={onSave} onCancel={vi.fn()} />,
+      <NewEntry currentUser={currentUser} onSave={onSave} onCancel={vi.fn()} onSendApp={vi.fn()} />,
     )
 
     fillRequiredBasics()
@@ -61,7 +61,7 @@ describe('NewEntry minor parent contact', () => {
   it('does not require parent contact for adult applicants', () => {
     const onSave = vi.fn()
     render(
-      <NewEntry currentUser={currentUser} onSave={onSave} onCancel={vi.fn()} />,
+      <NewEntry currentUser={currentUser} onSave={onSave} onCancel={vi.fn()} onSendApp={vi.fn()} />,
     )
 
     fillRequiredBasics()

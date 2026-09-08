@@ -17,7 +17,7 @@ export function ApplicationProspectSync() {
       let stage: ProspectStage | null = null
       let sopSubStatus: string | null = null
       if (app.status === 'sent') stage = 'application_sent'
-      else if (app.status === 'in_progress' || app.status === 'draft') stage = 'application_started'
+      else if (app.status === 'in_progress') stage = 'application_started'
       else if (app.status === 'pending_guardian') stage = 'application_pending'
       else if (app.status === 'submitted') {
         stage = 'application_completed'

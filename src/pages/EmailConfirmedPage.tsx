@@ -62,7 +62,7 @@ export function EmailConfirmedPage() {
             maxWidth: 420,
             background: '#fff',
             borderRadius: 12,
-            padding: '36px 36px 32px',
+            padding: '24px 18px 28px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
             textAlign: 'center',
           }}

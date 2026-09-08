@@ -111,12 +111,13 @@ function generateTempPassword(): string {
 
 function roleColor(role: Role): string {
   const colors: Record<string, string> = {
-    scout: '#7c3aed',
-    team1_lead: '#f59e0b',
-    ops_specialist: '#3b82f6',
-    team2_lead: '#06b6d4',
-    director: '#10b981',
-    success_manager: '#ec4899',
+    scout: '#ea580c',
+    account_manager: '#16a34a',
+    director: '#7c3aed',
+    success_manager: '#2563eb',
+    team1_lead: '#2563eb',
+    ops_specialist: '#16a34a',
+    team2_lead: '#16a34a',
   }
   return colors[role] ?? '#6b7280'
 }

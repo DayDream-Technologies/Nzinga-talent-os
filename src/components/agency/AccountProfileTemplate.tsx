@@ -19,6 +19,13 @@ import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { SendApplicationModal } from '@/components/application/ApplicationModals'
 import { BackToTopButton } from '@/components/ui/BackToTopButton'
 import { DocViewer } from '@/components/ui/DocViewer'
+import { AddNoteModal } from '@/components/agency/AddNoteModal'
+import { HistoryLedger } from '@/components/agency/HistoryLedger'
+import { QuickActionBar, type QuickActionId } from '@/components/agency/QuickActionBar'
+import { NewIssueModal } from '@/components/agency/IssuesDashboard'
+import { AddTaskModal } from '@/components/agency/AgencyTasksBoard'
+import { RenewalOfferModal } from '@/components/agency/RenewalOffersHub'
+import { createHistoryEntry } from '@/lib/history-ledger'
 import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
 import { isApplicationReadyToImport } from '@/lib/application-prefill'
 import { STAGE_LABELS } from '@/constants/stages'
@@ -26,6 +33,8 @@ import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useResolvedImageUrl } from '@/hooks/useResolvedImageUrl'
+import { useViewport } from '@/hooks/useViewport'
+import { staffGridColumns } from '@/lib/viewport'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
 import { resolvePipelineTalentId } from '@/lib/resolve-history-talent'
@@ -146,6 +155,7 @@ export function AccountProfileTemplate({
   onUploadContract?: (file: File) => void
 }) {
   const navigate = useNavigate()
+  const band = useViewport()
   const { user, companyCode } = useAuth()
   const { cropImage, cropper } = useImageCropper()
   const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent, talents } = useAppData()
@@ -293,25 +303,37 @@ export function AccountProfileTemplate({
     }
   }
 
-  function addHistoryNote(text: string) {
-    const entry: HistoryEntry = {
-      id: `h_${Date.now()}`,
-      talent_id: resolvePipelineTalentId(talents, {
+  function addHistoryNote(text: string, category: import('@/types/history').HistoryCategory = 'general', type: import('@/types/history').HistoryType = 'note') {
+    const entry = createHistoryEntry({
+      type,
+      text,
+      category,
+      userId: user?.id,
+      staffName: user?.name,
+      talentId: resolvePipelineTalentId(talents, {
         id: pipelineTalent?.id,
         email: email || prospect?.email || pipelineTalent?.email,
         applicationId: application?.id || pipelineTalent?.application_id,
         accountId: accountId || prospect?.accountId || pipelineTalent?.account_number,
       }),
-      account_number: accountId || prospect?.accountId || pipelineTalent?.account_number || null,
-      user_id: user?.id || null,
-      type: 'note',
-      text,
-      ts: new Date().toISOString(),
-      flagged: false,
-      is_document: false,
-      staff_name: user?.name,
-    }
+      accountNumber: accountId || prospect?.accountId || pipelineTalent?.account_number || null,
+    })
     setHistory((prev) => [entry, ...prev])
+  }
+
+  function onQuickAction(id: QuickActionId) {
+    if (id === 'add-note' || id === 'add-call' || id === 'add-meeting' || id === 'log-email') setModal('note')
+    else if (id === 'add-issue') setModal('issue')
+    else if (id === 'add-charge') setModal('charge')
+    else if (id === 'add-payment') setModal('payment')
+    else if (id === 'send-renewal' || id === 'add-agreement') setModal('renew')
+    else if (id === 'add-task' || id === 'add-appointment') navigate('/calendar')
+    else if (id === 'send-email') navigate('/send-email')
+    else if (id === 'send-sms') navigate('/messaging')
+    else if (id === 'related-invoices') navigate('/client-invoices')
+    else if (id === 'related-contracts' || id === 'send-dochub') setModal('docs')
+    else if (id === 'view-profile') window.scrollTo({ top: 0, behavior: 'smooth' })
+    else if (id === 'portal-access' || id === 'payment-settings') navigate('/settings')
   }
 
   function saveInvoice(values: Omit<ClientInvoice, 'id'>) {
@@ -340,6 +362,8 @@ export function AccountProfileTemplate({
   return (
     <>
       {cropper}
+    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', paddingBottom: band === 'mobile' ? 64 : 0 }}>
+    <div style={{ flex: 1, minWidth: 0 }}>
     <Panel
       title={displayName}
       subtitle={`${kind === 'applicant' ? 'Applicant' : 'Client'} account · ${formatAccountDisplay(accountId)}`}
@@ -431,17 +455,6 @@ export function AccountProfileTemplate({
       </Card>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-        <Btn variant="secondary" onClick={() => setModal('note')}>Add Note</Btn>
-        <Btn variant="secondary" onClick={() => setModal('contact')}>Add contact</Btn>
-        <Btn variant="secondary" onClick={() => setModal(kind === 'applicant' ? 'renew' : 'note')}>Renew</Btn>
-        <Btn variant="secondary" onClick={() => contactsRef.current?.scrollIntoView({ behavior: 'smooth' })}>Contacts</Btn>
-        <Btn variant="secondary" onClick={() => notesRef.current?.scrollIntoView({ behavior: 'smooth' })}>History Notes</Btn>
-        <Btn variant="secondary" onClick={() => setModal('payment')}>Add Payment</Btn>
-        <Btn onClick={() => setModal('charge')}>Add Charge</Btn>
-        <Btn variant="secondary" onClick={() => setModal('retainer')}>Recurring Fees</Btn>
-        <Btn variant="secondary" onClick={() => setModal('issue')}>Add Issue</Btn>
-        <Btn variant="secondary" onClick={() => navigate('/send-email')}>Send Email</Btn>
-        <Btn variant="secondary" onClick={() => setModal('docs')}>View documents</Btn>
         {kind === 'applicant' && (
           <Btn
             variant="success"
@@ -466,7 +479,7 @@ export function AccountProfileTemplate({
         {extraActions}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 14, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: staffGridColumns(band, '1.1fr 1fr'), gap: 14, marginBottom: 14 }}>
         <Card hover={false}>
           <div ref={contactsRef} style={{ fontSize: 12, fontWeight: 700, color: T.t3, marginBottom: 8 }}>
             ACCOUNT DETAILS
@@ -594,39 +607,22 @@ export function AccountProfileTemplate({
       <div ref={notesRef} style={{ marginTop: 16 }}>
         <Card hover={false}>
           <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, marginBottom: 8 }}>HISTORY NOTES</div>
-          {relatedHistory.length === 0 ? (
-            <div style={{ color: T.t3, fontSize: 13 }}>No notes yet.</div>
-          ) : (
-            relatedHistory.slice(0, 12).map((entry) => (
-              <div key={entry.id} style={{ padding: '8px 0', borderBottom: `1px solid ${T.cardBorder}`, fontSize: 13 }}>
-                <div style={{ color: T.t3, fontSize: 11 }}>{new Date(entry.ts).toLocaleString()} · {entry.type}</div>
-                <div>{entry.text}</div>
-              </div>
-            ))
-          )}
+          <HistoryLedger entries={relatedHistory} limit={8} />
         </Card>
       </div>
 
       {extraBody}
 
       {modal === 'note' && (
-        <ModalShell title="Add note" onClose={() => setModal(null)}>
-          <Field label="Note">
-            <textarea style={{ ...inputStyle, minHeight: 96 }} value={noteText} onChange={(e) => setNoteText(e.target.value)} />
-          </Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Btn variant="secondary" onClick={() => setModal(null)}>Cancel</Btn>
-            <Btn
-              onClick={() => {
-                if (noteText.trim()) addHistoryNote(noteText.trim())
-                setNoteText('')
-                setModal(null)
-              }}
-            >
-              Save note
-            </Btn>
-          </div>
-        </ModalShell>
+        <AddNoteModal
+          personName={displayName}
+          onClose={() => setModal(null)}
+          onSave={({ text, category, type }) => addHistoryNote(text, category, type)}
+        />
+      )}
+      {modal === 'issue' && <NewIssueModal defaultTalent={displayName} onClose={() => setModal(null)} />}
+      {modal === 'renew' && rosterTalent && (
+        <RenewalOfferModal talent={rosterTalent} onClose={() => setModal(null)} />
       )}
       {modal === 'contact' && (
         <ModalShell title="Add / update contact" onClose={() => setModal(null)}>
@@ -683,59 +679,6 @@ export function AccountProfileTemplate({
           }}
         />
       )}
-      {modal === 'issue' && (
-        <ModalShell title="Add issue" onClose={() => setModal(null)}>
-          <Field label="Subject">
-            <input style={inputStyle} value={issueSubject} onChange={(e) => setIssueSubject(e.target.value)} />
-          </Field>
-          <Field label="Type">
-            <select style={inputStyle} value={issueType} onChange={(e) => setIssueType(e.target.value as TicketType)}>
-              {(['availability', 'scheduling', 'contract', 'billing', 'general'] as TicketType[]).map((type) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Priority">
-            <select
-              style={inputStyle}
-              value={issuePriority}
-              onChange={(e) => setIssuePriority(e.target.value as SupportTicket['priority'])}
-            >
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-            </select>
-          </Field>
-          <Field label="Details">
-            <textarea style={{ ...inputStyle, minHeight: 80 }} value={issueBody} onChange={(e) => setIssueBody(e.target.value)} />
-          </Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Btn variant="secondary" onClick={() => setModal(null)}>Cancel</Btn>
-            <Btn
-              onClick={() => {
-                addTicket({
-                  subject: issueSubject.trim() || `Issue for ${displayName}`,
-                  clientId: invoiceClients[0]?.id || 'internal',
-                  clientName: invoiceClients[0]?.name || displayName,
-                  talentName: displayName,
-                  status: 'open',
-                  type: issueType,
-                  priority: issuePriority,
-                  dueDate: today(),
-                  body: issueBody.trim() || `Opened from ${kind} profile`,
-                  assignee: user?.name || AGENCY_TICKET_AGENTS[0]?.name || 'Unassigned',
-                })
-                ensureProspect()
-                setIssueSubject('')
-                setIssueBody('')
-                setModal(null)
-              }}
-            >
-              Create issue
-            </Btn>
-          </div>
-        </ModalShell>
-      )}
       {modal === 'docs' && (
         <ModalShell title="Documents" onClose={() => setModal(null)} width={640}>
           {docs.length === 0 && <div style={{ color: T.t3, fontSize: 13 }}>No documents on file.</div>}
@@ -776,7 +719,7 @@ export function AccountProfileTemplate({
           }}
           prospect={prospect}
           companyCode={companyCode || application.company_code}
-          onSend={(app) => handleSendApp(app, { accountNumber: accountId })}
+          onSend={(app: Application) => handleSendApp(app, { accountNumber: accountId })}
           onClose={() => setModal(null)}
         />
       )}
@@ -793,6 +736,9 @@ export function AccountProfileTemplate({
         />
       )}
     </Panel>
+    </div>
+    <QuickActionBar onAction={onQuickAction} />
+    </div>
     </>
   )
 }

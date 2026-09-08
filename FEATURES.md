@@ -20,7 +20,7 @@ This file is the product capability catalog. Setup and development live in [READ
 | **Staff** | Company code + staff login | Run CRM, pipeline, packets, contracts, finance, and admin |
 | **Prospects** | `/portal` with an access code (or start a new application) | Fill the NZG short application |
 | **Guardians** | `/guardian/verify` magic link | Confirm a minor applicant |
-| **Signed talent** | `/talent/login` then `/talent/*` | Home, activity, money, files (including contract sign), messages, settings |
+| **Signed talent** | `/talent/login` then `/talent/*` | Home, activity, money, files (DocHub sign), messages, settings |
 
 ### Staff roles
 
@@ -29,9 +29,7 @@ System roles keep stable slugs. Directors can create additional roles with their
 | Role | What they are for |
 |---|---|
 | **Scouting Agent** (`scout`) | Identify and qualify prospects. Send applications. Assemble a Client Packet. Do not approve representation or negotiate contracts. |
-| **Team 1 Lead** | Legacy Client Packet Review path into operations. Can return a packet. |
-| **Ops Specialist** | Compliance, documents, contract framework, and finance modules. |
-| **Team 2 Lead** | Contract-pending audit before director review. |
+| **Account Manager** (`account_manager`) | Finance, escrow, invoices, retainers, payday. Open workspace. |
 | **Success Manager** | QA Client Packets, approve as **Approved - Future**, publish contracts, onboard signed clients. |
 | **Director** | Full pipeline, admin (users, roles, settings), and executive decisions. |
 
@@ -97,8 +95,14 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Signup confirmation, password reset, and guardian links are sent by Supabase Auth (custom SMTP).
 - Per-user settings: display name/title, light/dark theme, sidebar preference, password reset request.
 - Command Launch in the top nav finds people, applications, and pages. Pages match by title or path substring, not by letter-sequence matches against names (searching “Rico” does not suggest Applicant Pool).
+- Header **SMS icon** with an unread-thread badge opens the Text Messaging Center (`/messaging`).
 - Staff **My Workspace** home uses larger welcome, Favorites, Reports, and group titles.
-- RingCentral account pairing on Settings for click-to-call and SMS (OAuth). TOTP MFA is configured in Supabase Auth; demo mode shows it as coming soon.
+- Twilio (not RingCentral) will power click-to-call and SMS. Until the vendor is live, Settings, the Text Messaging Center, and talent-record Call/SMS show **Coming soon** and send stays disabled. Staff notices mention [EXTERNAL_ATTENTION.txt](EXTERNAL_ATTENTION.txt); talent and brand portals do not.
+- TOTP MFA is configured in Supabase Auth; demo mode shows it as coming soon.
+
+### Open workspace
+
+- Four system roles: Scouting Agent, Success Manager, Account Manager, Director. All four see every module and pipeline stage. Only Director can open `/admin/users` and `/admin/roles`. SOP still locks incomplete Client Packet submit.
 
 ### Prospect CRM
 
@@ -117,63 +121,65 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 
 ### Pipeline and talent record
 
-- Pipeline views (tables / kanban) filtered by the signed-in role’s stage access.
-- Talent record tabs: Details, Scoring, Compliance, Documents, Framework, Executive, Onboarding, History, Tasks, Audit Log.
+- Pipeline views (tables / kanban). Open workspace shows all stages to the four roles.
+- Talent record includes a **Screening Workspace** (review → Jordan Score → Discovery Call → safety screening → recommendation → submit). Initiate screening shows **Coming soon** until a provider is live. Submit stays locked until every required step is done; the missing list is shown in plain language.
 - **Jordan Score**: five pillars, each 1–5 with written rationale; all ≥ 3 and average ≥ 3.5 to advance.
-- Scout Client Packet gate: Jordan Score, Discovery Call notes, and government ID. Submit sends the record to Success Manager review.
-- Documents: government ID, tax, banking, proof of income, plus application uploads (headshots, reels, portfolio). Staff can add a cropped profile photo. Files are stored in Amazon S3 and served through CloudFront (demo mode still embeds data URLs).
-- History captures notes, calls, emails, and system events (including follow-up flags). Tasks attach to the record.
-- New Entry: manual holding-entry create, or create-and-send application. Date of birth is required; applicants under 18 must include parent name, email, and phone.
+- Scout Client Packet gate: Jordan Score, Discovery Call notes, government ID, application review, safety screening status, and Scout recommendation.
+- History / Notes: categories General, Communication, Opportunity, Internal. Table of Type / Date / Note / Category / User. Mass email and SMS write a row onto every recipient.
+- Right-hand **quick action bar** on account profiles (add note, renew, issue, email, SMS, invoices).
+- Documents: government ID, tax, banking, proof of income, plus application uploads. Files are stored in Amazon S3.
 
 ### Contracts and onboarding
 
-- Success Manager (or Director) **publish contract** and notify by email (platform send from Talent Manager X via Resend).
-- Prospect/talent portal **Review and sign** uses in-app name confirmation (not DocuSign).
-- On signature the CRM prospect becomes a **Clients · Active** roster record.
-- Return-packet / more-information path sends the record back to the scout stage when QA rejects the packet.
+- Success Manager (or Director) **publish contract**. Signing is **DocHub only** (in-app name confirmation removed). Until DocHub is live, Create & Send stays disabled and staff/talent/brand contract screens show **Coming soon**.
+- Renew opens a term form (6 months–3 years), previews the template (Division, Contract, Current % Rate), then sends via DocHub.
+- On executed signature the CRM prospect becomes a **Clients · Active** roster record.
 
 ### Clients / roster
 
-- Shared account profile for applicants and clients: photo and name first, then account number, status, and payout due; contacts, addresses, application answers, UDF roster sheet, charges, tickets, documents. A **Back to top** button appears after scrolling. Row click on Prospects, Clients, and Applications opens the account (there is no separate Open talent account button).
+- Shared account profile: compact header, widget grid, History ledger, and sticky right-hand actions (no cluttered horizontal action row).
 - UDF (user-defined roster fields) is staff-maintained; application answers prefill empty fields only.
 - Clients list with lifecycle (current / future / past), contracts, and account number.
-- Some client row actions remain **Coming soon** (publish signable documents from the list, add screening, send application from the clients grid).
+- **Brands** directory and **Brand portal** (`/client/*`) for invoices, contracts, and projects. Pay Invoice and e-sign show **Coming soon** until Stripe and DocHub are live.
 
 ### Communication
 
-- **Send Email** compose for staff, with templates. Outbound mail goes through the `send-email` Edge Function (Resend). From-address is the platform domain; display name and Reply-To are per message.
-- **Text Messaging Center** for SMS threads (RingCentral when connected).
-- Talent record: click-to-call, SMS, call history (duration, direction, recording links when the telephony integration is connected).
+- **Send Email** composer for 1:1 and blasts. **Send Individually** is required so recipients never see each other. Each send writes History per recipient. Resend Edge Function.
+- **Text Messaging Center** two-pane inbox. Twilio when connected; otherwise a **Coming soon** notice and Send stays off.
+- Header phone icon jumps to `/messaging`.
+- Talent record: click-to-call and SMS via Twilio when connected.
 
 ### Client services
 
-- Support tickets (create, status, types such as availability, scheduling, contract, billing).
-- Agency tasks and checklist items.
-- Appointments & meetings, plus a calendar of events.
+- Support tickets: staff New Issue modal (Description / Links / Details / Dates) and a short talent/brand portal form. Dashboard lists Issue ID, age, status, talent, division.
+- Agency tasks with assignees, due dates, recurrence, and History on create/complete.
+- Interactive calendar (month / week / day / agenda) sharing one data model with Appointments. Portal self-scheduling respects agency hours and blocks overlaps. Google/Outlook sync shows **Coming soon**.
 
 ### Accounting
 
-Visible to Ops Specialist, Success Manager, and Director (account-manager module set). Agents do not see finance nav.
+Open workspace: all four roles can open finance modules. SOP still requires cleared escrow before **Approve & Execute**.
 
-- Client invoices, recurring retainer plans, post retainers, overdue interest, batch receipts.
-- Record escrow / deposit.
-- Log expense / payout, vendors, disbursements, issue talent payouts.
+- Client invoices, recurring retainers, overdue interest, batch receipts.
+- Record escrow / deposit, **Bank Reconciliation** (Post disabled until Difference is $0.00). Live Plaid feeds and Chase balances show **Coming soon**.
+- Log expense / payout, vendors, disbursements, issue talent payouts, **Payout Approvals**. Approve & Execute / Execute payout stay off until Chase ACH is live.
+- Gross bookings report uses a 20/80 split on invoice amount (agency commission vs talent share).
 
 ### Reports
 
-Role-scoped hub under **My Reports**:
+**My Reports** uses a parameter launcher (Division, date range) then **Run Live View**:
 
-- Roster & booking: roster scorecard, applicant pool & pipeline log (application created / last saved / submitted timestamps), onboarding & offboarding, roster openings & availability, escrow balances (ops).
-- Receivables: gross bookings & commission, AR aging, overdue accounts.
-- Payables: pending talent payouts (AP aging). Ops and directors approve from the report with a review modal (split, aging, tax/banking, method, and notes).
+- Roster & booking: roster scorecard, applicant pool & pipeline log, onboarding & offboarding, roster openings, escrow balances.
+- Receivables: gross bookings & commission (fixed 20/80), AR aging, overdue accounts.
+- Payables: pending talent payouts.
 
 ### Admin
 
-Directors (and roles with `admin_access`):
+Directors only: `/admin/users` (Team Members) and `/admin/roles`.
 
-- Team users, invite team member, **Roles** (create / copy / edit / delete catalog roles and assign users).
-- Audit log of admin and sensitive actions.
-- System settings and **TMX Academy** (role guides plus training videos). Directors add, edit, and remove videos — YouTube, Vimeo, Loom, or a direct URL, or an uploaded MP4/WebM when storage is connected — and can target them to specific roles or all staff.
+- Tabbed System Settings (Company Codes, General, Email, Financial). Financial tab shows **Coming soon** for Stripe, Plaid, and Chase until those vendors are live.
+- **TMX University** at `/university` (workspace Academy link). Role learning paths plus training videos.
+- Team Members (`/admin/users`): search, invite, job title, active toggle, four-role badges.
+- Staff layouts use breakpoints at 1280px (desktop), 768–1279 (tablet), and under 768 (mobile): stacked launchers, horizontally scrolling tables. On phones the staff sidebar hides, TopNav collapses extras into search + menu + profile, the full menu stacks, and the profile quick-action rail becomes a bottom bar. Talent and brand portals stack cards and keep 44px tap targets.
 
 ### Talent portal
 
@@ -182,9 +188,14 @@ Signed clients (and approved prospects waiting to sign) use `/talent`:
 - **Home** — status, agent, calendar, trust/earnings snapshot.
 - **Activity** — appointments and related events.
 - **Money** — invoices, commissions, payout request when tax/banking are ready.
-- **Files** — documents on file and **Review and sign** when a contract is published.
-- **Messages** — contact the assigned agent (prefilled email).
-- **Settings** — portal preferences.
+- **Files** — documents and DocHub signing when a contract is published (no in-app name sign). Open in DocHub stays disabled with **Coming soon** until e-sign is live.
+- **Messages** — support request form (Payment, Contract, Booking, Profile, Other).
+- **Settings** — portal preferences. Direct-deposit bank linking shows **Coming soon** until Plaid is live.
+- Full-width layout with denser cards. Below 768px the nav is off-canvas.
+
+### Brand portal
+
+Corporate reps use `/client/login` then dashboard, projects, invoices (Pay Invoice **Coming soon** until Stripe), and contracts (e-sign **Coming soon** until DocHub). Demo login still works.
 
 ---
 
@@ -192,4 +203,5 @@ Signed clients (and approved prospects waiting to sign) use `/talent`:
 
 - [README.md](README.md) — install, demo mode, tech stack
 - [TODO.md](TODO.md) — remaining product to-dos
-- [SUPABASE_SETUP.md](SUPABASE_SETUP.md), [EDGE_FUNCTIONS_SETUP.md](EDGE_FUNCTIONS_SETUP.md), [RINGCENTRAL_TALENTMANAGERX_SETUP.md](RINGCENTRAL_TALENTMANAGERX_SETUP.md) — integrations
+- [EXTERNAL_ATTENTION.txt](EXTERNAL_ATTENTION.txt) — vendor accounts (Twilio, DocHub, Stripe, Plaid, Chase, screening)
+- [SUPABASE_SETUP.md](SUPABASE_SETUP.md), [EDGE_FUNCTIONS_SETUP.md](EDGE_FUNCTIONS_SETUP.md) — integrations

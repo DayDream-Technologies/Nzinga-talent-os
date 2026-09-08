@@ -9,6 +9,7 @@ import { createRoleDef, deleteRoleDef, updateRoleDef } from '@/services/roles.se
 import { useAuth } from '@/hooks/useAuth'
 import { useRoles } from '@/context/RolesContext'
 import { T } from '@/lib/tokens'
+import { AUTO_STACK_GRID } from '@/lib/viewport'
 import { Av, Btn, TH, TD } from '@/components/ui-compat'
 
 const EDITABLE_PERMISSIONS = ROLE_PERMISSIONS.filter((p) => p !== 'admin_access')
@@ -313,7 +314,7 @@ export function RoleManagementPanel() {
             )}
           </div>
           <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 6 }}>Modules</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 6, marginBottom: 12 }}>
             {ROLE_MODULE_PATH_OPTIONS.map((path) => (
               <label key={path} style={{ fontSize: 11, display: 'flex', gap: 6, alignItems: 'center' }}>
                 <input

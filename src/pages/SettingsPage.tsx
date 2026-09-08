@@ -13,6 +13,9 @@ import { ConfirmDialog, useUnsavedNavigation } from '@/components/ui/ConfirmDial
 import { useToast } from '@/components/ui/Toast'
 import { PageContent } from '@/components/layout/PageContent'
 import { T } from '@/lib/tokens'
+import { AUTO_STACK_GRID } from '@/lib/viewport'
+import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
+import { isCalendarSyncConnected } from '@/lib/integrations'
 
 const RC_ERROR_MESSAGES: Record<string, string> = {
   missing_code: 'Authorization was cancelled or incomplete.',
@@ -341,7 +344,7 @@ export function SettingsPage() {
       <div style={card}>
         <div style={{ fontSize: 15, fontWeight: 600, color: T.t1, marginBottom: 12 }}>Display</div>
         <div style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>Theme</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
           {(['light', 'dark'] as const).map((t) => (
             <button
               key={t}
@@ -397,11 +400,11 @@ export function SettingsPage() {
       <div style={{ ...card, gridColumn: '1 / -1' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 700 }}>
-            RC
+            T
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: T.t1 }}>RingCentral</div>
-            <div style={{ fontSize: 12, color: T.t3 }}>Click-to-call, SMS, and call recording</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: T.t1 }}>Twilio (voice & SMS)</div>
+            <div style={{ fontSize: 12, color: T.t3 }}>Click-to-call, SMS inbox, and recordings. Replaces RingCentral.</div>
           </div>
           <div style={{ marginLeft: 'auto' }}>
             {loading ? (
@@ -412,21 +415,17 @@ export function SettingsPage() {
               </span>
             ) : (
               <span style={{ background: T.amberL, color: T.amber, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
-                Not Connected
+                Coming soon
               </span>
             )}
           </div>
         </div>
 
-        {!loading && !rcStatus.connected && (
-          <div style={{ fontSize: 11, color: T.t3, marginBottom: 12, lineHeight: 1.5 }}>
-            Connect your RingCentral extension to enable click-to-call and SMS from talent records.
-          </div>
-        )}
+        {!loading && !rcStatus.connected && <IntegrationNotice id="twilio" />}
 
         {!loading && rcStatus.connected && (
           <div style={{ background: T.mutedBg, borderRadius: 8, padding: 12, marginBottom: 12 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 8, fontSize: 12 }}>
               <div>
                 <span style={{ color: T.t3 }}>Phone Number: </span>
                 <span style={{ fontWeight: 600, color: T.t1 }}>{rcStatus.phone_number || '—'}</span>
@@ -442,11 +441,11 @@ export function SettingsPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {!rcStatus.connected || rcStatus.expired ? (
             <button
-              onClick={handleConnect}
-              disabled={actionLoading}
-              style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              type="button"
+              disabled
+              style={{ background: '#f97316', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'not-allowed', opacity: 0.55, fontFamily: 'inherit' }}
             >
-              {actionLoading ? '…' : rcStatus.expired ? 'Reconnect' : 'Connect RingCentral'}
+              Coming soon
             </button>
           ) : (
             <button
@@ -458,6 +457,30 @@ export function SettingsPage() {
             </button>
           )}
         </div>
+      </div>
+
+      <div style={{ ...card, gridColumn: '1 / -1' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 8, background: T.blue, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 18, fontWeight: 700 }}>
+            📅
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: T.t1 }}>Google / Outlook calendar sync</div>
+            <div style={{ fontSize: 12, color: T.t3 }}>Two-way busy times with the in-app calendar. In-app hours still work.</div>
+          </div>
+          <div style={{ marginLeft: 'auto' }}>
+            {isCalendarSyncConnected() ? (
+              <span style={{ background: T.greenL, color: T.green, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+                ✓ Connected
+              </span>
+            ) : (
+              <span style={{ background: T.amberL, color: T.amber, padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+                Coming soon
+              </span>
+            )}
+          </div>
+        </div>
+        {!isCalendarSyncConnected() && <IntegrationNotice id="calendar" />}
       </div>
       </div>
       {unsavedDialog}
@@ -474,7 +497,7 @@ export function SettingsPage() {
       />
       <ConfirmDialog
         open={confirmDisconnect}
-        title="Disconnect RingCentral?"
+        title="Disconnect Twilio?"
         message="You will need to reconnect to place or receive calls from this workspace."
         confirmLabel="Disconnect"
         danger

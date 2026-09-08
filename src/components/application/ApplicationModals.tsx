@@ -4,6 +4,9 @@ import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { completedSectionsFromData, prefillApplicationData } from "@/lib/application-prefill";
 
+/**
+ * @param {{ talent: any, prospect?: any, onSend: Function, onClose: Function, companyCode?: string }} props
+ */
 function SendApplicationModal({ talent, prospect, onSend, onClose, companyCode = "NZG" }) {
   const [email,setEmail]=useState(talent.email || prospect?.email || "");
   const [sent,setSent]=useState(false);

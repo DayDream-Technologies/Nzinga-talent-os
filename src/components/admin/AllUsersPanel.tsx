@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { T } from '@/lib/tokens'
 import { Av, Btn, TH, TD } from '@/components/ui-compat'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { inputStyle } from '@/components/agency/AgencyUI'
 
 interface AllUsersPanelProps {
   onManageRoles: () => void
@@ -19,6 +20,7 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
   const [error, setError] = useState('')
   const [actionId, setActionId] = useState<string | null>(null)
   const [pendingDeactivate, setPendingDeactivate] = useState<(User & { active?: boolean }) | null>(null)
+  const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -53,17 +55,25 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 14,
+          flexWrap: 'wrap',
+          gap: 10,
         }}
       >
         <div>
           <div style={{ fontSize: 16, fontWeight: 700, color: T.t1, fontFamily: "'Syne', sans-serif" }}>
-            All Users
+            Team Members
           </div>
           <div style={{ fontSize: 12, color: T.t3, marginTop: 2 }}>
-            Team members in {companyCode || 'NZG'}
+            Manage agency accounts, role assignments, and platform access in {companyCode || 'NZG'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name, email, title"
+            style={{ ...inputStyle, width: 220 }}
+          />
           <Btn sm onClick={onManageRoles}>
             Role Management
           </Btn>
@@ -113,7 +123,13 @@ export function AllUsersPanel({ onManageRoles, onInvite }: AllUsersPanelProps) {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => {
+            {users
+              .filter((u) => {
+                const q = query.trim().toLowerCase()
+                if (!q) return true
+                return `${u.name} ${u.email} ${u.title} ${roleLabel(u.role)}`.toLowerCase().includes(q)
+              })
+              .map((u) => {
               const active = (u as User & { active?: boolean }).active !== false
               return (
                 <tr key={u.id}>

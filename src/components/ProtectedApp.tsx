@@ -23,6 +23,7 @@ const AdminRolesPage = lazyWithReload(() => import('@/pages/AdminRolesPage').the
 const AdminAuditPage = lazyWithReload(() => import('@/pages/AdminAuditPage').then(m => ({ default: m.AdminAuditPage })))
 const AdminSettingsPage = lazyWithReload(() => import('@/pages/AdminSettingsPage').then(m => ({ default: m.AdminSettingsPage })))
 const SettingsPage = lazyWithReload(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const UniversityPage = lazyWithReload(() => import('@/pages/UniversityPage').then(m => ({ default: m.UniversityPage })))
 
 function PageLoader() {
   return <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, fontSize: 14, color: '#6b7280' }}>Loading…</div>
@@ -49,6 +50,7 @@ function AuthenticatedApp() {
             <Routes>
               <Route path="workspace" element={<WorkspacePage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="university" element={<UniversityPage />} />
               <Route
                 path="applications"
                 element={

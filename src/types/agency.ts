@@ -1,5 +1,14 @@
-export type TicketStatus = 'open' | 'in_progress' | 'closed' | 'resolved'
-export type TicketType = 'availability' | 'scheduling' | 'contract' | 'billing' | 'general'
+export type TicketStatus = 'unassigned' | 'open' | 'in_progress' | 'pending_client' | 'closed' | 'resolved'
+export type TicketType =
+  | 'availability'
+  | 'scheduling'
+  | 'contract'
+  | 'billing'
+  | 'general'
+  | 'payment'
+  | 'booking'
+  | 'profile'
+  | 'legal'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'partial'
 export type PayoutStatus = 'pending' | 'issued' | 'completed'
 export type EscrowStatus = 'pending' | 'cleared' | 'disbursed'
@@ -166,6 +175,24 @@ export interface ProspectContract {
   document: ProspectContractDocument
   signedAt?: string | null
   signedName?: string | null
+  dochubStatus?: DocHubStatus
+  dochubDocumentId?: string | null
+  expiresAt?: string | null
+}
+
+export type DocHubStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'completed' | 'expired'
+
+export interface BrandAccount {
+  id: string
+  name: string
+  logoUrl?: string
+  contactName: string
+  email: string
+  phone?: string
+  division?: string
+  openBalance: number
+  activeProjects: number
+  portalStatus: 'active' | 'pending' | 'hold'
 }
 
 export interface SupportTicket {
@@ -176,7 +203,7 @@ export interface SupportTicket {
   talentName?: string
   status: TicketStatus
   type: TicketType
-  priority: 'low' | 'medium' | 'high'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
   createdAt: string
   /** ISO date (YYYY-MM-DD) */
   dueDate: string
@@ -184,6 +211,10 @@ export interface SupportTicket {
   assignee: string
   /** Talent portal confirm/decline on an opportunity ticket. */
   talentDecision?: 'confirmed' | 'declined'
+  createdBy?: string
+  division?: string
+  followUpAt?: string | null
+  vendor?: string
 }
 
 export interface AgencyTask {
@@ -195,6 +226,12 @@ export interface AgencyTask {
   relatedClient?: string
   completedBy?: string
   completedAt?: string
+  description?: string
+  category?: string
+  assignees?: string[]
+  reminder?: string
+  recurring?: string
+  relatedTalentId?: string
 }
 
 export interface ChecklistItem {
@@ -215,6 +252,9 @@ export interface Appointment {
   endsAt: string
   location: string
   notes: string
+  category?: string
+  allDay?: boolean
+  recurrence?: string
 }
 
 export interface CalendarEvent {
@@ -332,4 +372,7 @@ export interface MessageThread {
   preview: string
   sentAt: string
   status: 'draft' | 'sent' | 'delivered'
+  body?: string
+  from?: string
+  read?: boolean
 }

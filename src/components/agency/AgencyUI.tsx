@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { T } from '@/lib/tokens'
+import { useViewport } from '@/hooks/useViewport'
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
@@ -49,14 +50,17 @@ export function Panel({
   actions?: ReactNode
   children: ReactNode
 }) {
+  const band = useViewport()
+  const stacked = band === 'mobile'
   return (
-    <div data-scroll-container="" style={{ padding: 20, overflow: 'auto', height: '100%', background: T.pageBg }}>
+    <div data-scroll-container="" style={{ padding: band === 'desktop' ? 20 : 14, overflow: 'auto', height: '100%', background: T.pageBg }}>
       <div
         className="animate-fade-in-up"
         style={{
           display: 'flex',
+          flexDirection: stacked ? 'column' : 'row',
           justifyContent: 'space-between',
-          alignItems: 'flex-start',
+          alignItems: stacked ? 'stretch' : 'flex-start',
           gap: 16,
           marginBottom: 16,
           position: 'relative',
@@ -413,9 +417,8 @@ export function ModalShell({
   children: ReactNode
   width?: number
 }) {
-  // Portal to body so position:fixed is viewport-relative. Panel/page enter
-  // animations keep a CSS transform, which would otherwise pin "fixed" overlays
-  // to the full scrollable page instead of the visible window.
+  const band = useViewport()
+  const mobile = band === 'mobile'
   return createPortal(
     <div
       role="dialog"
@@ -426,7 +429,7 @@ export function ModalShell({
         inset: 0,
         zIndex: 9999,
         display: 'flex',
-        alignItems: 'center',
+        alignItems: mobile ? 'flex-end' : 'center',
         justifyContent: 'center',
         background: 'rgba(0,0,0,0.4)',
       }}
@@ -436,11 +439,11 @@ export function ModalShell({
         style={{
           background: T.elevatedBg,
           border: `1px solid ${T.cardBorder}`,
-          borderRadius: 12,
-          padding: '24px 28px',
-          width,
-          maxWidth: '92vw',
-          maxHeight: '90vh',
+          borderRadius: mobile ? '12px 12px 0 0' : 12,
+          padding: mobile ? '16px' : '24px 28px',
+          width: mobile ? '100%' : width,
+          maxWidth: mobile ? '100vw' : '92vw',
+          maxHeight: mobile ? '92vh' : '90vh',
           overflow: 'auto',
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
         }}

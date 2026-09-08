@@ -10,6 +10,8 @@ import {
 import { T } from '@/lib/tokens'
 import { Btn, TH, TD } from '@/components/ui-compat'
 import { ConfirmDialog, useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
+import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
+import { isChaseConnected, isPlaidConnected, isStripeConnected } from '@/lib/integrations'
 
 export function SystemSettingsPanel() {
   const [settings, setSettings] = useState<SystemSetting[]>([])
@@ -17,6 +19,7 @@ export function SystemSettingsPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [tab, setTab] = useState<'codes' | 'general' | 'email' | 'financial'>('codes')
   const [newCode, setNewCode] = useState('')
   const [pendingDeactivateCode, setPendingDeactivateCode] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -86,7 +89,33 @@ export function SystemSettingsPanel() {
         System Settings
       </div>
       <div style={{ fontSize: 12, color: T.t3, marginBottom: 16 }}>
-        Company codes and application configuration
+        Manage global agency configurations, company codes, and application defaults
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {([
+          ['codes', 'Company Codes'],
+          ['general', 'General'],
+          ['email', 'Email & Notifications'],
+          ['financial', 'Financial Defaults'],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 999,
+              border: `1px solid ${tab === id ? T.blue : T.cardBorder}`,
+              background: tab === id ? T.blue : T.cardBg,
+              color: tab === id ? '#fff' : T.t1,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 12,
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -104,6 +133,7 @@ export function SystemSettingsPanel() {
         <div style={{ color: T.t3 }}>Loading settings…</div>
       ) : (
         <>
+          {tab === 'codes' && (
           <div
             style={{
               background: T.cardBg,
@@ -169,7 +199,17 @@ export function SystemSettingsPanel() {
               </Btn>
             </div>
           </div>
+          )}
 
+          {tab === 'financial' && (
+            <>
+              {!isStripeConnected() && <IntegrationNotice id="stripe" />}
+              {!isPlaidConnected() && <IntegrationNotice id="plaid" />}
+              {!isChaseConnected() && <IntegrationNotice id="chase" />}
+            </>
+          )}
+
+          {tab !== 'codes' && (
           <div
             style={{
               background: T.cardBg,
@@ -242,6 +282,7 @@ export function SystemSettingsPanel() {
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
       {unsavedDialog}

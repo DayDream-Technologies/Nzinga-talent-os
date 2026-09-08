@@ -34,6 +34,8 @@ export type {
   InvoiceStatus,
   PayoutStatus,
   EscrowStatus,
+  BrandAccount,
+  DocHubStatus,
 } from './agency'
 export type { TaskStatus as AgencyTaskStatus } from './agency'
 export type { TalentUdf, TalentType } from './udf'

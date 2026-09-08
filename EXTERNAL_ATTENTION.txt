@@ -1,0 +1,217 @@
+TMX — External attention and account configuration
+=================================================
+Items in this file cannot be completed in application code alone. They need
+an outside vendor account, DNS, bank setup, or a legal/ops decision.
+Until each item is connected, TMX shows a Coming soon placeholder and
+disables send/execute actions instead of faking success. Talent and brand
+portals never mention this file.
+
+Last updated: 2026-09-08
+Product owner: Nzinga MGMT / Talent Manager X
+
+----------------------------------------------------------------------
+1. Twilio (voice + SMS) — REPLACES RingCentral
+----------------------------------------------------------------------
+Why it blocks: Text Messaging Center, click-to-call, inbound SMS badge,
+call recordings, and automated SMS (72-hour contract notice, payday,
+call-sheet updates) cannot send or receive until Twilio is live.
+
+Who: Director / IT
+What to do:
+  - Create a Twilio account (twilio.com) under the agency entity.
+  - Buy at least one US local or toll-free number with Voice + SMS + MMS.
+  - Copy Account SID and Auth Token into Supabase Edge Function secrets:
+      TWILIO_ACCOUNT_SID
+      TWILIO_AUTH_TOKEN
+      TWILIO_FROM_NUMBER
+  - Point inbound SMS webhook to:
+      https://<project>.supabase.co/functions/v1/twilio-webhook
+  - Point voice status / recording callbacks to the same function
+    (or twilio-voice when split).
+  - Enable Twilio recording storage if call recordings should appear
+    on talent History.
+  - Remove RingCentral app credentials from Settings and Edge Function
+    secrets after cutover (RINGCENTRAL_*).
+
+Blocked product: /messaging, header SMS badge, TalentRecord click-to-call.
+
+----------------------------------------------------------------------
+2. DocHub (exclusive e-sign) — REPLACES in-app name confirmation
+----------------------------------------------------------------------
+Why it blocks: Renew, representation agreements, usage buyouts, and
+portal signing cannot dispatch or complete until DocHub is connected.
+Create & Send stays disabled; records stay Draft.
+
+Who: Director / Success Manager
+What to do:
+  - Create a DocHub Business account (dochub.com) for Nzinga MGMT.
+  - Generate API key / OAuth credentials. Store as:
+      DOCHUB_API_KEY
+      DOCHUB_WEBHOOK_SECRET
+  - Build and save these templates (merge fields in brackets):
+      * Representation agreement  [legal_name] [division] [start_date]
+        [end_date] [commission_rate] [agency_split] [talent_share]
+      * Renewal offer            same fields + [renewal_term]
+      * Usage / buyout           [brand] [project] [shoot_dates]
+        [guarantee] [usage_term]
+  - Point webhook to:
+      https://<project>.supabase.co/functions/v1/dochub-webhook
+    Events: document.sent, document.signed, document.completed,
+    document.expired.
+  - Enable Web Embed SDK so /talent/files and /client/contracts
+    can sign without leaving TMX.
+  - Confirm 72-hour default expiry on signature requests.
+
+Blocked product: Renew, publish contract, talent Files sign, brand
+portal contracts.
+
+----------------------------------------------------------------------
+3. Stripe Connect — brand invoice checkout
+----------------------------------------------------------------------
+Why it blocks: Brand portal "Pay Invoice Now" (card + ACH) cannot
+collect funds until Stripe is connected and routed to escrow.
+
+Who: Director / Account Manager
+What to do:
+  - Create a Stripe account (Connect if brands pay on their own).
+  - Store:
+      STRIPE_SECRET_KEY
+      STRIPE_PUBLISHABLE_KEY
+      STRIPE_WEBHOOK_SECRET
+  - Configure payout destination = Chase Escrow Holding Account
+    (see section 5). Do not land campaign funds in operating.
+  - Enable ACH (Financial Connections / ACH Direct Debit) in addition
+    to cards.
+  - Webhook: payment_intent.succeeded, invoice.paid, charge.failed
+    → https://<project>.supabase.co/functions/v1/stripe-webhook
+
+Blocked product: /client/billing Pay Invoice.
+
+----------------------------------------------------------------------
+4. Plaid — bank verification and statement feed
+----------------------------------------------------------------------
+Why it blocks: Talent direct-deposit linking and daily Chase transaction
+sync for reconciliation.
+
+Who: Director / Account Manager
+What to do:
+  - Create a Plaid Production (or Development) account.
+  - Store:
+      PLAID_CLIENT_ID
+      PLAID_SECRET
+      PLAID_ENV          (sandbox | development | production)
+  - Enable Auth + Transactions products.
+  - Link the three Chase accounts (escrow, trust, operating) via Plaid
+    Link in System Settings, not only talent Link in /talent/settings.
+  - Schedule /transactions/sync at 6:00 AM EDT.
+
+Blocked product: talent Settings direct deposit, /reconciliation live feed.
+
+----------------------------------------------------------------------
+5. Chase Bank — escrow, trust, operating, NACHA
+----------------------------------------------------------------------
+Why it blocks: Escrow clearing, 20/80 split, payday ACH, Friday $0.00
+reconciliation.
+
+Who: Director + bank relationship manager
+What to do:
+  - Confirm three segregated Chase accounts:
+      1. Escrow Holding     — inbound brand wires/ACH
+      2. Talent Trust       — outbound 80% talent share
+      3. Agency Operating    — 20% commission and expenses
+  - Enable Chase Business Online NACHA / ACH file upload for payday.
+  - Provide statement export (BAI2/OFX or Plaid) for /reconciliation.
+  - Target: $0.00 Difference on Friday 4:00 PM EDT before Post
+    Reconciliation is allowed.
+  - JPMorgan Access API is enterprise-only; until granted, use Plaid
+    + NACHA file export as documented above.
+
+Blocked product: payout Approve & Execute, live recon balances.
+
+----------------------------------------------------------------------
+6. Background screening provider (Checkr / Certn / DISA)
+----------------------------------------------------------------------
+Why it blocks: Scout "Initiate Screening" and Client Packet submit
+(screening required). TMX is provider-agnostic; pick ONE first.
+
+Who: Director / Success Manager (compliance)
+What to do:
+  - Choose provider (Checkr recommended as first adapter).
+  - Create account, get API keys, candidate-invite flow, webhook.
+  - Store:
+      SCREENING_PROVIDER     (checkr | certn | disa)
+      SCREENING_API_KEY
+      SCREENING_WEBHOOK_SECRET
+  - Map provider statuses into TMX:
+      Not Started, Invitation Sent, Awaiting Applicant,
+      Screening in Progress, Screening Complete, Review Required,
+      Cleared, Disputed, Unable to Complete
+  - Restrict full report bodies to authorized roles; scouts see
+    status only unless granted report access.
+
+Blocked product: Screening Workspace Initiate Screening; packet submit
+until screening is Cleared or Review Required is resolved.
+
+----------------------------------------------------------------------
+7. Google Calendar / Microsoft Outlook — two-way calendar sync
+----------------------------------------------------------------------
+Why it blocks: Portal self-scheduling cannot see staff's external
+busy times until OAuth is connected. In-app TMX conflicts still work.
+
+Who: Each staff member + Director (app registration)
+What to do:
+  - Google Cloud: OAuth client for Calendar API (readonly + events).
+  - Microsoft: Azure app for Calendars.ReadWrite.
+  - Store:
+      GOOGLE_CALENDAR_CLIENT_ID / SECRET
+      MICROSOFT_CALENDAR_CLIENT_ID / SECRET
+  - Staff connect from Settings. Sync bidirectional with TMX
+    appointments.
+
+Blocked product: external busy-time blocking on portal scheduler.
+
+----------------------------------------------------------------------
+8. Brand portal auth and DNS
+----------------------------------------------------------------------
+Why it blocks: Corporate brand reps need a public URL and email/password
+(or magic link) to reach /client/*.
+
+Who: Director / IT
+What to do:
+  - Add redirect URLs in Supabase Auth:
+      https://<app-host>/client/login
+      https://<app-host>/client/*
+  - Optional custom host (e.g. clients.talentmanagerx.com) + TLS.
+  - Confirm Site URL allows the brand portal.
+  - Invite flow: Send Portal Access from /brands (email via Resend).
+
+Blocked product: live brand logins (staff can still preview in demo).
+
+----------------------------------------------------------------------
+9. Email (Resend) — already live; no change required
+----------------------------------------------------------------------
+Staff compose and system alerts use the existing send-email Edge Function
+and Resend. Do not switch to SendGrid/Postmark unless deliverability
+requires it. Keep:
+  RESEND_API_KEY
+  EMAIL_FROM_ADDRESS=hello@talentmanagerx.com
+  EMAIL_FROM_NAME
+
+If DocHub signing alerts bounce, add a dedicated Resend template for
+"Action Required: Document Ready for Signature".
+
+----------------------------------------------------------------------
+10. Remaining account-only items from prior TODO
+----------------------------------------------------------------------
+  - CSV import of prospects is in-app (no vendor).
+  - Application hold-for-screening needs the screening API (section 6).
+  - Stripe payment collection on renewals is Stripe (section 3) plus
+    DocHub (section 2).
+
+----------------------------------------------------------------------
+How to mark an item done
+----------------------------------------------------------------------
+When credentials are in Supabase secrets and a smoke test succeeds
+(send SMS, send a DocHub draft, pay a test invoice, etc.), update this
+file with the date connected and the environment (demo / production).
+Do not commit secrets.

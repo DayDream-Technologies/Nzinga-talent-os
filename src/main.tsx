@@ -17,6 +17,14 @@ import { TalentMoneyPage } from '@/pages/TalentMoneyPage'
 import { TalentFilesPage } from '@/pages/TalentFilesPage'
 import { TalentMessagesPage } from '@/pages/TalentMessagesPage'
 import { TalentSettingsPage } from '@/pages/TalentSettingsPage'
+import {
+  BrandPortalLayout,
+  BrandLoginPage,
+  BrandDashboardPage,
+  BrandBillingPage,
+  BrandContractsPage,
+  BrandProjectsPage,
+} from '@/pages/BrandPortalPages'
 import { TalentAppLayout } from '@/components/talent-portal/TalentPortalShell'
 import { GuardianVerifyPage } from '@/pages/GuardianVerifyPage'
 import { installChunkLoadRecovery, lazyWithReload } from '@/lib/lazy-with-reload'
@@ -106,6 +114,21 @@ const router = createBrowserRouter([
               { path: 'files', element: <TalentFilesPage /> },
               { path: 'messages', element: <TalentMessagesPage /> },
               { path: 'settings', element: <TalentSettingsPage /> },
+            ],
+          },
+        ],
+      },
+      {
+        path: 'client',
+        children: [
+          { path: 'login', element: <BrandLoginPage /> },
+          {
+            element: <BrandPortalLayout />,
+            children: [
+              { path: 'dashboard', element: <BrandDashboardPage /> },
+              { path: 'billing', element: <BrandBillingPage /> },
+              { path: 'contracts', element: <BrandContractsPage /> },
+              { path: 'projects', element: <BrandProjectsPage /> },
             ],
           },
         ],

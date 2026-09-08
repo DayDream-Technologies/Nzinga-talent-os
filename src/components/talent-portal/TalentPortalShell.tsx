@@ -5,6 +5,7 @@ import { AgencyDataProvider } from '@/context/AgencyDataContext'
 import { useTalentAuth } from '@/context/TalentAuthContext'
 import { TMXMark } from '@/components/branding'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
+import { useViewport } from '@/hooks/useViewport'
 import {
   DEFAULT_TALENT_PORTAL_PREFS,
   readTalentPortalPrefs,
@@ -67,7 +68,8 @@ export const portalGhost: CSSProperties = {
   color: 'var(--tp-fg)',
   fontSize: 12,
   fontWeight: 600,
-  padding: '6px 10px',
+  padding: '10px 14px',
+  minHeight: 44,
   cursor: 'pointer',
   fontFamily: 'inherit',
 }
@@ -80,6 +82,7 @@ export const portalPrimary: CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
   padding: '10px 14px',
+  minHeight: 44,
   cursor: 'pointer',
   fontFamily: 'inherit',
 }
@@ -173,6 +176,36 @@ function TalentPortalGate({ children }: { children: ReactNode }) {
 function ThemedShell() {
   const { handleLogout, displayName } = useTalentPortal()
   const { prefs } = useTalentPortalPrefs()
+  const band = useViewport()
+  const [navOpen, setNavOpen] = useState(false)
+  const mobile = band === 'mobile'
+
+  const links = (
+    <>
+      {NAV.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          onClick={() => setNavOpen(false)}
+          style={({ isActive }) => ({
+            fontSize: 13,
+            fontWeight: 600,
+            textDecoration: 'none',
+            padding: '10px 14px',
+            minHeight: 44,
+            display: 'inline-flex',
+            alignItems: 'center',
+            borderRadius: 8,
+            color: isActive ? '#fff' : 'var(--tp-nav-idle)',
+            background: isActive ? 'rgba(22,163,74,0.28)' : 'transparent',
+            border: isActive ? '1px solid rgba(22,163,74,0.45)' : '1px solid transparent',
+          })}
+        >
+          {item.label}
+        </NavLink>
+      ))}
+    </>
+  )
 
   return (
     <div style={{ ...portalPage, ...portalThemeVars(prefs.theme) }} data-talent-theme={prefs.theme}>
@@ -191,26 +224,28 @@ function ThemedShell() {
           <TMXMark size="sm" />
           <span style={{ fontSize: 15, fontWeight: 700 }}>{PLATFORM_BRAND.name}</span>
         </Link>
-        <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} aria-label="Talent portal">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              style={({ isActive }) => ({
-                fontSize: 13,
-                fontWeight: 600,
-                textDecoration: 'none',
-                padding: '7px 12px',
-                borderRadius: 8,
-                color: isActive ? '#fff' : 'var(--tp-nav-idle)',
-                background: isActive ? 'rgba(22,163,74,0.28)' : 'transparent',
-                border: isActive ? '1px solid rgba(22,163,74,0.45)' : '1px solid transparent',
-              })}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+        {mobile ? (
+          <button
+            type="button"
+            aria-label="Open menu"
+            onClick={() => setNavOpen(true)}
+            style={{
+              minHeight: 44,
+              minWidth: 44,
+              background: 'none',
+              border: '1px solid var(--tp-border)',
+              borderRadius: 8,
+              color: 'var(--tp-fg)',
+              cursor: 'pointer',
+            }}
+          >
+            ☰
+          </button>
+        ) : (
+          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} aria-label="Talent portal">
+            {links}
+          </nav>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{displayName}</span>
           <button
@@ -222,7 +257,8 @@ function ThemedShell() {
               borderRadius: 8,
               color: 'var(--tp-fg)',
               fontSize: 13,
-              padding: '8px 14px',
+              padding: '10px 14px',
+              minHeight: 44,
               cursor: 'pointer',
               fontFamily: 'inherit',
             }}
@@ -231,7 +267,35 @@ function ThemedShell() {
           </button>
         </div>
       </header>
-      <main style={{ flex: 1, maxWidth: 1100, width: '100%', margin: '0 auto', padding: '28px 24px 64px' }}>
+      {mobile && navOpen && (
+        <div
+          role="dialog"
+          aria-label="Talent portal"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            zIndex: 40,
+          }}
+          onClick={() => setNavOpen(false)}
+        >
+          <nav
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 280,
+              height: '100%',
+              background: 'var(--tp-bg)',
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            {links}
+          </nav>
+        </div>
+      )}
+      <main style={{ flex: 1, maxWidth: 1440, width: '100%', margin: '0 auto', padding: mobile ? '20px 16px 64px' : '28px 24px 64px' }}>
         <Outlet />
       </main>
     </div>

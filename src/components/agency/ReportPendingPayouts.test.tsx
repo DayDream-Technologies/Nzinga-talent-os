@@ -81,7 +81,7 @@ describe('ReportPendingPayouts', () => {
     })
   })
 
-  it('hides approve for roles that cannot issue payouts', () => {
+  it('keeps approve visible in open workspace for scouts', () => {
     auth.role = 'scout'
     issuePayout.mockClear()
     render(
@@ -90,6 +90,6 @@ describe('ReportPendingPayouts', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
   })
 })

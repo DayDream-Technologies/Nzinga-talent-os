@@ -80,7 +80,7 @@ export function TalentMoneyPage() {
         Earnings, commission, trust balance, invoices, and payout requests.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: 12, marginBottom: 16 }}>
         <div style={portalCard}>
           <div style={{ fontSize: 11, color: portalMuted, fontWeight: 600 }}>Trust account</div>
           <div style={{ fontSize: 24, fontWeight: 800, marginTop: 8 }}>{formatMoney(trust)}</div>

@@ -2,11 +2,7 @@
 
 import type { Role } from '@/types'
 import { getRoleDef, hasPermission } from '@/constants/roles'
-import {
-  ACCOUNT_MANAGER_MODULE_PATHS,
-  AGENT_MODULE_PATHS,
-  ALL_MODULE_PATHS,
-} from '@/constants/agency-module-paths'
+import { ALL_MODULE_PATHS } from '@/constants/agency-module-paths'
 
 export interface AgencyNavItem {
   id: string
@@ -39,6 +35,7 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
           { id: 'clients', label: 'Clients', path: 'clients' },
           { id: 'active-roster', label: 'Clients', path: 'active-roster' },
           { id: 'prospect-tracking', label: 'Prospect Tracking Board', path: 'prospect-tracking' },
+          { id: 'brands', label: 'Brands', path: 'brands' },
         ],
       },
     ],
@@ -68,6 +65,7 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
           { id: 'appointments', label: 'Appointments & Meetings', path: 'appointments' },
           { id: 'new-ticket', label: 'New Tickets', path: 'new-ticket' },
           { id: 'calendar', label: 'Calendar', path: 'calendar' },
+          { id: 'university', label: 'TMX University', path: 'university' },
         ],
       },
     ],
@@ -80,6 +78,7 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
         label: 'Accounting',
         items: [
           { id: 'escrow-deposit', label: 'Record Escrow / Deposit', path: 'escrow-deposit' },
+          { id: 'reconciliation', label: 'Bank Reconciliation', path: 'reconciliation' },
         ],
       },
       {
@@ -99,6 +98,7 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
           { id: 'vendors', label: 'Vendors & Service Providers', path: 'vendors' },
           { id: 'disbursements', label: 'Disbursements / Payouts', path: 'disbursements' },
           { id: 'issue-payouts', label: 'Issue Talent Payouts', path: 'issue-payouts' },
+          { id: 'payout-approvals', label: 'Payout Approvals', path: 'payout-approvals' },
         ],
       },
     ],
@@ -154,10 +154,8 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
 
 /** Allowed agency paths per role. `workspace` is always allowed separately. */
 export const AGENCY_MODULE_ACCESS: Record<string, readonly string[]> = {
-  scout: AGENT_MODULE_PATHS,
-  team1_lead: AGENT_MODULE_PATHS,
-  team2_lead: AGENT_MODULE_PATHS,
-  ops_specialist: ACCOUNT_MANAGER_MODULE_PATHS,
+  scout: ALL_MODULE_PATHS,
+  account_manager: ALL_MODULE_PATHS,
   success_manager: ALL_MODULE_PATHS,
   director: ALL_MODULE_PATHS,
 }
@@ -221,6 +219,10 @@ export const AGENCY_PAGE_TITLES: Record<string, string> = Object.fromEntries(
     ['admin/audit-log', 'Audit Log'],
     ['admin/settings', 'System Settings'],
     ['admin/invite', 'Invite Team Member'],
+    ['university', 'TMX University'],
+    ['brands', 'Brands'],
+    ['reconciliation', 'Bank Reconciliation'],
+    ['payout-approvals', 'Payout Approvals'],
   ]),
 )
 

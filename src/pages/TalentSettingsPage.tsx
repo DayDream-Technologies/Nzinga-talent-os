@@ -13,6 +13,8 @@ import { isImageDoc, resolveProfilePhoto, uploadProfilePhoto } from '@/lib/profi
 import { useImageCropper } from '@/components/ui/ImageCropper'
 import { cropAspectForField } from '@/lib/crop-image'
 import { mergeUdf } from '@/lib/talent-udf'
+import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
+import { isPlaidConnected } from '@/lib/integrations'
 import type { TalentUdf } from '@/types/udf'
 
 const MEASUREMENT_FIELDS: Array<{ key: keyof TalentUdf; label: string }> = [
@@ -207,6 +209,17 @@ export function TalentSettingsPage() {
             Phone
             <input value={phone} onChange={(e) => setPhone(e.target.value)} style={{ ...portalInput, marginTop: 6 }} />
           </label>
+        </section>
+
+        <section style={portalCard}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Direct deposit</h2>
+          <p style={{ fontSize: 13, color: portalMuted, margin: '0 0 12px' }}>
+            Link a bank account for payouts. Until this is live, your agent can still keep banking details on file.
+          </p>
+          {!isPlaidConnected() && <IntegrationNotice id="plaid" audience="public" />}
+          <button type="button" style={{ ...portalPrimary, width: 'fit-content', opacity: isPlaidConnected() ? 1 : 0.55 }} disabled={!isPlaidConnected()}>
+            Link bank account
+          </button>
         </section>
 
         <form onSubmit={saveSheet} style={{ display: 'grid', gap: 16 }}>

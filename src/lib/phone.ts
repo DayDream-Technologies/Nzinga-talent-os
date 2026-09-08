@@ -1,74 +1,57 @@
 import { invokeEdgeFunction } from './edge-functions'
 import { supabaseConfigured } from './supabase'
-import type {
-  RcConnectionStatus,
-  RcAuthUrlResponse,
-  MakeCallResponse,
-  SendSmsResponse,
-} from './ringcentral-types'
+import { isTwilioConnected } from './integrations'
 
-export function isRingCentralAvailable(): boolean {
-  return supabaseConfigured
+export type TwilioConnectionStatus = { connected: boolean; fromNumber?: string; expired?: boolean }
+
+export function isVoiceSmsAvailable(): boolean {
+  return isTwilioConnected()
 }
 
-async function invokeRcOAuth<T>(action: string, body: Record<string, unknown> = {}): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
-  return invokeEdgeFunction<T>('ringcentral-oauth', { action, ...body })
-}
-
-export async function getRcConnectionStatus(): Promise<RcConnectionStatus> {
-  if (!isRingCentralAvailable()) {
-    return { connected: false }
-  }
-
-  const result = await invokeRcOAuth<RcConnectionStatus>('status')
+export async function getTwilioStatus(): Promise<TwilioConnectionStatus> {
+  if (!isTwilioConnected() || !supabaseConfigured) return { connected: false }
+  const result = await invokeEdgeFunction<TwilioConnectionStatus>('twilio-sms', { action: 'status' })
   if (!result.ok) return { connected: false }
   return result.data
 }
 
+export async function makeCall(to: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isTwilioConnected()) return { ok: false, error: 'Voice calls are coming soon.' }
+  const result = await invokeEdgeFunction<{ sid?: string }>('twilio-voice', { to })
+  return result.ok ? { ok: true } : { ok: false, error: result.error }
+}
+
+export async function sendSms(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isTwilioConnected()) return { ok: false, error: 'Text messaging is coming soon.' }
+  const result = await invokeEdgeFunction<{ sid?: string }>('twilio-sms', { to, body })
+  return result.ok ? { ok: true } : { ok: false, error: result.error }
+}
+
+/** @deprecated RingCentral removed — use isVoiceSmsAvailable */
+export function isRingCentralAvailable(): boolean {
+  return isVoiceSmsAvailable()
+}
+
+export async function getRcConnectionStatus(): Promise<TwilioConnectionStatus> {
+  return getTwilioStatus()
+}
+
 export async function getRcAuthUrl(): Promise<string | null> {
-  const result = await invokeRcOAuth<RcAuthUrlResponse>('authorize')
-  if (!result.ok) return null
-  return result.data.auth_url
+  return null
 }
 
 export async function disconnectRc(): Promise<boolean> {
-  const result = await invokeRcOAuth('disconnect')
-  return result.ok
+  return true
 }
 
 export async function refreshRcToken(): Promise<boolean> {
-  const result = await invokeRcOAuth('refresh')
-  return result.ok
+  return isTwilioConnected()
 }
 
-export async function makeCall(
-  talentId: string,
-  phoneNumber: string,
-): Promise<MakeCallResponse> {
-  const result = await invokeEdgeFunction<MakeCallResponse>('ringcentral-call', {
-    talent_id: talentId,
-    phone_number: phoneNumber,
-  })
-
-  if (!result.ok) {
-    return { status: 'failed', message: result.error }
-  }
-  return result.data
+export async function makeRcCall(to: string): Promise<{ ok: boolean; error?: string }> {
+  return makeCall(to)
 }
 
-export async function sendSms(
-  talentId: string,
-  phoneNumber: string,
-  message: string,
-): Promise<SendSmsResponse> {
-  const result = await invokeEdgeFunction<SendSmsResponse>('ringcentral-sms', {
-    talent_id: talentId,
-    phone_number: phoneNumber,
-    message,
-  })
-
-  if (!result.ok) {
-    return { status: 'failed', error: result.error }
-  }
-  return result.data
+export async function sendRcSms(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
+  return sendSms(to, body)
 }

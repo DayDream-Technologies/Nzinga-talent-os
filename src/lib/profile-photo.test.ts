@@ -19,14 +19,14 @@ describe('resolveProfilePhoto', () => {
   it('prefers a staff-updated pipeline photo over the application file', () => {
     const pipeline = {
       uploaded_docs: { profile_photo: seedProfilePhoto('Maya Rivera', 'MR') },
-    } as Talent
+    } as unknown as Talent
     const application = {
       data: {
         doc_profile_photo: appPhoto.data,
         doc_profile_photo_name: appPhoto.name,
         doc_profile_photo_type: appPhoto.type,
       },
-    } as Application
+    } as unknown as Application
 
     const resolved = resolveProfilePhoto({ pipelineTalent: pipeline, application })
     expect(resolved?.name).toContain('Maya_Rivera')
@@ -36,7 +36,7 @@ describe('resolveProfilePhoto', () => {
   it('prefers a roster photo over the pipeline photo', () => {
     const pipeline = {
       uploaded_docs: { profile_photo: seedProfilePhoto('Maya Rivera', 'MR') },
-    } as Talent
+    } as unknown as Talent
     const rosterTalent = {
       profilePhoto: seedProfilePhoto('Kai Johnson', 'KJ', '#2563eb'),
     } as AgencyTalent
@@ -52,7 +52,7 @@ describe('resolveProfilePhoto', () => {
         doc_profile_photo_name: appPhoto.name,
         doc_profile_photo_type: appPhoto.type,
       },
-    } as Application
+    } as unknown as Application
     expect(resolveProfilePhoto({ application })?.name).toBe('app.jpg')
   })
 

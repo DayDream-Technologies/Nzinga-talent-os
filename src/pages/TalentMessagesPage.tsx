@@ -7,11 +7,11 @@ import { agentContact, agentMailto, belongingToTalent, opportunityStatusLabel } 
 import type { TicketType } from '@/types/agency'
 
 const REQUEST_TYPES: { id: TicketType; label: string }[] = [
-  { id: 'availability', label: 'Availability' },
-  { id: 'scheduling', label: 'Scheduling' },
-  { id: 'contract', label: 'Contract' },
-  { id: 'billing', label: 'Billing' },
-  { id: 'general', label: 'General' },
+  { id: 'payment', label: 'Payment question' },
+  { id: 'contract', label: 'Contract help' },
+  { id: 'booking', label: 'Booking issue' },
+  { id: 'profile', label: 'Profile update' },
+  { id: 'general', label: 'Other' },
 ]
 
 export function TalentMessagesPage() {

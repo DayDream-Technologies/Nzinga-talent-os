@@ -95,6 +95,7 @@ describe('AccountProfileTemplate', () => {
     expect(screen.getByRole('heading', { name: 'Kai Johnson' })).toBeInTheDocument()
     expect(screen.getByText('PAYOUT DUE')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Open talent account' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTitle('Quick Add'))
     expect(screen.getByText('Add Charge')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Review application' })).toBeDisabled()
     fireEvent.click(screen.getByText('Add Charge'))

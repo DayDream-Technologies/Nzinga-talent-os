@@ -8,6 +8,7 @@ import { AGENCY_PAGE_TITLES } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
 import { ApplicationProspectSync } from '@/components/agency/ApplicationProspectSync'
 import { useSidebarPreference } from '@/hooks/useSidebarPreference'
+import { useViewport } from '@/hooks/useViewport'
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
   const { user, companyCode, switchUser, logout } = useAuth()
@@ -15,6 +16,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const location = useLocation()
   const view = location.pathname.replace(/^\//, '') || 'workspace'
   const { sidebarVisible } = useSidebarPreference()
+  const band = useViewport()
+  const showSidebar = sidebarVisible && band !== 'mobile'
 
   const {
     talents,
@@ -84,7 +87,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       />
       <BreadcrumbBar label={pageTitle} sub={undefined} />
       <div className="flex flex-1 overflow-hidden">
-        {sidebarVisible && <Sidebar view={view} onNav={nav} userRole={user.role} />}
+        {showSidebar && <Sidebar view={view} onNav={nav} userRole={user.role} />}
         <div key={view} className="flex flex-1 flex-col overflow-hidden animate-fade-in">
           {children ?? <Outlet />}
         </div>

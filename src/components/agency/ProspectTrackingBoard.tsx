@@ -195,7 +195,7 @@ export function ProspectTrackingBoard() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
 
-  const canDrag = user?.role === 'director' || user?.role === 'scout' || user?.role === 'team1_lead'
+  const canDrag = user?.role === 'director' || user?.role === 'scout' || user?.role === 'success_manager' || user?.role === 'account_manager'
 
   const selected = useMemo(
     () => prospects.find((p) => p.id === selectedId) || null,

@@ -153,6 +153,8 @@ export function HomePage() {
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '20px clamp(20px, 4vw, 48px)',
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
           <button
@@ -326,7 +328,7 @@ export function HomePage() {
           style={{
             listStyle: 'none',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 160px), 1fr))',
             gap: 12,
             counterReset: 'stage',
           }}
@@ -377,7 +379,7 @@ export function HomePage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))',
             gap: 16,
           }}
         >

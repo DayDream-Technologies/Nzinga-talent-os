@@ -1,4 +1,23 @@
-export type HistoryType = 'note' | 'call' | 'email' | 'sms' | 'task' | 'document' | 'system'
+export type HistoryType =
+  | 'note'
+  | 'call'
+  | 'email'
+  | 'sms'
+  | 'task'
+  | 'document'
+  | 'system'
+  | 'meeting'
+  | 'issue'
+  | 'opportunity'
+
+export type HistoryCategory = 'general' | 'communication' | 'opportunity' | 'internal'
+
+export const HISTORY_CATEGORIES: { id: HistoryCategory; label: string; hint: string }[] = [
+  { id: 'general', label: 'General', hint: 'General notes, observations, or account updates.' },
+  { id: 'communication', label: 'Communication', hint: 'Calls, emails, texts, meetings, or conversations.' },
+  { id: 'opportunity', label: 'Opportunity', hint: 'Auditions, castings, bookings, brand deals, or submissions.' },
+  { id: 'internal', label: 'Internal', hint: 'Internal team notes, concerns, or recommendations.' },
+]
 
 export interface HistoryEntry {
   id: string
@@ -24,6 +43,10 @@ export interface HistoryEntry {
   /** Communication follow-up tracking (Build Requirements §23). */
   follow_up_needed?: boolean
   follow_up_date?: string | null
+  /** Persists HistoryCategory (and any legacy method string). */
   method?: string
   staff_name?: string
+  category?: HistoryCategory
+  /** Shared id when one blast is logged onto many recipients. */
+  blast_id?: string
 }

@@ -8,9 +8,11 @@ import {
 import { T, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, Section, PriBadge, DocViewer } from "@/components/ui-compat";
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
 import { ComposeEmail } from "@/components/talent/ComposeEmail";
-import { PhoneActions } from "@/components/talent/PhoneActions";
+import { ScreeningWorkspace } from "@/components/agency/ScreeningWorkspace";
 import { TalentLink } from "@/components/talent/TalentLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewport } from "@/hooks/useViewport";
+import { staffGridColumns } from "@/lib/viewport";
 import { useResolvedImageUrl } from "@/hooks/useResolvedImageUrl";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useImageCropper } from "@/components/ui/ImageCropper";
@@ -26,6 +28,8 @@ const NICHE_OPTIONS = ["Modeling", "Acting", "Sports & Athletics", "Influencing 
 
 function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
   const { companyCode } = useAuth();
+  const band = useViewport();
+  const stack = staffGridColumns(band, "1fr 1fr");
   const { upsertProspectSop, addProspectContract, prospects } = useAgencyData();
   const { cropImage, cropper } = useImageCropper();
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(talent)));
@@ -322,14 +326,14 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
     if (!opsReturnNotes.trim()) { setErr("Return notes required for Team 1 Lead."); return; }
     setErr("");
     void save({ ...local, stage: "team1_review", team1_notes: opsReturnNotes, audit_log: auditLog("Returned to Client Packet Review", "ops_processing") }, true);
-    const t1User = USERS.find((u) => u.role === "team1_lead");
+    const t1User = USERS.find((u) => u.role === "success_manager");
     setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Ops Return — Review: " + local.name, assigned_to: t1User ? t1User.id : "u2", related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: opsReturnNotes }, ...prev]);
   }
   function t2(d) {
     if (d === "approved") { void save({ ...local, stage: "executive_review", team2_decision: "approved", audit_log: auditLog("Approved for Director Review", "team2_audit") }, true); }
     else if (d === "returned") {
       void save({ ...local, stage: "ops_processing", team2_decision: "returned", audit_log: auditLog("Returned to Success Manager Validation", "team2_audit") }, true);
-      const opsUser = USERS.find((u) => u.role === "ops_specialist");
+      const opsUser = USERS.find((u) => u.role === "account_manager");
       setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Returned from Audit: " + local.name, assigned_to: opsUser ? opsUser.id : "u3", related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: local.team2_notes || "Returned from audit." }, ...prev]);
     } else {
       setPendingConfirm({
@@ -359,7 +363,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
   const compFields = [["legal_name", "Full Legal Name"], ["gov_id", "Government ID"], ["dob", "Date of Birth"], ["address", "Physical Address"], ["email_phone", "Email / Phone"], ["tax_doc", "Tax Documentation (W-9)"], ["banking", "Banking Information"], ["social_ownership", "Social Account Ownership"]];
   const filtHistory = showDocOnly ? tHistory.filter((h) => h.is_document) : tHistory;
-  const canUploadDocs = hasPermission(role, "submit_client_packet") || role === "ops_specialist" || hasPermission(role, "admin_access");
+  const canUploadDocs = hasPermission(role, "submit_client_packet") || role === "account_manager" || hasPermission(role, "admin_access");
   const packetBlockers = clientPacketSubmitBlockers(local);
   const packetReady = canSubmitClientPacket(local);
   const linkedProspect = prospects.find(
@@ -406,7 +410,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   {canEdit ? (
-                    <FInput value={local.name} onChange={(v) => p("name", v)} style={{ fontWeight: 700, fontSize: 16, fontFamily: "'Syne', Outfit, sans-serif", minWidth: 180 }} />
+                    <FInput value={local.name} onChange={(v) => p("name", v)} style={{ fontWeight: 700, fontSize: 16, fontFamily: "'Syne', Outfit, sans-serif", minWidth: 0, maxWidth: "100%" }} />
                   ) : (
                     <span style={{ fontWeight: 700, fontSize: 18, color: T.t1, fontFamily: "'Syne', Outfit, sans-serif" }}>{local.name}</span>
                   )}
@@ -455,7 +459,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
         <div style={{ padding: 16, maxHeight: "78vh", overflowY: "auto", display: "grid", gap: 12 }}>
           {/* Profile + status + contact */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: stack, gap: 12 }}>
             <Section title="Contact" accent={T.blue}>
               <Lbl>Phone</Lbl>
               <FInput value={local.phone || ""} onChange={(v) => canEdit && p("phone", v)} disabled={!canEdit} placeholder="(555) 000-0000" />
@@ -532,7 +536,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
           {/* Social links */}
           <Section title="Social media & links" accent={T.cyan}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: stack, gap: 10 }}>
               <div>
                 <Lbl>Primary handle</Lbl>
                 <FInput value={local.social_handle || ""} onChange={(v) => canEdit && p("social_handle", v)} disabled={!canEdit} placeholder="@handle" />
@@ -578,7 +582,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
           {/* Revenue */}
           <Section title="Revenue" accent={T.green}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: staffGridColumns(band, "1fr 1fr 1fr"), gap: 10, marginBottom: 10 }}>
               <div>
                 <Lbl>YTD revenue</Lbl>
                 <FInput value={local.revenue_ytd || ""} onChange={(v) => canEdit && p("revenue_ytd", v)} disabled={!canEdit} placeholder="0" />
@@ -596,11 +600,22 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
             <FTextarea value={local.revenue_path || ""} onChange={(v) => canEdit && p("revenue_path", v)} disabled={!canEdit} rows={3} placeholder="Describe near-term monetization plan…" />
           </Section>
 
+          {hasPermission(role, "submit_client_packet") && (
+            <ScreeningWorkspace
+              talent={local}
+              onChange={(patch) => {
+                setLocal((prev) => ({ ...prev, ...patch }))
+                setDirty(true)
+              }}
+              onSubmit={scoutSubmit}
+            />
+          )}
+
           {/* Jordan score */}
           <Section title="Jordan Score" accent={local.jordan_score >= 3.5 ? T.green : T.purple}>
-            {canEdit && (hasPermission(role, "submit_client_packet") || hasPermission(role, "admin_access") || role === "team1_lead") ? (
+            {canEdit && (hasPermission(role, "submit_client_packet") || hasPermission(role, "admin_access") || role === "success_manager") ? (
               <div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: stack, gap: 10, marginBottom: 10 }}>
                   <div>
                     <Lbl>Scout summary</Lbl>
                     <FTextarea value={local.scout_summary || ""} onChange={(v) => p("scout_summary", v)} rows={3} />
@@ -703,7 +718,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                 (historyFilter === "all" ? filtHistory : filtHistory.filter((h) => h.type === historyFilter)).map((h) => {
                   const u = USERS.find((x) => x.id === h.user_id);
                   return (
-                    <div key={h.id} style={{ display: "grid", gridTemplateColumns: "88px 56px 1fr", padding: "7px 10px", borderBottom: "1px solid #f5f5f5", gap: 6 }}>
+                    <div key={h.id} style={{ display: "grid", gridTemplateColumns: band === "mobile" ? "1fr" : "88px 56px 1fr", padding: "7px 10px", borderBottom: "1px solid #f5f5f5", gap: 6 }}>
                       <span style={{ fontSize: 11, color: T.t3 }}>{new Date(h.ts).toLocaleDateString()}</span>
                       <span style={{ fontSize: 10, color: T.t3, textTransform: "capitalize" }}>{h.type}</span>
                       <div>
@@ -723,7 +738,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
           {/* Documents */}
           <Section title="Documents" accent={T.blue}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: stack, gap: 10 }}>
               {REQUIRED_DOCS.map((doc) => {
                 const staffDoc = (local.uploaded_docs || {})[doc.id];
                 const appDocData = linkedApp?.data?.["doc_" + doc.id];
@@ -783,7 +798,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
             </Section>
           )}
 
-          {role === "team1_lead" && local.stage === "team1_review" && (
+          {role === "success_manager" && local.stage === "team1_review" && (
             <Section title="Client Packet Review decision" accent={T.amber}>
               <Lbl>Correction notes (required for revision)</Lbl>
               <FTextarea value={local.team1_notes} onChange={(v) => p("team1_notes", v)} rows={2} />
@@ -795,7 +810,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
             </Section>
           )}
 
-          {hasPermission(role, "approve_client_packet") && role !== "team1_lead" && local.stage === "team1_review" && (
+          {hasPermission(role, "approve_client_packet") && role !== "success_manager" && local.stage === "team1_review" && (
             <Section title="Success Manager quality assurance" accent={T.amber}>
               <div style={{ fontSize: 11, color: T.t3, marginBottom: 8 }}>Review the Client Packet, then approve into Prospects as Approved - Future, or return to the Scouting Agent.</div>
               <Lbl>Correction notes (required for revision)</Lbl>
@@ -823,14 +838,14 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
             </Section>
           )}
 
-          {(role === "ops_specialist" || role === "team2_lead" || role === "director") && (
+          {(role === "account_manager" || role === "director") && (
             <Section title="Compliance & contract framework" accent={T.green}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: stack, gap: 12 }}>
                 <div>
                   {compFields.map(([key, label]) => (
                     <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #f5f5f5" }}>
                       <span style={{ fontSize: 12 }}>{label}</span>
-                      <Toggle on={!!local.compliance?.[key]} onChange={(v) => role === "ops_specialist" && pc(key, v)} disabled={role !== "ops_specialist"} />
+                      <Toggle on={!!local.compliance?.[key]} onChange={(v) => role === "account_manager" && pc(key, v)} disabled={role !== "account_manager"} />
                     </div>
                   ))}
                 </div>
@@ -838,7 +853,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                   {[["Rep Type", "rep_type"], ["Commission %", "commission"], ["Term Length", "term_length"]].map(([label, field]) => (
                     <div key={field} style={{ marginBottom: 8 }}>
                       <Lbl>{label}</Lbl>
-                      {role === "ops_specialist" && local.stage === "ops_processing" ? (
+                      {role === "account_manager" && local.stage === "ops_processing" ? (
                         field === "rep_type" ? (
                           <FSelect value={local[field]} onChange={(v) => p(field, v)} options={[{ v: "", l: "Select…" }, "Exclusive", "Non-Exclusive", "Open to Discussion"]} style={{ width: "100%" }} />
                         ) : (
@@ -849,14 +864,14 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                       )}
                     </div>
                   ))}
-                  {role === "ops_specialist" && local.stage === "ops_processing" && (
+                  {role === "account_manager" && local.stage === "ops_processing" && (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
                       <Btn variant="success" onClick={ops}>Advance to Contract Pending →</Btn>
                       <FTextarea value={opsReturnNotes} onChange={setOpsReturnNotes} rows={2} placeholder="Return notes for Client Packet Review…" />
                       <Btn variant="warning" sm onClick={opsReturnTeam1}>Return to Client Packet Review</Btn>
                     </div>
                   )}
-                  {role === "team2_lead" && local.stage === "team2_audit" && (
+                  {role === "account_manager" && local.stage === "team2_audit" && (
                     <div style={{ marginTop: 8 }}>
                       <Lbl>Audit notes</Lbl>
                       <FTextarea value={local.team2_notes} onChange={(v) => p("team2_notes", v)} rows={2} />
@@ -884,7 +899,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
 
           {(role === "success_manager" || hasPermission(role, "admin_access") || local.stage === "signed_onboarding") && (
             <Section title="Onboarding" accent={T.green}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: stack, gap: 12 }}>
                 <div>
                   {[["portal_setup", "Client Portal Setup"], ["technical_routing", "Technical Routing"]].map(([key, label]) => (
                     <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid #f5f5f5" }}>
@@ -905,7 +920,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           )}
 
           {/* Tasks + audit compact */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: stack, gap: 12 }}>
             <Section title="Tasks" accent={T.amber}>
               {tTasks.length === 0 ? (
                 <div style={{ color: T.t4, fontSize: 12 }}>No linked tasks.</div>

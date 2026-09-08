@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useViewport } from '@/hooks/useViewport'
+import { staffGridColumns } from '@/lib/viewport'
 import { AGENCY_STAFF, AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
 import { filterAgencyNav, canAccessAgencyPath, type AgencyNavGroup } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
@@ -13,6 +15,18 @@ import { AppointmentFormModal } from '@/components/agency/AppointmentFormModal'
 import { ProspectsCrmModule } from '@/components/agency/ProspectsCrmModule'
 import { ClientsModule } from '@/components/agency/ClientsModule'
 import { ProspectTrackingBoard } from '@/components/agency/ProspectTrackingBoard'
+import { MessagingCenterModule } from '@/components/agency/MessagingCenterModule'
+import { IssuesDashboardModule } from '@/components/agency/IssuesDashboard'
+import { AgencyTasksBoard } from '@/components/agency/AgencyTasksBoard'
+import { InteractiveCalendarModule } from '@/components/agency/InteractiveCalendar'
+import { RenewalOffersHub } from '@/components/agency/RenewalOffersHub'
+import { UnifiedEmailModule } from '@/components/agency/UnifiedEmailModule'
+import { BrandsDirectoryModule } from '@/components/agency/BrandsDirectory'
+import { ReconciliationModule } from '@/components/agency/ReconciliationModule'
+import { PayoutApprovalsModule } from '@/components/agency/PayoutApprovalsModule'
+import { wrapReport } from '@/components/agency/ReportWrappers'
+import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
+import { isChaseConnected } from '@/lib/integrations'
 import {
   DisbursementFormModal,
   EscrowFormModal,
@@ -25,6 +39,7 @@ import {
 } from '@/components/agency/FinanceFormModals'
 import { DocViewer } from '@/components/ui/DocViewer'
 import type { UploadedDoc } from '@/types'
+import { splitGross } from '@/lib/commission'
 import { formatCallTime } from '@/lib/talent-portal'
 import {
   Badge,
@@ -144,6 +159,7 @@ function WorkspaceNavGroup({
 export function AgencyWorkspace() {
   const nav = useNavigate()
   const { user } = useAuth()
+  const band = useViewport()
   const firstName = (user?.name || AGENCY_STAFF.name).split(' ')[0]
   const role = user?.role || 'scout'
 
@@ -158,7 +174,7 @@ export function AgencyWorkspace() {
   return (
     <div
       style={{
-        padding: '22px 26px',
+        padding: band === 'mobile' ? '14px 12px' : '22px 26px',
         flex: 1,
         overflowY: 'auto',
         minHeight: '100%',
@@ -169,7 +185,7 @@ export function AgencyWorkspace() {
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div
           style={{
-            fontSize: 36,
+            fontSize: band === 'mobile' ? 26 : 36,
             fontWeight: 700,
             color: T.t1,
             fontFamily: "'Syne', sans-serif",
@@ -183,7 +199,7 @@ export function AgencyWorkspace() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: favoriteGroups.length && reportGroups.length ? '1fr 1fr' : '1fr',
+          gridTemplateColumns: staffGridColumns(band, favoriteGroups.length && reportGroups.length ? '1fr 1fr' : '1fr'),
           gap: 18,
         }}
       >
@@ -205,7 +221,7 @@ export function AgencyWorkspace() {
               style={{
                 padding: '12px 14px',
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: staffGridColumns(band, '1fr 1fr'),
                 gap: 14,
               }}
             >
@@ -249,7 +265,7 @@ export function AgencyWorkspace() {
               style={{
                 padding: '12px 14px',
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: staffGridColumns(band, '1fr 1fr'),
                 gap: 14,
               }}
             >
@@ -287,10 +303,10 @@ export function AgencyWorkspace() {
           📢 <strong style={{ color: T.t1, fontSize: 15 }}>Announcements</strong> — No new announcements
         </span>
         <span
-          onClick={() => go('training')}
+          onClick={() => go('university')}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && go('training')}
+          onKeyDown={(e) => e.key === 'Enter' && go('university')}
           style={{ fontSize: 14, color: WS.accent, cursor: 'pointer' }}
         >
           🎓 TMX Academy
@@ -305,26 +321,32 @@ export function AgencyModule({ moduleId }: { moduleId: string }) {
     case 'prospects':
       return <ProspectsCrmModule />
     case 'renewal-offers':
-      return <RenewalOffersModule />
+      return <RenewalOffersHub />
     case 'clients':
     case 'active-roster':
       return <ClientsModule />
     case 'prospect-tracking':
       return <ProspectTrackingBoard />
     case 'send-email':
-      return <SendEmailModule />
+      return <UnifiedEmailModule />
     case 'messaging':
-      return <MessagingModule />
+      return <MessagingCenterModule />
     case 'support-tickets':
-      return <SupportTicketsModule />
+      return <IssuesDashboardModule />
     case 'agency-tasks':
-      return <AgencyTasksModule />
+      return <AgencyTasksBoard />
     case 'appointments':
       return <AppointmentsModule />
     case 'new-ticket':
-      return <NewTicketModule />
+      return <IssuesDashboardModule />
     case 'calendar':
-      return <CalendarModule />
+      return <InteractiveCalendarModule />
+    case 'brands':
+      return <BrandsDirectoryModule />
+    case 'reconciliation':
+      return <ReconciliationModule />
+    case 'payout-approvals':
+      return <PayoutApprovalsModule />
     case 'escrow-deposit':
       return <EscrowModule />
     case 'client-invoices':
@@ -346,23 +368,23 @@ export function AgencyModule({ moduleId }: { moduleId: string }) {
     case 'issue-payouts':
       return <IssuePayoutsModule />
     case 'report-roster-scorecard':
-      return <ReportRosterScorecard />
+      return wrapReport(<ReportRosterScorecard />, 'Roster Performance Scorecard', 'Active bookings and revenue across the roster.')
     case 'report-applicant-pool':
-      return <ReportApplicantPool />
+      return wrapReport(<ReportApplicantPool />, 'Applicant Pool & Pipeline Log', 'How many applicants are waiting for agent screenings.')
     case 'report-escrow-balances':
-      return <ReportEscrow />
+      return wrapReport(<ReportEscrow />, 'Escrow & Deposit Balances', 'Funds held vs cleared.')
     case 'report-onboarding':
-      return <ReportOnboarding />
+      return wrapReport(<ReportOnboarding />, 'Onboarding & Offboarding', 'Activations and pending signatures.')
     case 'report-roster-openings':
-      return <ReportOpenings />
+      return wrapReport(<ReportOpenings />, 'Roster Openings & Availability', 'Capacity by division.')
     case 'report-gross-bookings':
-      return <ReportGrossBookings />
+      return wrapReport(<ReportGrossBookings />, 'Gross Bookings & Commission Summary', '20/80 agency vs talent split.')
     case 'report-ar-aging':
-      return <ReportArAging />
+      return wrapReport(<ReportArAging />, 'Aged Client Invoices (AR Aging)', 'Open receivables by due date.')
     case 'report-overdue-accounts':
-      return <ReportOverdue />
+      return wrapReport(<ReportOverdue />, 'Overdue Client Accounts', 'Accounts past payment terms.')
     case 'report-pending-payouts':
-      return <ReportPendingPayouts />
+      return wrapReport(<ReportPendingPayouts />, 'Pending Talent Payouts (AP Aging)', 'Queued talent payables.')
     default:
       return (
         <Panel title="Not found" subtitle="This agency module is not registered.">
@@ -1613,9 +1635,11 @@ function IssuePayoutsModule() {
   const editing = expenseLogs.find((e) => e.id === editId) || null
   const clientNames = clients.map((c) => c.name)
   const talentNames = talent.map((t) => t.name)
+  const chaseReady = isChaseConnected()
 
   return (
     <Panel title="Issue Talent Payouts" subtitle="Execute payday deposits for pending talent shares. Edit or delete pending logs before payout.">
+      {!chaseReady && <IntegrationNotice id="chase" />}
       <Card>
         <Table
           headers={['Talent', 'Project', 'Amount', '', '']}
@@ -1623,7 +1647,7 @@ function IssuePayoutsModule() {
             <TalentLink key={`tn-${e.id}`} name={e.talentName} />,
             e.project,
             <Money key={`m-${e.id}`} value={e.talentShare} />,
-            <Btn key={`b-${e.id}`} variant="success" onClick={() => issuePayout(e.id)}>
+            <Btn key={`b-${e.id}`} variant="success" disabled={!chaseReady} onClick={() => issuePayout(e.id)}>
               Execute payout
             </Btn>,
             <Btn key={`ed-${e.id}`} variant="secondary" onClick={() => setEditId(e.id)}>
@@ -1832,27 +1856,31 @@ function ReportOpenings() {
 }
 
 function ReportGrossBookings() {
-  const { invoices, expenseLogs } = useAgencyData()
-  const gross = invoices.reduce((s, i) => s + i.amount, 0)
-  const commission = expenseLogs.reduce((s, e) => s + e.agencyCommission, 0)
+  const { invoices } = useAgencyData()
+  const rows = invoices.map((inv) => {
+    const split = splitGross(inv.amount, inv.commissionPct || 20)
+    return { inv, split }
+  })
+  const gross = rows.reduce((s, r) => s + r.split.gross, 0)
+  const commission = rows.reduce((s, r) => s + r.split.agencyCommission, 0)
+  const talentShare = rows.reduce((s, r) => s + r.split.talentShare, 0)
   return (
-    <Panel title="Gross Bookings & Commission Summary" subtitle="Verify agency commission profits.">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+    <Panel title="Gross Bookings & Commission Summary" subtitle="Agency retains 20% unless the invoice rate says otherwise; talent share is the remainder.">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
         <Card><div style={{ color: T.t3, fontSize: 12 }}>Gross bookings</div><div style={{ fontSize: 26, fontWeight: 800 }}><Money value={gross} /></div></Card>
-        <Card><div style={{ color: T.t3, fontSize: 12 }}>Agency commission</div><div style={{ fontSize: 26, fontWeight: 800 }}><Money value={commission} /></div></Card>
+        <Card><div style={{ color: T.t3, fontSize: 12 }}>Agency commission (20%)</div><div style={{ fontSize: 26, fontWeight: 800 }}><Money value={commission} /></div></Card>
+        <Card><div style={{ color: T.t3, fontSize: 12 }}>Net talent share (80%)</div><div style={{ fontSize: 26, fontWeight: 800 }}><Money value={talentShare} /></div></Card>
       </div>
       <Card>
         <Table
-          headers={['Client', 'Project', 'Invoice', 'Commission logged']}
-          rows={invoices.map((inv) => {
-            const log = expenseLogs.find((e) => e.project === inv.project)
-            return [
-              inv.clientName,
-              inv.project,
-              <Money key={`i-${inv.id}`} value={inv.amount} />,
-              log ? <Money key={`c-${inv.id}`} value={log.agencyCommission} /> : '—',
-            ]
-          })}
+          headers={['Client / Brand', 'Project', 'Gross', 'Agency 20%', 'Talent 80%']}
+          rows={rows.map(({ inv, split }) => [
+            inv.clientName,
+            inv.project,
+            <Money key={`g-${inv.id}`} value={split.gross} />,
+            <Money key={`c-${inv.id}`} value={split.agencyCommission} />,
+            <Money key={`t-${inv.id}`} value={split.talentShare} />,
+          ])}
         />
       </Card>
     </Panel>
@@ -1923,6 +1951,7 @@ function ReportPendingPayouts() {
 
   return (
     <Panel title="Pending Talent Payouts (AP Aging)" subtitle="Ensure completed gigs are queued for payday. Admins approve a payout after reviewing the split and payee details.">
+      {!isChaseConnected() && <IntegrationNotice id="chase" compact />}
       <Card>
         <Table
           headers={canApprove

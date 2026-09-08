@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { portalCard, portalDanger, portalGhost, portalInput, portalMuted, portalPrimary } from '@/components/talent-portal/TalentPortalShell'
+import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
+import { isCalendarSyncConnected } from '@/lib/integrations'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
 import {
   belongingToTalent,
@@ -157,6 +159,7 @@ export function TalentActivityPage() {
 
         <section style={portalCard}>
           <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>Calendar</h2>
+          {!isCalendarSyncConnected() && <IntegrationNotice id="calendar" audience="public" compact />}
           <p style={{ fontSize: 12, color: portalMuted, margin: '0 0 12px' }}>
             Shoots, meetings, and invoice deadlines. Blocked dates also appear here.
           </p>

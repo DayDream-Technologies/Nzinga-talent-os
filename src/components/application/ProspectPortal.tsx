@@ -10,6 +10,7 @@ import { uploadApplicationFile } from "@/services/storage.service";
 import { AgreementViewer } from "@/components/application/AgreementViewer";
 import { useImageCropper } from "@/components/ui/ImageCropper";
 import { cropAspectForField } from "@/lib/crop-image";
+import { useViewport } from "@/hooks/useViewport";
 
 function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }) {
   const [mode,setMode]=useState("landing");
@@ -108,10 +109,10 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
   if(mode==="form"&&foundApp) return <ApplicationForm applications={apps} app={foundApp} onSave={async updated=>{await onSaveApp(updated);setApps(prev=>({...prev,[updated.id]:updated}));setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
 
   return (
-    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44,#162038)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",position:"relative",overflow:"hidden" }}>
+    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44,#162038)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",position:"relative",overflow:"hidden",padding:16 }}>
       <div style={{ position:"absolute",width:500,height:500,borderRadius:"50%",background:"rgba(124,58,237,0.08)",top:-150,right:-100,pointerEvents:"none" }}/>
       <div style={{ position:"absolute",inset:0,backgroundImage:"radial-gradient(rgba(255,255,255,0.025) 1px,transparent 1px)",backgroundSize:"28px 28px",pointerEvents:"none" }}/>
-      <div style={{ width:500,zIndex:1 }}>
+      <div style={{ width:"100%",maxWidth:500,zIndex:1,boxSizing:"border-box" }}>
         <div style={{ textAlign:"center",marginBottom:28 }}>
           <div style={{ width:60,height:60,background:"linear-gradient(135deg,#7c3aed,#2563eb)",borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,color:"#fff",fontFamily:"'Syne',sans-serif",fontWeight:800,margin:"0 auto 12px",boxShadow:"0 8px 24px rgba(124,58,237,0.4)" }}>N</div>
           <div style={{ fontSize:28,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif" }}>Nzinga Talent</div>
@@ -119,7 +120,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
         </div>
 
         {mode==="landing"&&(
-          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"28px 32px" }}>
+          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"20px 18px" }}>
             <div style={{ fontSize:17,fontWeight:700,color:"#fff",marginBottom:4 }}>Welcome, Talent</div>
             <div style={{ fontSize:13,color:"rgba(255,255,255,0.45)",marginBottom:24,lineHeight:1.6 }}>Apply to join the Nzinga Talent Group roster, or continue a saved application.</div>
             <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
@@ -132,7 +133,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
         )}
 
         {mode==="apply"&&(
-          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"28px 32px" }}>
+          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"20px 18px" }}>
             <button onClick={()=>{setMode("landing");setLookupErr("");}} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer",marginBottom:14,fontFamily:"inherit" }}>← Back</button>
             <div style={{ fontSize:17,fontWeight:700,color:"#fff",marginBottom:16 }}>Create Your Application</div>
             {[["Full Name","talent_name","text","Your full legal name"],["Email Address","talent_email","email","your@email.com"]].map(([l,k,type,ph])=>(
@@ -152,7 +153,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
         )}
 
         {mode==="login"&&(
-          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"28px 32px" }}>
+          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"20px 18px" }}>
             <button onClick={()=>{setMode("landing");setLookupErr("");}} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer",marginBottom:14,fontFamily:"inherit" }}>← Back</button>
             <div style={{ fontSize:17,fontWeight:700,color:"#fff",marginBottom:4 }}>Log In</div>
             <div style={{ fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:18 }}>Sign in with the email and password you used when creating your application.</div>
@@ -181,7 +182,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
         )}
 
         {mode==="lookup"&&(
-          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"28px 32px" }}>
+          <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"20px 18px" }}>
             <button onClick={()=>setMode("landing")} style={{ background:"transparent",border:"none",color:"rgba(255,255,255,0.4)",fontSize:12,cursor:"pointer",marginBottom:14,fontFamily:"inherit" }}>← Back</button>
             <div style={{ fontSize:17,fontWeight:700,color:"#fff",marginBottom:4 }}>Resume Application</div>
             <div style={{ fontSize:13,color:"rgba(255,255,255,0.4)",marginBottom:18 }}>Enter the access code from your invitation email.</div>
@@ -199,6 +200,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
 
 // ─── APPLICATION FORM (multi-step, autosave, file upload, validation) ─────────
 function ApplicationForm({ applications, app, onSave, onExit }) {
+  const mobile = useViewport() === "mobile";
   const [data,setData]=useState({...app.data});
   const [currentSection,setCurrentSection]=useState(0);
   const [completedSections,setCompletedSections]=useState(new Set(app.completed_sections||[]));
@@ -450,21 +452,23 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
         </div>
       </div>
 
-      <div style={{ display:"flex",flex:1,overflow:"hidden",flexWrap:"wrap" }}>
-        <div style={{ width:210,maxWidth:"100%",flex:"0 0 auto",background:"rgba(0,0,0,0.2)",borderRight:"1px solid rgba(255,255,255,0.06)",padding:"12px 0",overflowY:"auto" }}>
+      <div style={{ display:"flex",flex:1,overflow:"hidden",flexDirection:mobile?"column":"row" }}>
+        <div style={{ width:mobile?"100%":210,maxWidth:"100%",flex:"0 0 auto",background:"rgba(0,0,0,0.2)",borderRight:mobile?"none":"1px solid rgba(255,255,255,0.06)",borderBottom:mobile?"1px solid rgba(255,255,255,0.06)":"none",padding:mobile?"8px 0 0":"12px 0",overflowX:mobile?"auto":"hidden",overflowY:mobile?"hidden":"auto" }}>
           <div style={{ padding:"0 14px",marginBottom:12 }}>
             <div style={{ fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:5,display:"flex",justifyContent:"space-between" }}><span>Progress</span><span style={{ color:"#4ade80",fontWeight:700 }}>{progress}%</span></div>
             <div style={{ height:4,background:"rgba(255,255,255,0.1)",borderRadius:2,overflow:"hidden" }}><div style={{ height:"100%",width:progress+"%",background:"linear-gradient(90deg,#7c3aed,#2563eb)",borderRadius:2,transition:"width 0.4s" }}/></div>
           </div>
+          <div style={{ display:mobile?"flex":"block",gap:4,padding:mobile?"0 8px 8px":0 }}>
           {visibleSections.map((s,i)=>{
             const done=completedSections.has(s.id);
             const active=i===currentSection;
             const hasMissing=missingMap[s.id]&&missingMap[s.id].length>0&&completedSections.has(s.id);
-            return <div key={s.id} onClick={()=>setCurrentSection(i)} style={{ padding:"8px 14px",cursor:"pointer",background:active?"rgba(124,58,237,0.2)":"transparent",borderLeft:`3px solid ${active?"#7c3aed":done&&!hasMissing?"#4ade80":hasMissing?"#dc2626":"transparent"}`,display:"flex",alignItems:"center",gap:8,marginBottom:1 }}>
+            return <div key={s.id} onClick={()=>setCurrentSection(i)} style={{ padding:mobile?"10px 12px":"8px 14px",cursor:"pointer",background:active?"rgba(124,58,237,0.2)":"transparent",borderLeft:mobile?"none":`3px solid ${active?"#7c3aed":done&&!hasMissing?"#4ade80":hasMissing?"#dc2626":"transparent"}`,borderBottom:mobile&&active?`2px solid #7c3aed`:"none",display:"flex",alignItems:"center",gap:8,marginBottom:1,whiteSpace:"nowrap",minHeight:44 }}>
               <div style={{ width:20,height:20,borderRadius:"50%",background:done&&!hasMissing?"#4ade80":hasMissing?"#dc2626":active?"#7c3aed":"rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff",flexShrink:0 }}>{done&&!hasMissing?"✓":i+1}</div>
               <span style={{ fontSize:11,fontWeight:active?700:400,color:active?"#fff":"rgba(255,255,255,0.55)" }}>{s.label}</span>
             </div>;
           })}
+          </div>
           <div style={{ padding:"12px 14px 0",borderTop:"1px solid rgba(255,255,255,0.06)",marginTop:6 }}>
             {allComplete&&<button onClick={requestSubmit} disabled={submitting} style={{ width:"100%",padding:"10px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:submitting?0.7:1 }}>{submitting?"Submitting…":minorApplicant?"Submit (Pending Parent Approval)":"Submit Application"}</button>}
             {!allComplete&&<div style={{ fontSize:10,color:"rgba(255,255,255,0.25)",textAlign:"center",lineHeight:1.5 }}>Complete all sections to submit</div>}

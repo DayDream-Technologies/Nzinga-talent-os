@@ -10,6 +10,9 @@ const complete = {
   niches: ['Modeling'],
   discovery_call_notes: 'Ready, responsive, no conflicts.',
   uploaded_docs: { gov_id: { name: 'id.pdf', data: 'data:application/pdf;base64,x', type: 'application/pdf' } },
+  application_reviewed_at: '2026-09-01T12:00:00Z',
+  screening_status: 'cleared' as const,
+  scout_recommendation: 'recommend' as const,
 }
 
 describe('client packet submit gate', () => {
@@ -19,7 +22,7 @@ describe('client packet submit gate', () => {
     expect(canSubmitClientPacket({ ...complete, jordan_score: 3.2 })).toBe(false)
   })
 
-  it('allows submit when Jordan Score, discovery notes, and gov ID are complete', () => {
+  it('allows submit when Jordan Score, discovery notes, gov ID, screening, and recommendation are complete', () => {
     expect(clientPacketSubmitBlockers(complete)).toEqual([])
     expect(canSubmitClientPacket(complete)).toBe(true)
   })

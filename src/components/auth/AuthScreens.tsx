@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { CompanyLogo, TMXLogo, TMXMark } from "@/components/branding";
+import { useViewport } from "@/hooks/useViewport";
 import { PLATFORM_BRAND } from "@/constants/company-branding";
 import { sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
 import { supabaseConfigured } from "@/lib/supabase";
@@ -11,15 +12,15 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
   const [code,setCode]=useState(""); const [err,setErr]=useState("");
   function go(){const c=code.trim().toUpperCase();if(COMPANY_CODES[c])onCode(c);else setErr("Code not found. Try: NZG");}
   return (
-    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#f5f0ea,#ede8e0 40%,#e8e2f5)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",position:"relative",overflow:"hidden" }}>
+    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#f5f0ea,#ede8e0 40%,#e8e2f5)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",position:"relative",overflow:"hidden",padding:16 }}>
       <div style={{ position:"absolute",width:600,height:600,borderRadius:"50%",background:"rgba(124,58,237,0.06)",top:-150,right:-100,pointerEvents:"none" }}/>
       <div style={{ position:"absolute",width:400,height:400,borderRadius:"50%",background:"rgba(37,99,235,0.05)",bottom:-100,left:-80,pointerEvents:"none" }}/>
-      <div style={{ width:440,zIndex:1 }}>
+      <div style={{ width:"100%",maxWidth:440,zIndex:1,boxSizing:"border-box" }}>
         <div style={{ textAlign:"center",marginBottom:24 }}>
           <CompanyLogo variant="platform" size="lg" />
           <div style={{ fontSize:11,color:"#6b7280",letterSpacing:"0.18em",textTransform:"uppercase",marginTop:8 }}>{PLATFORM_BRAND.tagline}</div>
         </div>
-        <div style={{ background:"#fff",borderRadius:12,boxShadow:"0 4px 24px rgba(0,0,0,0.10)",padding:"32px 36px" }}>
+        <div style={{ background:"#fff",borderRadius:12,boxShadow:"0 4px 24px rgba(0,0,0,0.10)",padding:"24px 20px" }}>
           <div style={{ display:"flex",justifyContent:"center",marginBottom:20 }}>
             <TMXLogo size="md" />
           </div>
@@ -42,6 +43,7 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
 
 // ─── EMPLOYEE LOGIN ───────────────────────────────────────────────────────────
 function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCode, onHome }) {
+  const mobile = useViewport() === "mobile";
   const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
   const [resetSent,setResetSent]=useState(false);
   async function go(){
@@ -128,11 +130,11 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
 
       <div style={{ position:"relative",zIndex:1,flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"32px 16px 48px" }}>
         <div className="animate-scale-in" style={{
-          display:"flex",width:"min(840px,100%)",background:"rgba(255,255,255,0.06)",
+          display:"flex",flexDirection:mobile?"column":"row",width:"min(840px,100%)",background:"rgba(255,255,255,0.06)",
           border:"1px solid rgba(255,255,255,0.12)",borderRadius:14,
           boxShadow:"0 12px 40px rgba(0,0,0,0.35)",overflow:"hidden",backdropFilter:"blur(12px)",
         }}>
-          <div className="animate-fade-in-up" style={{ flex:1,padding:"36px 32px" }}>
+          <div className="animate-fade-in-up" style={{ flex:1,padding:mobile?"24px 18px":"36px 32px" }}>
             <button type="button" className="mh-link-underline" onClick={onBack} disabled={!navReady} style={{
               background:"none",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",marginBottom:18,fontFamily:"inherit",padding:0,
               opacity: navReady ? 1 : 0.45,
@@ -211,7 +213,7 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
             </div>
           </div>
 
-          <div className="animate-slide-right stagger-2" style={{
+          {!mobile && <div className="animate-slide-right stagger-2" style={{
             width:300,flexShrink:0,
             background:"linear-gradient(165deg, rgba(29,111,164,0.25), rgba(12,21,32,0.9))",
             borderLeft:"1px solid rgba(255,255,255,0.10)",
@@ -254,7 +256,7 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
                 ))}
               </div>
             </div>
-          </div>
+          </div>}
         </div>
       </div>
 

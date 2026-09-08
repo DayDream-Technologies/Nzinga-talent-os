@@ -18,6 +18,7 @@ import {
 } from '@/constants'
 import { T, Btn, Lbl, FInput, FTextarea, FSelect, FileUpload } from '@/components/ui-compat'
 import { PageContent } from '@/components/layout/PageContent'
+import { AUTO_STACK_GRID } from '@/lib/viewport'
 
 const EMPTY_FORM = {
   first_name: '',
@@ -99,6 +100,9 @@ function Field({ label, required, children, full }) {
   )
 }
 
+/**
+ * @param {{ currentUser: any, onSave: Function, onCancel: Function, onSendApp?: Function }} props
+ */
 function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
   const [entryType, setEntryType] = useState('manual')
   const [f, setF] = useState({
@@ -259,7 +263,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
     if (onSendApp) onSendApp(t)
   }
 
-  const grid = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 4 }
+  const grid = { display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10, marginBottom: 4 }
 
   return (
     <PageContent>
@@ -273,7 +277,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
           </div>
         </div>
 
-        <div style={{ marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ marginBottom: 14, display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
           {[
             ['manual', '🖊', 'Manual Entry', 'Scout fills applicant details'],
             ['send_app', '📧', 'Send Application', 'Prospect completes their form'],
@@ -625,7 +629,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
               >
                 Upload Digitals / Headshots / Video Reels
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
                 {MEDIA_UPLOAD_TYPES.map((doc) => (
                   <div key={doc.id}>
                     <Lbl>{doc.label}</Lbl>
@@ -658,7 +662,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                 >
                   Compliance Documents (optional)
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: AUTO_STACK_GRID, gap: 10 }}>
                   {REQUIRED_DOCS.map((doc) => (
                     <div key={doc.id}>
                       <Lbl>{doc.label}</Lbl>

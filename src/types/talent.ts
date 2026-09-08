@@ -133,4 +133,27 @@ export interface Talent extends ApplicantProfile {
   application_data?: ApplicationData
   uploaded_docs: UploadedDocs
   audit_log: AuditLogEntry[]
+  /** Provider-agnostic safety screening. */
+  screening_status?: ScreeningStatus
+  screening_provider?: string | null
+  screening_updated_at?: string | null
+  scout_recommendation?: ScoutRecommendation | null
+  application_reviewed_at?: string | null
 }
+
+export type ScreeningStatus =
+  | 'not_started'
+  | 'invitation_sent'
+  | 'awaiting_applicant'
+  | 'in_progress'
+  | 'complete'
+  | 'review_required'
+  | 'cleared'
+  | 'disputed'
+  | 'unable_to_complete'
+
+export type ScoutRecommendation =
+  | 'recommend'
+  | 'more_information'
+  | 'do_not_recommend'
+  | 'unable_to_complete'

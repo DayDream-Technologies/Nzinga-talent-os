@@ -40,7 +40,7 @@ const TRAINING_BY_ROLE: Record<
     ],
   },
   team1_lead: {
-    title: 'Team 1 Lead Training',
+    title: 'Success Manager Training (legacy role)',
     items: [
       {
         label: 'Review Criteria',
@@ -52,8 +52,21 @@ const TRAINING_BY_ROLE: Record<
       },
     ],
   },
+  account_manager: {
+    title: 'Account Manager Training',
+    items: [
+      {
+        label: 'Escrow & payday',
+        description: 'Clear brand funds before talent payouts. Use reconciliation every Friday.',
+      },
+      {
+        label: 'Invoices and retainers',
+        description: 'Itemized invoices, bulk retainer updates, and overdue interest.',
+      },
+    ],
+  },
   ops_specialist: {
-    title: 'Ops Specialist Training',
+    title: 'Account Manager Training',
     items: [
       {
         label: 'Compliance Checklist',

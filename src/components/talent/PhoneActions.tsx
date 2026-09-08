@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { T, Btn, FTextarea } from '@/components/ui-compat'
-import { makeCall, sendSms, getRcConnectionStatus } from '@/lib/phone'
-import type { RcConnectionStatus } from '@/lib/ringcentral-types'
+import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
+import { makeCall, sendSms, getTwilioStatus } from '@/lib/phone'
+import type { TwilioConnectionStatus } from '@/lib/phone'
 
 interface PhoneActionsProps {
   talentId: string
@@ -19,11 +20,11 @@ export function PhoneActions({ talentId, phone, talentName, onSuccess }: PhoneAc
   const [smsText, setSmsText] = useState('')
   const [smsSending, setSmsSending] = useState(false)
   const [smsResult, setSmsResult] = useState('')
-  const [rcStatus, setRcStatus] = useState<RcConnectionStatus>({ connected: false })
+  const [rcStatus, setRcStatus] = useState<TwilioConnectionStatus>({ connected: false })
   const [rcLoading, setRcLoading] = useState(true)
 
   useEffect(() => {
-    getRcConnectionStatus().then((status) => {
+    getTwilioStatus().then((status) => {
       setRcStatus(status)
       setRcLoading(false)
     })
@@ -36,14 +37,14 @@ export function PhoneActions({ talentId, phone, talentName, onSuccess }: PhoneAc
     setCallState('calling')
     setCallError('')
 
-    const result = await makeCall(talentId, phone)
-    if (result.status === 'initiated') {
+    const result = await makeCall(phone)
+    if (result.ok) {
       setCallState('connected')
       onSuccess?.()
       setTimeout(() => setCallState('idle'), 5000)
     } else {
       setCallState('error')
-      setCallError(result.message || 'Call failed')
+      setCallError(result.error || 'Call failed')
       setTimeout(() => setCallState('idle'), 4000)
     }
   }
@@ -53,10 +54,10 @@ export function PhoneActions({ talentId, phone, talentName, onSuccess }: PhoneAc
     setSmsSending(true)
     setSmsResult('')
 
-    const result = await sendSms(talentId, phone, smsText.trim())
+    const result = await sendSms(phone, smsText.trim())
     setSmsSending(false)
 
-    if (result.status === 'sent') {
+    if (result.ok) {
       onSuccess?.()
       setSmsText('')
       setSmsResult('sent')
@@ -71,12 +72,14 @@ export function PhoneActions({ talentId, phone, talentName, onSuccess }: PhoneAc
   return (
     <div style={{ marginTop: 8 }}>
       {!rcLoading && !rcReady && (
-        <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '6px 10px', marginBottom: 8, fontSize: 11, color: '#b45309' }}>
-          {rcStatus.expired
-            ? 'RingCentral token expired. '
-            : 'RingCentral not connected. '}
-          <Link to="/settings" style={{ color: '#b45309', fontWeight: 700 }}>Connect in Settings →</Link>
-        </div>
+        rcStatus.expired ? (
+          <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '6px 10px', marginBottom: 8, fontSize: 11, color: '#b45309' }}>
+            Twilio session expired.{' '}
+            <Link to="/settings" style={{ color: '#b45309', fontWeight: 700 }}>See Settings →</Link>
+          </div>
+        ) : (
+          <IntegrationNotice id="twilio" compact />
+        )
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: showSms ? 8 : 0 }}>
@@ -100,7 +103,7 @@ export function PhoneActions({ talentId, phone, talentName, onSuccess }: PhoneAc
             alignItems: 'center',
             gap: 3,
           }}
-          title={rcReady ? 'Click to call via RingCentral' : 'Connect RingCentral in Settings first'}
+          title={rcReady ? 'Click to call via Twilio' : 'Voice calls are coming soon'}
         >
           {callState === 'calling' ? '⟳ Ringing…' : callState === 'connected' ? '✓ Connected' : callState === 'error' ? '✗ Failed' : '📞 Call'}
         </button>

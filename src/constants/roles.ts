@@ -1,65 +1,47 @@
 import type { Role, RoleDefinition, RolePermission, TalentStage } from '@/types'
-import {
-  ACCOUNT_MANAGER_MODULE_PATHS,
-  AGENT_MODULE_PATHS,
-  ALL_MODULE_PATHS,
-} from '@/constants/agency-module-paths'
+import { ALL_MODULE_PATHS } from '@/constants/agency-module-paths'
 import { STAGES } from '@/types/stages'
+import { migrateRoleSlug } from '@/lib/migrate-role'
 
 export const COMPANY_CODES: Record<string, boolean> = { NZG: true, NZINGA: true, TCG: true }
 
-export const SYSTEM_ROLE_SLUGS = [
-  'scout',
-  'team1_lead',
-  'ops_specialist',
-  'team2_lead',
-  'director',
-  'success_manager',
-] as const
+export const SYSTEM_ROLE_SLUGS = ['scout', 'account_manager', 'director', 'success_manager'] as const
 
 const ALL_STAGES: TalentStage[] = [...STAGES]
+
+const OPEN_PERMISSIONS: RolePermission[] = [
+  'submit_client_packet',
+  'send_application',
+  'track_own_submissions',
+  'approve_client_packet',
+  'return_packet',
+  'publish_contract',
+]
+
+const OPEN_MODULES = [...ALL_MODULE_PATHS]
 
 export const SYSTEM_ROLE_DEFINITIONS: RoleDefinition[] = [
   {
     slug: 'scout',
     name: 'Scouting Agent',
     description:
-      'Identify, evaluate, and qualify prospects. Assemble a complete Client Packet for Success Manager review. Does not approve representation or negotiate contracts.',
+      'Identify, evaluate, and qualify prospects. Assemble a complete Client Packet for Success Manager review. Does not approve representation or negotiate contracts. Open workspace: full module access; SOP still locks incomplete packet submit.',
     is_system: true,
-    stage_access: ['holding_entry', 'scout_complete', 'not_viable'],
-    module_paths: [...AGENT_MODULE_PATHS],
-    permissions: ['submit_client_packet', 'send_application', 'track_own_submissions'],
+    stage_access: ALL_STAGES,
+    module_paths: OPEN_MODULES,
+    permissions: [...OPEN_PERMISSIONS],
     action_stage: 'holding_entry',
   },
   {
-    slug: 'team1_lead',
-    name: 'Team 1 Lead',
-    description: 'Legacy Client Packet Review path into operations.',
+    slug: 'account_manager',
+    name: 'Account Manager',
+    description:
+      'Finance, escrow, invoices, retainers, and payday. Open workspace: full module access. Does not administer users or roles.',
     is_system: true,
-    stage_access: ['scout_complete', 'team1_review'],
-    module_paths: [...AGENT_MODULE_PATHS],
-    permissions: ['return_packet'],
-    action_stage: 'team1_review',
-  },
-  {
-    slug: 'ops_specialist',
-    name: 'Ops Specialist',
-    description: 'Compliance, documents, and contract framework.',
-    is_system: true,
-    stage_access: ['team1_review', 'ops_processing'],
-    module_paths: [...ACCOUNT_MANAGER_MODULE_PATHS],
-    permissions: [],
+    stage_access: ALL_STAGES,
+    module_paths: OPEN_MODULES,
+    permissions: [...OPEN_PERMISSIONS],
     action_stage: 'ops_processing',
-  },
-  {
-    slug: 'team2_lead',
-    name: 'Team 2 Lead',
-    description: 'Contract pending audit before director review.',
-    is_system: true,
-    stage_access: ['ops_processing', 'team2_audit'],
-    module_paths: [...AGENT_MODULE_PATHS],
-    permissions: [],
-    action_stage: 'team2_audit',
   },
   {
     slug: 'director',
@@ -67,16 +49,8 @@ export const SYSTEM_ROLE_DEFINITIONS: RoleDefinition[] = [
     description: 'Full pipeline access, admin, and executive decisions.',
     is_system: true,
     stage_access: ALL_STAGES,
-    module_paths: [...ALL_MODULE_PATHS],
-    permissions: [
-      'submit_client_packet',
-      'send_application',
-      'track_own_submissions',
-      'approve_client_packet',
-      'return_packet',
-      'publish_contract',
-      'admin_access',
-    ],
+    module_paths: OPEN_MODULES,
+    permissions: [...OPEN_PERMISSIONS, 'admin_access'],
     action_stage: 'executive_review',
   },
   {
@@ -85,9 +59,9 @@ export const SYSTEM_ROLE_DEFINITIONS: RoleDefinition[] = [
     description:
       'Quality-assure Client Packets, approve prospects as Approved - Future, publish contracts, and onboard signed clients.',
     is_system: true,
-    stage_access: ['team1_review', 'team2_audit', 'executive_review', 'signed_onboarding'],
-    module_paths: [...ALL_MODULE_PATHS],
-    permissions: ['approve_client_packet', 'return_packet', 'publish_contract'],
+    stage_access: ALL_STAGES,
+    module_paths: OPEN_MODULES,
+    permissions: [...OPEN_PERMISSIONS],
     action_stage: 'team1_review',
   },
 ]
@@ -122,17 +96,18 @@ export function setRoleCatalog(roles: RoleDefinition[]) {
 }
 
 export function getRoleDef(slug: string): RoleDefinition {
+  const mapped = migrateRoleSlug(slug)
   const found =
-    roleCatalog.find((r) => r.slug === slug) || SYSTEM_ROLE_DEFINITIONS.find((r) => r.slug === slug)
+    roleCatalog.find((r) => r.slug === mapped) || SYSTEM_ROLE_DEFINITIONS.find((r) => r.slug === mapped)
   if (found) return found
   return {
-    slug,
-    name: slug,
+    slug: mapped,
+    name: mapped,
     description: '',
     is_system: false,
-    stage_access: [],
-    module_paths: [...AGENT_MODULE_PATHS],
-    permissions: [],
+    stage_access: ALL_STAGES,
+    module_paths: OPEN_MODULES,
+    permissions: [...OPEN_PERMISSIONS],
     action_stage: 'holding_entry',
   }
 }

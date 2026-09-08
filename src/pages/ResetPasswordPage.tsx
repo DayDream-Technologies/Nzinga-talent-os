@@ -228,7 +228,7 @@ export function ResetPasswordPage() {
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: 14,
-            padding: '32px 36px',
+            padding: '24px 18px',
             boxShadow: '0 12px 40px rgba(0,0,0,0.35)',
             backdropFilter: 'blur(12px)',
           }}

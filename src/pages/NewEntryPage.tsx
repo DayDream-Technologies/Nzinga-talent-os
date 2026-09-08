@@ -28,6 +28,7 @@ export function NewEntryPage() {
       {pendingTalent && (
         <SendApplicationModal
           talent={pendingTalent}
+          prospect={null}
           companyCode={companyCode || 'NZG'}
           onClose={() => { setPendingTalent(null); navigate('/pipeline'); }}
           onSend={(app: any) => { if (handleSendApp) handleSendApp(app); setPendingTalent(null); navigate('/pipeline'); }}
