@@ -8,6 +8,7 @@ import {
 import { T, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, Section, PriBadge, DocViewer } from "@/components/ui-compat";
 import { SendApplicationModal } from "@/components/application/ApplicationModals";
 import { ComposeEmail } from "@/components/talent/ComposeEmail";
+import { PhoneActions } from "@/components/talent/PhoneActions";
 import { ScreeningWorkspace } from "@/components/agency/ScreeningWorkspace";
 import { TalentLink } from "@/components/talent/TalentLink";
 import { useAuth } from "@/hooks/useAuth";

@@ -86,9 +86,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         tasks={tasks}
       />
       <BreadcrumbBar label={pageTitle} sub={undefined} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {showSidebar && <Sidebar view={view} onNav={nav} userRole={user.role} />}
-        <div key={view} className="flex flex-1 flex-col overflow-hidden animate-fade-in">
+        <div key={view} className="flex min-h-0 flex-1 flex-col overflow-hidden animate-fade-in">
           {children ?? <Outlet />}
         </div>
       </div>

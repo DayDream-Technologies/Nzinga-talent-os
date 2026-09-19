@@ -53,7 +53,18 @@ export function Panel({
   const band = useViewport()
   const stacked = band === 'mobile'
   return (
-    <div data-scroll-container="" style={{ padding: band === 'desktop' ? 20 : 14, overflow: 'auto', height: '100%', background: T.pageBg }}>
+    <div
+      data-scroll-container=""
+      style={{
+        padding: band === 'desktop' ? '20px 20px 56px' : '14px 14px 96px',
+        overflow: 'auto',
+        height: '100%',
+        minHeight: 0,
+        flex: 1,
+        boxSizing: 'border-box',
+        background: T.pageBg,
+      }}
+    >
       <div
         className="animate-fade-in-up"
         style={{

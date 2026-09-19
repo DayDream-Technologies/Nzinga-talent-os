@@ -179,7 +179,7 @@ Directors only: `/admin/users` (Team Members) and `/admin/roles`.
 - Tabbed System Settings (Company Codes, General, Email, Financial). Financial tab shows **Coming soon** for Stripe, Plaid, and Chase until those vendors are live.
 - **TMX University** at `/university` (workspace Academy link). Role learning paths plus training videos.
 - Team Members (`/admin/users`): search, invite, job title, active toggle, four-role badges.
-- Staff layouts use breakpoints at 1280px (desktop), 768–1279 (tablet), and under 768 (mobile): stacked launchers, horizontally scrolling tables. On phones the staff sidebar hides, TopNav collapses extras into search + menu + profile, the full menu stacks, and the profile quick-action rail becomes a bottom bar. Talent and brand portals stack cards and keep 44px tap targets.
+- Staff layouts use breakpoints at 1280px (desktop), 768–1279 (tablet), and under 768 (mobile): stacked launchers, horizontally scrolling tables. On phones the staff sidebar hides, TopNav collapses extras into search + menu + profile, the full menu stacks, and the profile quick-action rail becomes a bottom bar. Staff talent and applicant account pages fill the remaining viewport height and keep extra bottom padding so the last section can be scrolled into view. Talent and brand portals stack cards and keep 44px tap targets.
 
 ### Talent portal
 

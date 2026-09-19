@@ -362,8 +362,19 @@ export function AccountProfileTemplate({
   return (
     <>
       {cropper}
-    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', paddingBottom: band === 'mobile' ? 64 : 0 }}>
-    <div style={{ flex: 1, minWidth: 0 }}>
+    <div
+      style={{
+        display: 'flex',
+        gap: 12,
+        alignItems: 'stretch',
+        flex: 1,
+        minHeight: 0,
+        height: '100%',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+      }}
+    >
+    <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
     <Panel
       title={displayName}
       subtitle={`${kind === 'applicant' ? 'Applicant' : 'Client'} account · ${formatAccountDisplay(accountId)}`}
