@@ -100,7 +100,7 @@ export function TalentHomePage() {
             Welcome, {displayName}
           </h1>
           <p style={{ color: portalMuted, fontSize: 14, margin: '6px 0 0' }}>
-            Talent dashboard · {talent.account_number || 'Account'} · Agent {agent.name}
+            Home · {talent.account_number || 'Account'} · Agent {agent.name}
           </p>
         </div>
       </div>

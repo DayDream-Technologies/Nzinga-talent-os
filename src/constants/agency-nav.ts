@@ -29,6 +29,7 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
       {
         label: 'Talent Info',
         items: [
+          { id: 'client-management', label: 'Client Management Dashboard', path: 'client-management' },
           { id: 'prospects', label: 'Prospects', path: 'prospects' },
           { id: 'applications', label: 'Applications', path: 'applications' },
           { id: 'renewal-offers', label: 'Create Renewal Offers', path: 'renewal-offers' },
@@ -160,7 +161,7 @@ export const AGENCY_MODULE_ACCESS: Record<string, readonly string[]> = {
 
 export function canAccessAgencyPath(role: Role, path: string): boolean {
   const normalized = path.replace(/^\//, '').split('?')[0]
-  if (!normalized || normalized === 'workspace') return true
+  if (!normalized || normalized === 'workspace' || normalized === 'client-management') return true
   if (normalized === 'settings' || normalized === 'announcements') return true
   if (normalized === 'talent' || normalized.startsWith('talent/')) return true
   const paths = getRoleDef(role).module_paths
@@ -208,6 +209,7 @@ export const AGENCY_PAGE_TITLES: Record<string, string> = Object.fromEntries(
     cat.groups.flatMap((g) => g.items.map((i) => [i.path, i.label] as const)),
   ).concat([
     ['workspace', 'My Workspace'],
+    ['client-management', 'Client Management Dashboard'],
     ['reports', 'My Reports'],
     ['clients', 'Clients'],
     ['active-roster', 'Clients'],

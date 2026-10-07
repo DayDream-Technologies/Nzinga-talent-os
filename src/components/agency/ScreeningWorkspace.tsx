@@ -48,7 +48,7 @@ export function ScreeningWorkspace({
   }
 
   return (
-    <Panel title="Application Screening Workspace" subtitle={`${talent.name} · guided scout qualification`}>
+    <Panel title="Application screening" subtitle={`${talent.name} · guided scout qualification`}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
         {STEPS.map((label, i) => (
           <button

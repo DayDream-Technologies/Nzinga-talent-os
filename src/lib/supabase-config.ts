@@ -10,6 +10,8 @@ export function getSupabaseFunctionUrls() {
     sendEmail: `${base}/functions/v1/send-email`,
     dochubSend: `${base}/functions/v1/dochub-send`,
     dochubWebhook: `${base}/functions/v1/dochub-webhook`,
+    stripeCheckout: `${base}/functions/v1/stripe-checkout`,
+    stripeWebhook: `${base}/functions/v1/stripe-webhook`,
     ringcentralOauth: `${base}/functions/v1/ringcentral-oauth`,
     ringcentralCall: `${base}/functions/v1/ringcentral-call`,
     ringcentralSms: `${base}/functions/v1/ringcentral-sms`,

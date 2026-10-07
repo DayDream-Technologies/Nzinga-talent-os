@@ -22,8 +22,9 @@ export function isDocHubConnected(): boolean {
   return supabaseConfigured
 }
 
+/** Secret key and webhook secret stay in Supabase. Demo mode stays on Coming soon. */
 export function isStripeConnected(): boolean {
-  return envFlag('VITE_STRIPE_CONNECTED') && supabaseConfigured
+  return supabaseConfigured
 }
 
 export function isPlaidConnected(): boolean {
@@ -57,7 +58,7 @@ const COMING_SOON: Record<IntegrationId, string> = {
   dochub: 'Contract sending and e-sign are coming soon. Preview stays available; send and sign stay off until DocHub is live.',
   stripe: 'Card and ACH invoice pay are coming soon. Invoice lists still show here; Pay stays off until Stripe is live.',
   plaid: 'Bank linking and live statement feeds are coming soon. You can still reconcile with in-app deposits.',
-  screening: 'Background screening invites are coming soon. Status tracking stays in the workspace; Initiate stays off until a provider is live.',
+  screening: 'Background screening invites are coming soon. Status tracking stays on the talent record; Initiate stays off until a provider is live.',
   calendar: 'Google and Outlook calendar sync is coming soon. In-app hours and conflict checks still work.',
   chase: 'Live escrow clearing and payday ACH are coming soon. Approvals still follow the in-app escrow-cleared rule.',
 }

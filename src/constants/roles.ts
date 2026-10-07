@@ -25,7 +25,7 @@ export const SYSTEM_ROLE_DEFINITIONS: RoleDefinition[] = [
     slug: 'scout',
     name: 'Scouting Agent',
     description:
-      'Identify, evaluate, and qualify prospects. Assemble a complete Client Packet for Success Manager review. Does not approve representation or negotiate contracts. Open workspace: full module access; SOP still locks incomplete packet submit.',
+      'Identify, evaluate, and qualify prospects. Assemble a complete Client Packet for Success Manager review. Does not approve representation or negotiate contracts. Every module is available; SOP still locks incomplete packet submit.',
     is_system: true,
     stage_access: ALL_STAGES,
     module_paths: OPEN_MODULES,
@@ -36,7 +36,7 @@ export const SYSTEM_ROLE_DEFINITIONS: RoleDefinition[] = [
     slug: 'account_manager',
     name: 'Account Manager',
     description:
-      'Finance, escrow, invoices, retainers, and payday. Open workspace: full module access. Does not administer users or roles.',
+      'Finance, escrow, invoices, retainers, and payday. Every module is available. Does not administer users or roles.',
     is_system: true,
     stage_access: ALL_STAGES,
     module_paths: OPEN_MODULES,

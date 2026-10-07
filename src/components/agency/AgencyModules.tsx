@@ -14,7 +14,7 @@ import { TalentLink } from '@/components/talent/TalentLink'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { AppointmentFormModal } from '@/components/agency/AppointmentFormModal'
 import { AnnouncementFooterLink, AnnouncementsModule } from '@/components/agency/AnnouncementsModule'
-import { WorkspaceCommandWidgets } from '@/components/agency/WorkspaceCommandWidgets'
+import { ClientManagementDashboard } from '@/components/agency/ClientManagementDashboard'
 import { ProspectsCrmModule } from '@/components/agency/ProspectsCrmModule'
 import { ClientsModule } from '@/components/agency/ClientsModule'
 import { ProspectTrackingBoard } from '@/components/agency/ProspectTrackingBoard'
@@ -199,7 +199,6 @@ export function AgencyWorkspace() {
         </div>
         <div style={{ fontSize: 16, color: T.t3, marginTop: 8 }}>Let&apos;s get to work.</div>
       </div>
-      <WorkspaceCommandWidgets />
 
       <div
         style={{
@@ -314,6 +313,8 @@ export function AgencyModule({ moduleId }: { moduleId: string }) {
   switch (moduleId) {
     case 'announcements':
       return <AnnouncementsModule />
+    case 'client-management':
+      return <ClientManagementDashboard />
     case 'prospects':
       return <ProspectsCrmModule />
     case 'renewal-offers':

@@ -35,5 +35,7 @@ describe('AgencyWorkspace', () => {
     expect(screen.getByText('My Favorites')).toHaveStyle({ fontSize: '18px' })
     expect(screen.getByText('My Reports')).toHaveStyle({ fontSize: '18px' })
     expect(screen.getByText('Talent Info')).toHaveStyle({ fontSize: '16px' })
+    expect(screen.queryByText('Pitch stages')).not.toBeInTheDocument()
+    expect(screen.getByText('Client Management Dashboard')).toBeInTheDocument()
   })
 })

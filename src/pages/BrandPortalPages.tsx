@@ -1,8 +1,9 @@
-import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Navigate, Outlet, useNavigate, useSearchParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { T } from '@/lib/tokens'
 import { isDocHubConnected, isStripeConnected } from '@/lib/integrations'
 import { supabase } from '@/lib/supabase'
+import { fetchStripeInvoiceStatus, invoiceDueCents, startStripeCheckout, type StripeInvoiceStatus } from '@/lib/stripe'
 import type { DocHubEnvelopeRow } from '@/lib/dochub'
 import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
 import { Btn, Card, Money, Panel, Table } from '@/components/agency/AgencyUI'
@@ -84,7 +85,7 @@ export function BrandDashboardPage() {
   const session = brandSession()
   const band = useViewport()
   if (!session) return <Navigate to="/client/login" replace />
-  const open = INVOICES_SEED.filter((i) => i.status !== 'paid').reduce((s, i) => s + i.amount, 0)
+  const open = INVOICES_SEED.filter((i) => i.status !== 'paid').reduce((s, i) => s + invoiceDueCents(i.amount, i.taxAmount) / 100, 0)
   return (
     <Panel title={`Welcome, ${session.brand}`} subtitle={`Signed in as ${session.email}`}>
       <div style={{ display: 'grid', gridTemplateColumns: staffGridColumns(band, 'repeat(3, 1fr)'), gap: 10 }}>
@@ -105,22 +106,83 @@ export function BrandDashboardPage() {
 }
 
 export function BrandBillingPage() {
+  const connected = isStripeConnected()
+  const [params] = useSearchParams()
+  const checkout = params.get('checkout')
+  const [statuses, setStatuses] = useState<Record<string, StripeInvoiceStatus>>({})
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!connected) return
+    let cancel = false
+    void fetchStripeInvoiceStatus(INVOICES_SEED.map((invoice) => invoice.id)).then((result) => {
+      if (cancel || !result.ok) return
+      const next: Record<string, StripeInvoiceStatus> = {}
+      for (const row of result.data.invoices || []) next[row.id] = row
+      setStatuses(next)
+    })
+    return () => {
+      cancel = true
+    }
+  }, [connected, checkout])
+
+  async function pay(invoiceId: string) {
+    setError('')
+    setBusyId(invoiceId)
+    const result = await startStripeCheckout(invoiceId)
+    setBusyId(null)
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    if (result.data.status === 'paid' || result.data.status === 'processing') {
+      setStatuses((prev) => ({
+        ...prev,
+        [invoiceId]: {
+          ...(prev[invoiceId] || { id: invoiceId, amount_cents: 0, tax_cents: 0, paid_at: null, last_error: null }),
+          status: result.data.status || 'paid',
+        },
+      }))
+      return
+    }
+    if (result.data.url) window.location.assign(result.data.url)
+  }
+
   return (
     <Panel title="Invoices & Billing">
-      {!isStripeConnected() && <IntegrationNotice id="stripe" audience="public" />}
+      {!connected && <IntegrationNotice id="stripe" audience="public" />}
+      {checkout === 'success' && (
+        <p>
+          Payment submitted. Card payments mark the invoice paid when Stripe confirms them. A bank
+          transfer stays processing until the bank settles, then this page updates.
+        </p>
+      )}
+      {checkout === 'cancel' && <p>Payment canceled. The invoice is still open.</p>}
+      {error && <p style={{ color: T.red }}>{error}</p>}
       <Card>
         <Table
-          headers={['Invoice', 'Project', 'Due', 'Gross', 'Status', '']}
-          rows={INVOICES_SEED.map((i) => [
-            i.invoiceNumber || i.id,
-            i.project,
-            i.dueAt,
-            <Money key={i.id} value={i.amount} />,
-            i.status,
-            <Btn key={`p-${i.id}`} disabled={!isStripeConnected()}>
-              Pay Invoice Now
-            </Btn>,
-          ])}
+          headers={['Invoice', 'Project', 'Due', 'Amount due', 'Status', '']}
+          rows={INVOICES_SEED.map((invoice) => {
+            const remote = statuses[invoice.id]
+            const status = remote?.status || invoice.status
+            const due = invoiceDueCents(invoice.amount, invoice.taxAmount) / 100
+            const payable = status !== 'paid' && status !== 'processing'
+            return [
+              invoice.invoiceNumber || invoice.id,
+              invoice.project,
+              invoice.dueAt,
+              <Money key={invoice.id} value={due} />,
+              status,
+              <Btn
+                key={`p-${invoice.id}`}
+                disabled={!connected || !payable || busyId === invoice.id}
+                onClick={() => void pay(invoice.id)}
+              >
+                {status === 'paid' ? 'Paid' : status === 'processing' ? 'Bank payment processing' : busyId === invoice.id ? 'Opening Stripe…' : 'Pay Invoice Now'}
+              </Btn>,
+            ]
+          })}
         />
       </Card>
     </Panel>

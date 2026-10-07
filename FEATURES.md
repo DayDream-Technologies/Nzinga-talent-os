@@ -96,13 +96,13 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Per-user settings: display name/title, light/dark theme, sidebar preference, password reset request.
 - Command Launch in the top nav finds people, applications, and pages. Pages match by title or path substring, not by letter-sequence matches against names (searching “Rico” does not suggest Applicant Pool).
 - Header **SMS icon** with an unread-thread badge opens the Text Messaging Center (`/messaging`).
-- Staff **My Workspace** home uses larger welcome, Favorites, Reports, and group titles.
+- Staff **My Workspace** (`/workspace`) is the launcher: welcome, Favorites, and Reports. The **Client Management Dashboard** (`/client-management`) is a separate page of prospect, roster, fee, and payout counts.
 - Twilio (not RingCentral) will power click-to-call and SMS. Until the vendor is live, Settings, the Text Messaging Center, and talent-record Call/SMS show **Coming soon** and send stays disabled. Staff notices mention [EXTERNAL_ATTENTION.txt](EXTERNAL_ATTENTION.txt); talent and brand portals do not.
 - TOTP MFA is configured in Supabase Auth; demo mode shows it as coming soon.
 
-### Open workspace
+### Module access
 
-- Four system roles: Scouting Agent, Success Manager, Account Manager, Director. All four see every module and pipeline stage. Only Director can open `/admin/users` and `/admin/roles`. SOP still locks incomplete Client Packet submit.
+- Four system roles: Scouting Agent, Success Manager, Account Manager, Director. All four can open every module and pipeline stage. That access is separate from **My Workspace** and the **Client Management Dashboard**. Only Director can open `/admin/users` and `/admin/roles`. SOP still locks incomplete Client Packet submit.
 
 ### Prospect CRM
 
@@ -121,8 +121,8 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 
 ### Pipeline and talent record
 
-- Pipeline views (tables / kanban). Open workspace shows all stages to the four roles.
-- Talent record includes a **Screening Workspace** (review → Jordan Score → Discovery Call → safety screening → recommendation → submit). Initiate screening shows **Coming soon** until a provider is live. Submit stays locked until every required step is done; the missing list is shown in plain language.
+- Pipeline views (tables / kanban). All four roles see every stage.
+- Talent record includes **Application screening** (review → Jordan Score → Discovery Call → safety screening → recommendation → submit). Initiate screening shows **Coming soon** until a provider is live. Submit stays locked until every required step is done; the missing list is shown in plain language.
 - **Jordan Score**: five pillars, each 1–5 with written rationale; all ≥ 3 and average ≥ 3.5 to advance.
 - Scout Client Packet gate: Jordan Score, Discovery Call notes, government ID, application review, safety screening status, and Scout recommendation.
 - History / Notes: categories General, Communication, Opportunity, Internal. Table of Type / Date / Note / Category / User. Mass email and SMS write a row onto every recipient.
@@ -140,7 +140,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Shared account profile: compact header, widget grid, History ledger, and sticky right-hand actions (no cluttered horizontal action row).
 - UDF (user-defined roster fields) is staff-maintained; application answers prefill empty fields only.
 - Clients list with lifecycle (current / future / past), contracts, and account number.
-- **Brands** directory and **Brand portal** (`/client/*`) for invoices, contracts, and projects. Pay Invoice shows **Coming soon** until Stripe is live. Brands can send a usage agreement through DocHub when Supabase is configured; the brand contracts page lists those agreements for a signed-in Talent OS user with the same email.
+- **Brands** directory and **Brand portal** (`/client/*`) for invoices, contracts, and projects. Pay Invoice opens Stripe Checkout for the invoice total (subtotal plus tax) by card or ACH. The invoice is marked paid only after Stripe confirms the payment; a bank transfer shows as processing until it settles. Demo mode still shows **Coming soon**. Payout to the Chase escrow account is configured in the Stripe dashboard. Brands can send a usage agreement through DocHub when Supabase is configured; the brand contracts page lists those agreements for a signed-in Talent OS user with the same email.
 
 ### Communication
 
@@ -151,13 +151,13 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 
 ### Client services
 
-- Support tickets: staff New Issue modal (Description / Links / Details / Dates) and a short talent/brand portal form. Dashboard lists Issue ID, age, status, talent, division.
+- Support tickets: staff New Issue modal (Description / Links / Details / Dates) and a short talent/brand portal form. The tickets page lists Issue ID, age, status, talent, and division.
 - Agency tasks with assignees, due dates, recurrence, and History on create/complete.
 - Interactive calendar (month / week / day / agenda) sharing one data model with Appointments. Portal self-scheduling respects agency hours and blocks overlaps. Google/Outlook sync shows **Coming soon**.
 
 ### Accounting
 
-Open workspace: all four roles can open finance modules. SOP still requires cleared escrow before **Approve & Execute**.
+All four roles can open finance modules. SOP still requires cleared escrow before **Approve & Execute**.
 
 - Client invoices, recurring retainers, overdue interest, batch receipts.
 - Record escrow / deposit, **Bank Reconciliation** (Post disabled until Difference is $0.00). Live Plaid feeds and Chase balances show **Coming soon**.
@@ -176,7 +176,7 @@ Open workspace: all four roles can open finance modules. SOP still requires clea
 
 Directors only: `/admin/users` (Team Members) and `/admin/roles`.
 
-- Tabbed System Settings (Company Codes, General, Email, Financial). Financial tab shows **Coming soon** for Stripe, Plaid, and Chase until those vendors are live.
+- Tabbed System Settings (Company Codes, General, Email, Financial). Financial tab shows **Coming soon** for Plaid and Chase until those vendors are live. Stripe checkout is available when Supabase is configured.
 - **TMX University** at `/university` (workspace Academy link). Role learning paths plus training videos.
 - Team Members (`/admin/users`): search, invite, job title, active toggle, four-role badges.
 - Staff layouts use breakpoints at 1280px (desktop), 768–1279 (tablet), and under 768 (mobile): stacked launchers, horizontally scrolling tables. On phones the staff sidebar hides, TopNav collapses extras into search + menu + profile, the full menu stacks, and the profile quick-action rail becomes a bottom bar. Staff talent and applicant account pages fill the remaining viewport height and keep extra bottom padding so the last section can be scrolled into view. Talent and brand portals stack cards and keep 44px tap targets.
@@ -195,7 +195,7 @@ Signed clients (and approved prospects waiting to sign) use `/talent`:
 
 ### Brand portal
 
-Corporate reps use `/client/login` then dashboard, projects, invoices (Pay Invoice **Coming soon** until Stripe), and contracts. Usage agreements sent through DocHub are listed when this browser has a Talent OS session for that email; otherwise the signer uses the DocHub email. Demo mode still shows **Coming soon** on contracts.
+Corporate reps use `/client/login` then the brand dashboard (`/client/dashboard`), projects, and invoices (Pay Invoice opens Stripe Checkout when Supabase is configured; demo mode shows **Coming soon**), and contracts. Usage agreements sent through DocHub are listed when this browser has a Talent OS session for that email; otherwise the signer uses the DocHub email. Demo mode still shows **Coming soon** on contracts.
 
 ---
 

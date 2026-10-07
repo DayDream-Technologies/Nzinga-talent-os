@@ -104,6 +104,7 @@ export function useCommandSearch(query: string): CommandSearchResult[] {
       }
       for (const [label, path] of [
         ['My Workspace', 'workspace'],
+        ['Client Management Dashboard', 'client-management'],
         ['Settings', 'settings'],
         ['Clients', 'clients'],
         ['Prospect Tracking Board', 'prospect-tracking'],

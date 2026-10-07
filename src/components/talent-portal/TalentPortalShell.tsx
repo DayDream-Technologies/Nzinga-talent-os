@@ -112,7 +112,7 @@ export const portalInput: CSSProperties = {
 }
 
 const NAV = [
-  { to: '/talent/home', label: 'Dashboard' },
+  { to: '/talent/home', label: 'Home' },
   { to: '/talent/activity', label: 'Career activity' },
   { to: '/talent/money', label: 'Money' },
   { to: '/talent/files', label: 'Files & media' },

@@ -433,3 +433,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.dochub-webhook]
 verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false

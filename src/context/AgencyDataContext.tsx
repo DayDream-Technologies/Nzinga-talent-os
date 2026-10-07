@@ -51,6 +51,7 @@ import { shouldAdvanceSopStatus } from '@/constants/sop-status'
 import { AGENCY_PROPERTY } from '@/lib/session-storage'
 import { clientFromSignedProspect, signPendingContract } from '@/lib/sop-workflow'
 import { mergeDocHubEnvelope, type DocHubEnvelopeRow } from '@/lib/dochub'
+import { persistClientInvoice } from '@/lib/stripe'
 import { supabase } from '@/lib/supabase'
 
 interface AgencyDataValue {
@@ -193,6 +194,57 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     saveAgencyRecords({ prospects, talent })
   }, [prospects, talent])
 
+  useEffect(() => {
+    if (!supabase) return
+    let cancel = false
+    async function pullStripe() {
+      const [invoicesResult, receiptsResult] = await Promise.all([
+        supabase!.from('client_invoices').select('id, status, paid_at'),
+        supabase!.from('escrow_receipts').select('id, invoice_id, client_name, talent_name, project, amount, received_at, notes'),
+      ])
+      if (cancel) return
+      const paidRows = invoicesResult.data || []
+      if (paidRows.length) {
+        setInvoices((prev) => {
+          let changed = false
+          const next = prev.map((inv) => {
+            const row = paidRows.find((item) => item.id === inv.id)
+            if (!row || row.status !== 'paid' || inv.status === 'paid') return inv
+            changed = true
+            return { ...inv, status: 'paid' as const, paidAt: String(row.paid_at || '').slice(0, 10) }
+          })
+          return changed ? next : prev
+        })
+      }
+      const receipts = receiptsResult.data || []
+      if (receipts.length) {
+        setEscrow((prev) => {
+          const have = new Set(prev.map((row) => row.invoiceId).filter(Boolean))
+          const add = receipts
+            .filter((row) => !have.has(row.invoice_id))
+            .map((row) => ({
+              id: row.id as string,
+              clientName: row.client_name as string,
+              talentName: (row.talent_name as string | null) || undefined,
+              project: row.project as string,
+              amount: Number(row.amount),
+              receivedAt: String(row.received_at || '').slice(0, 10),
+              status: 'pending' as const,
+              invoiceId: row.invoice_id as string,
+              notes: (row.notes as string) || 'Collected by Stripe.',
+            }))
+          return add.length ? [...add, ...prev] : prev
+        })
+      }
+    }
+    void pullStripe()
+    const timer = window.setInterval(() => void pullStripe(), 20000)
+    return () => {
+      cancel = true
+      window.clearInterval(timer)
+    }
+  }, [])
+
   const addTicket = useCallback((t: Omit<SupportTicket, 'id' | 'createdAt'>) => {
     setTickets((prev) => [
       {
@@ -275,18 +327,17 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       const amount = inv.amount || 0
       const taxRatePct = inv.taxRatePct ?? 0
       const taxAmount = inv.taxAmount ?? Math.round(amount * (taxRatePct / 100))
-      setInvoices((prev) => [
-        {
-          ...inv,
-          id: uid('inv'),
-          interestApplied: inv.interestApplied ?? 0,
-          taxId: inv.taxId ?? '',
-          taxRatePct,
-          taxAmount,
-          document: inv.document ?? null,
-        },
-        ...prev,
-      ])
+      const created: ClientInvoice = {
+        ...inv,
+        id: uid('inv'),
+        interestApplied: inv.interestApplied ?? 0,
+        taxId: inv.taxId ?? '',
+        taxRatePct,
+        taxAmount,
+        document: inv.document ?? null,
+      }
+      setInvoices((prev) => [created, ...prev])
+      void persistClientInvoice(created)
     },
     [],
   )

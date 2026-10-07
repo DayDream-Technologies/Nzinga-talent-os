@@ -3,9 +3,9 @@ TMX — External attention and account configuration
 Items in this file cannot be completed in application code alone. They need
 an outside vendor account, DNS, bank setup, or a legal/ops decision.
 Until each item is connected, TMX shows a Coming soon placeholder and
-disables send/execute actions instead of faking success. DocHub send is
-on when Supabase is configured (see section 2). Talent and brand
-portals never mention this file.
+disables send/execute actions instead of faking success. DocHub send and
+Stripe invoice pay are on when Supabase is configured (see sections 2
+and 3). Talent and brand portals never mention this file.
 
 Last updated: 2026-10-07
 Product owner: Nzinga MGMT / Talent Manager X
@@ -62,26 +62,29 @@ Open in DocHub uses the document fullUrl (https://dochub.com/d/{id}).
 Demo mode (no Supabase) still shows Coming soon and does not send.
 
 ----------------------------------------------------------------------
-3. Stripe Connect — brand invoice checkout
+3. Stripe — brand invoice checkout
 ----------------------------------------------------------------------
-Why it blocks: Brand portal "Pay Invoice Now" (card + ACH) cannot
-collect funds until Stripe is connected and routed to escrow.
+Pay Invoice on /client/billing opens Stripe Checkout (card and ACH)
+for the invoice total stored in client_invoices. stripe-webhook marks
+the invoice paid only on payment_intent.succeeded, invoice.paid, or
+checkout.session.async_payment_succeeded. ACH stays "processing" until
+the bank settles. A failed charge does not mark the invoice paid.
 
-Who: Director / Account Manager
-What to do:
-  - Create a Stripe account (Connect if brands pay on their own).
-  - Store:
-      STRIPE_SECRET_KEY
-      STRIPE_PUBLISHABLE_KEY
-      STRIPE_WEBHOOK_SECRET
-  - Configure payout destination = Chase Escrow Holding Account
-    (see section 5). Do not land campaign funds in operating.
-  - Enable ACH (Financial Connections / ACH Direct Debit) in addition
-    to cards.
-  - Webhook: payment_intent.succeeded, invoice.paid, charge.failed
-    → https://<project>.supabase.co/functions/v1/stripe-webhook
+Secrets (Supabase Edge Functions, not Vite):
+  STRIPE_SECRET_KEY
+  STRIPE_PUBLISHABLE_KEY
+  STRIPE_WEBHOOK_SECRET
 
-Blocked product: /client/billing Pay Invoice.
+Webhook URL (JWT verification off):
+  https://rvuchforbheotenhkxnm.supabase.co/functions/v1/stripe-webhook
+Events: payment_intent.succeeded, payment_intent.processing,
+payment_intent.payment_failed, checkout.session.completed,
+checkout.session.async_payment_succeeded,
+checkout.session.async_payment_failed, invoice.paid, charge.failed.
+
+Payout bank is still a Stripe dashboard setting: Chase escrow holding
+account, not the operating account. ACH Direct Debit must be enabled
+on the Stripe account or checkout creation returns Stripe's error.
 
 ----------------------------------------------------------------------
 4. Plaid — bank verification and statement feed
