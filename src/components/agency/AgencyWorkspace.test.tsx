@@ -7,6 +7,21 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { name: 'Simone Director', role: 'director' } }),
 }))
 
+vi.mock('@/context/AgencyDataContext', () => ({
+  useAgencyData: () => ({
+    prospects: [],
+    tickets: [],
+    talent: [],
+    invoices: [],
+    escrow: [],
+    expenseLogs: [],
+  }),
+}))
+
+vi.mock('@/context/AppDataContext', () => ({
+  useAppData: () => ({ applications: {} }),
+}))
+
 describe('AgencyWorkspace', () => {
   it('renders larger welcome and section titles', () => {
     render(

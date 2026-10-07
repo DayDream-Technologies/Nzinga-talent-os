@@ -17,7 +17,7 @@ This file is the product capability catalog. Setup and development live in [READ
 
 | Audience | How they get in | What they do |
 |---|---|---|
-| **Staff** | Company code + staff login | Run CRM, pipeline, packets, contracts, finance, and admin |
+| **Staff** | Company code, then email and password or Continue with Google | Run CRM, pipeline, packets, contracts, finance, and admin |
 | **Prospects** | `/portal` with an access code (or start a new application) | Fill the NZG short application |
 | **Guardians** | `/guardian/verify` magic link | Confirm a minor applicant |
 | **Signed talent** | `/talent/login` then `/talent/*` | Home, activity, money, files (DocHub sign), messages, settings |
@@ -198,6 +198,20 @@ Signed clients (and approved prospects waiting to sign) use `/talent`:
 Corporate reps use `/client/login` then dashboard, projects, invoices (Pay Invoice **Coming soon** until Stripe), and contracts (e-sign **Coming soon** until DocHub). Demo login still works.
 
 ---
+
+## Operations updates
+
+- Staff sessions stay signed in for 15 minutes of inactivity.
+- Create and edit dialogs use **Save and New** and **Save and Finish**.
+- Executed talent payouts show as **Paid**. Payment methods are ACH, Wire, and Check.
+- The workspace announcements line opens an announcements page. Directors can add, edit, and remove announcements.
+- Create Prospect asks for first name, email, organization, and date of birth, then emails the application link. People stay off the Prospects list until the application is complete.
+- Prospect email from the row menu opens in place. Renewal offers are 1 year. If there is no existing representation, commission and division can change.
+- Tracking-board cards show last contact, next contact, and agent. The name opens the profile.
+- Support tickets open on Unassigned. Ticket rows open the detail dialog. Client Services no longer lists a second New Ticket or TMX University item.
+- Reports can be downloaded as PDF, Excel, CSV, text, or HTML. Roster openings show four divisions at a 50-person cap for the current semester.
+- System Settings includes agency catalogs, contract end-date shifts, and open-ended contracts.
+- Staff can sign in with Google through Supabase after the company code. The Google account must already belong to a staff user for that company.
 
 ## Related docs
 

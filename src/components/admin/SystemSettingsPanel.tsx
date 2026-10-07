@@ -11,6 +11,7 @@ import { T } from '@/lib/tokens'
 import { Btn, TH, TD } from '@/components/ui-compat'
 import { ConfirmDialog, useUnsavedNavigation } from '@/components/ui/ConfirmDialog'
 import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
+import { LookupCatalogs } from '@/components/admin/LookupCatalogs'
 import { isChaseConnected, isPlaidConnected, isStripeConnected } from '@/lib/integrations'
 
 export function SystemSettingsPanel() {
@@ -19,7 +20,7 @@ export function SystemSettingsPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [tab, setTab] = useState<'codes' | 'general' | 'email' | 'financial'>('codes')
+  const [tab, setTab] = useState<'codes' | 'general' | 'email' | 'financial' | 'catalogs'>('codes')
   const [newCode, setNewCode] = useState('')
   const [pendingDeactivateCode, setPendingDeactivateCode] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<string | null>(null)
@@ -97,6 +98,7 @@ export function SystemSettingsPanel() {
           ['general', 'General'],
           ['email', 'Email & Notifications'],
           ['financial', 'Financial Defaults'],
+          ['catalogs', 'Agency Catalogs'],
         ] as const).map(([id, label]) => (
           <button
             key={id}
@@ -201,6 +203,8 @@ export function SystemSettingsPanel() {
           </div>
           )}
 
+          {tab === 'catalogs' && <LookupCatalogs />}
+
           {tab === 'financial' && (
             <>
               {!isStripeConnected() && <IntegrationNotice id="stripe" />}
@@ -209,7 +213,7 @@ export function SystemSettingsPanel() {
             </>
           )}
 
-          {tab !== 'codes' && (
+          {tab !== 'codes' && tab !== 'catalogs' && (
           <div
             style={{
               background: T.cardBg,

@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react'
-import { Btn, Card, Field, Panel, inputStyle } from '@/components/agency/AgencyUI'
+import { useRef, useState, type ReactNode } from 'react'
+import { Btn, Card, Field, ModalShell, Panel, inputStyle } from '@/components/agency/AgencyUI'
+import { downloadReport, reportLinesFromElement, type ExportFormat } from '@/lib/report-export'
 import { useViewport } from '@/hooks/useViewport'
 import { staffGridColumns } from '@/lib/viewport'
 import { T } from '@/lib/tokens'
@@ -32,7 +33,14 @@ export function ReportLauncher({
   kpis?: { label: string; value: ReactNode }[]
 }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [otherOpen, setOtherOpen] = useState(false)
+  const [picked, setPicked] = useState<ExportFormat[]>(['pdf'])
+  const reportRef = useRef<HTMLDivElement>(null)
   const band = useViewport()
+
+  function exportAs(format: ExportFormat) {
+    downloadReport(title, reportLinesFromElement(reportRef.current), format)
+  }
 
   return (
     <Panel
@@ -78,12 +86,6 @@ export function ReportLauncher({
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <Btn onClick={onRun}>Run Live View</Btn>
-            <Btn variant="secondary" onClick={() => window.print()}>
-              PDF
-            </Btn>
-            <Btn variant="secondary" onClick={onRun}>
-              Excel
-            </Btn>
           </div>
         </Card>
       )}
@@ -104,7 +106,43 @@ export function ReportLauncher({
           ))}
         </div>
       )}
-      {ran && children}
+      {ran && <div ref={reportRef}>{children}</div>}
+      {ran && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: T.t3, alignSelf: 'center' }}>Generate as</span>
+          <Btn variant="secondary" onClick={() => exportAs('pdf')}>PDF</Btn>
+          <Btn variant="secondary" onClick={() => exportAs('excel')}>Excel</Btn>
+          <Btn variant="secondary" onClick={() => { exportAs('pdf'); exportAs('excel') }}>PDF & Excel</Btn>
+          <Btn variant="secondary" onClick={() => setOtherOpen(true)}>Other Formats</Btn>
+        </div>
+      )}
+      {otherOpen && (
+        <ModalShell title="Report Formats" onClose={() => setOtherOpen(false)} width={360}>
+          {(['pdf', 'excel', 'csv', 'text', 'html'] as ExportFormat[]).map((format) => (
+            <label key={format} style={{ display: 'flex', gap: 8, fontSize: 13, marginBottom: 8 }}>
+              <input
+                type="checkbox"
+                checked={picked.includes(format)}
+                onChange={(e) =>
+                  setPicked((prev) => (e.target.checked ? [...prev, format] : prev.filter((f) => f !== format)))
+                }
+              />
+              {format.toUpperCase()}
+            </label>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Btn variant="secondary" onClick={() => setOtherOpen(false)}>Cancel</Btn>
+            <Btn
+              onClick={() => {
+                picked.forEach((format) => exportAs(format))
+                setOtherOpen(false)
+              }}
+            >
+              Generate
+            </Btn>
+          </div>
+        </ModalShell>
+      )}
     </Panel>
   )
 }

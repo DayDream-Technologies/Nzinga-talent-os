@@ -76,7 +76,7 @@ describe('ReportPendingPayouts', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve payout' }))
     expect(issuePayout).toHaveBeenCalledWith('exp_maya_1', {
       notes: 'Approved for Friday payday.',
-      method: 'Direct deposit',
+      method: 'ACH',
       approvedBy: 'Simone Director',
     })
   })

@@ -429,7 +429,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     setExpenseLogs((prev) => {
       const log = prev.find((l) => l.id === logId)
       if (!log) return prev
-      const method = details?.method?.trim() || 'Direct deposit'
+      const method = details?.method?.trim() || 'ACH'
       setDisbursements((d) => [
         {
           id: uid('dis'),
@@ -514,8 +514,12 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
         property: input.property || AGENCY_PROPERTY,
         firstName: input.firstName || nameParts[0] || '',
         lastName: input.lastName || nameParts.slice(1).join(' ') || '',
-        contractStart: null,
-        contractEnd: null,
+        contractStart: new Date().toISOString().slice(0, 10),
+        contractEnd: (() => {
+          const end = new Date()
+          end.setFullYear(end.getFullYear() + 1)
+          return end.toISOString().slice(0, 10)
+        })(),
         contracts: input.contracts ?? [],
         messageEmails:
           input.messageEmails?.length > 0

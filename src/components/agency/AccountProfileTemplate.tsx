@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApplicationAnswersTab, fileFromApplication } from '@/components/agency/ApplicationAnswersTab'
+import { PersonApplicationPanel } from '@/components/agency/PersonApplicationPanel'
 import { UdfPanel } from '@/components/agency/UdfPanel'
 import { InvoiceFormModal, RetainerFormModal } from '@/components/agency/FinanceFormModals'
 import {
@@ -158,7 +159,7 @@ export function AccountProfileTemplate({
   const band = useViewport()
   const { user, companyCode } = useAuth()
   const { cropImage, cropper } = useImageCropper()
-  const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent, talents } = useAppData()
+  const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent, talents, saveApp } = useAppData()
   const {
     clients,
     invoices,
@@ -336,9 +337,9 @@ export function AccountProfileTemplate({
     else if (id === 'portal-access' || id === 'payment-settings') navigate('/settings')
   }
 
-  function saveInvoice(values: Omit<ClientInvoice, 'id'>) {
+  function saveInvoice(values: Omit<ClientInvoice, 'id'>, action?: 'new' | 'finish') {
     createInvoice({ ...values, talentName: displayName })
-    setModal(null)
+    if (action !== 'new') setModal(null)
   }
 
   const paidInitial: ClientInvoice = {
@@ -466,7 +467,7 @@ export function AccountProfileTemplate({
       </Card>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-        {kind === 'applicant' && (
+        {application && (
           <Btn
             variant="success"
             disabled={!canImport}
@@ -613,7 +614,12 @@ export function AccountProfileTemplate({
           <FieldRow label="Country" value={String(application?.data?.country || '')} />
         </Card>
       )}
-      {tab === 'application' && application && <ApplicationAnswersTab application={application} />}
+      {tab === 'application' && application && (
+        <>
+          <PersonApplicationPanel application={application} onAddApplicant={(next) => saveApp(next)} />
+          <ApplicationAnswersTab application={application} />
+        </>
+      )}
 
       <div ref={notesRef} style={{ marginTop: 16 }}>
         <Card hover={false}>
@@ -684,9 +690,9 @@ export function AccountProfileTemplate({
         <RetainerFormModal
           clients={invoiceClients}
           onClose={() => setModal(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             addRetainer(values)
-            setModal(null)
+            if (action !== 'new') setModal(null)
           }}
         />
       )}

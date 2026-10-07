@@ -42,7 +42,7 @@ function CompanyCodeScreen({ onCode, onProspectPortal }) {
 }
 
 // ─── EMPLOYEE LOGIN ───────────────────────────────────────────────────────────
-function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCode, onHome }) {
+function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCode, onHome, onGoogle, googleError }) {
   const mobile = useViewport() === "mobile";
   const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [show,setShow]=useState(false); const [err,setErr]=useState(""); const [loading,setLoading]=useState(false);
   const [resetSent,setResetSent]=useState(false);
@@ -191,7 +191,7 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
                 }}>Forgot Password?</button>
               )}
             </div>
-            {err&&<div style={{ color:"#f87171",fontSize:12,marginBottom:10,lineHeight:1.5 }}>{err}</div>}
+            {(err || googleError)&&<div style={{ color:"#f87171",fontSize:12,marginBottom:10,lineHeight:1.5 }}>{err || googleError}</div>}
             {resetSent&&<div style={{ color:"#4ade80",fontSize:12,marginBottom:10,lineHeight:1.5 }}>If an account exists for that email, we sent a password reset message. Check your inbox and follow the Reset Password button. If you did not request this, you can ignore the email.</div>}
             <button
               type="button"
@@ -205,6 +205,20 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
             >
               {loading?"Signing in…":"Sign In"}
             </button>
+            {supabaseConfigured && onGoogle && (
+              <button
+                type="button"
+                onClick={onGoogle}
+                disabled={loading}
+                style={{
+                  width:"100%",padding:"12px",marginTop:8,background:"transparent",color:"#e8eef4",
+                  border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,fontSize:14,fontWeight:600,
+                  cursor:loading?"wait":"pointer",fontFamily:"inherit",
+                }}
+              >
+                Continue with Google
+              </button>
+            )}
             <div style={{ marginTop:14,textAlign:"center" }}>
               <button type="button" className="mh-link-underline" onClick={changeCode} disabled={!navReady} style={{
                 background:"transparent",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",fontFamily:"inherit",

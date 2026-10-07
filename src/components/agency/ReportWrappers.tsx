@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { Btn, Card, Field, inputStyle } from '@/components/agency/AgencyUI'
 import { useViewport } from '@/hooks/useViewport'
+import { downloadReport, type ExportFormat } from '@/lib/report-export'
 import { staffGridColumns } from '@/lib/viewport'
 
 export function wrapReport(inner: ReactNode, _title: string, _subtitle: string) {
@@ -11,6 +12,15 @@ function LaunchedReport({ children }: { children: ReactNode }) {
   const [params, setParams] = useState({ division: 'All', from: '', to: '' })
   const [collapsed, setCollapsed] = useState(false)
   const band = useViewport()
+  const reportRef = useRef<HTMLDivElement>(null)
+
+  function exportReport(format: ExportFormat) {
+    const lines = (reportRef.current?.innerText || 'Report')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+    downloadReport('Report', lines, format)
+  }
   return (
     <>
       {!collapsed && (
@@ -32,10 +42,15 @@ function LaunchedReport({ children }: { children: ReactNode }) {
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <Btn onClick={() => setCollapsed(true)}>Run Live View</Btn>
-            <Btn variant="secondary" onClick={() => window.print()}>
+            <Btn variant="secondary" onClick={() => exportReport('pdf')}>
               PDF
             </Btn>
-            <Btn variant="secondary">Excel</Btn>
+            <Btn variant="secondary" onClick={() => exportReport('excel')}>
+              Excel
+            </Btn>
+            <Btn variant="secondary" onClick={() => exportReport('csv')}>
+              CSV
+            </Btn>
           </div>
         </Card>
       )}
@@ -46,7 +61,7 @@ function LaunchedReport({ children }: { children: ReactNode }) {
           </Btn>
         </div>
       )}
-      {children}
+      <div ref={reportRef}>{children}</div>
     </>
   )
 }

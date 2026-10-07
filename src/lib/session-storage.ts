@@ -43,7 +43,7 @@ export function writeSidebarVisible(visible: boolean) {
   }
 }
 
-export const IDLE_MS = 5 * 60 * 1000
+export const IDLE_MS = 15 * 60 * 1000
 
 export function readStorage(key: string): string | null {
   try {

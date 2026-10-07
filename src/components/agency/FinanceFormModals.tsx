@@ -16,6 +16,15 @@ import { T } from '@/lib/tokens'
 import { AUTO_STACK_GRID } from '@/lib/viewport'
 import { uploadOwnedFile } from '@/services/storage.service'
 
+export type ModalSaveAction = 'new' | 'finish'
+
+export function payoutStatusLabel(status: string): string {
+  if (status === 'completed' || status === 'paid') return 'Paid'
+  if (status === 'pending') return 'Pending'
+  if (status === 'issued') return 'Issued'
+  return status
+}
+
 function Footer({
   isEdit,
   onClose,
@@ -24,7 +33,7 @@ function Footer({
 }: {
   isEdit: boolean
   onClose: () => void
-  onSave: () => void
+  onSave: (action: ModalSaveAction) => void
   onDelete?: () => void
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -39,7 +48,10 @@ function Footer({
       <Btn variant="secondary" onClick={onClose}>
         Cancel
       </Btn>
-      <Btn onClick={onSave}>{isEdit ? 'Save' : 'Create'}</Btn>
+      <Btn variant="secondary" onClick={() => onSave('new')}>
+        Save and New
+      </Btn>
+      <Btn onClick={() => onSave('finish')}>Save and Finish</Btn>
       <ConfirmDialog
         open={confirmDelete}
         title="Delete this record?"
@@ -78,7 +90,7 @@ export function InvoiceFormModal({
   clients: { id: string; name: string }[]
   talentNames: string[]
   onClose: () => void
-  onSave: (values: Omit<ClientInvoice, 'id'>) => void
+  onSave: (values: Omit<ClientInvoice, 'id'>, action?: ModalSaveAction) => void
   onDelete?: () => void
 }) {
   const defaultClient = clients[0]
@@ -111,6 +123,29 @@ export function InvoiceFormModal({
   const rateNum = Number(taxRatePct) || 0
   const taxAmount = calcInvoiceTax(amountNum, rateNum)
   const total = amountNum + taxAmount
+
+  function resetBlank() {
+    const client = clients[0]
+    setClientId(client?.id || '')
+    setClientName(client?.name || '')
+    setTalentName(talentNames[0] || '')
+    setProject('')
+    setAmount('0')
+    setCommissionPct('20')
+    setStatus('sent')
+    setIssuedAt(new Date().toISOString().slice(0, 10))
+    setDueAt(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10))
+    setPaidAt('')
+    setInterestApplied('0')
+    setTaxId('')
+    setTaxRatePct('0')
+    setInvoiceNumber(`INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`)
+    setPoNumber('')
+    setPaymentTerms('Net 30')
+    setBillingAddress('')
+    setNotes('')
+    setDocument(null)
+  }
 
   useEffect(() => {
     if (!initial) return
@@ -380,30 +415,34 @@ export function InvoiceFormModal({
         isEdit={Boolean(initial)}
         onClose={onClose}
         onDelete={onDelete}
-        onSave={() =>
-          onSave({
-            clientId,
-            clientName,
-            talentName,
-            project: project.trim() || 'Untitled project',
-            amount: amountNum,
-            commissionPct: Number(commissionPct) || 0,
-            status,
-            issuedAt,
-            dueAt,
-            paidAt: paidAt || undefined,
-            interestApplied: Number(interestApplied) || 0,
-            taxId: taxId.trim(),
-            taxRatePct: rateNum,
-            taxAmount,
-            invoiceNumber: invoiceNumber.trim() || undefined,
-            poNumber: poNumber.trim() || undefined,
-            paymentTerms,
-            billingAddress: billingAddress.trim() || undefined,
-            notes: notes.trim() || undefined,
-            document: document || null,
-          })
-        }
+        onSave={(action) => {
+          onSave(
+            {
+              clientId,
+              clientName,
+              talentName,
+              project: project.trim() || 'Untitled project',
+              amount: amountNum,
+              commissionPct: Number(commissionPct) || 0,
+              status,
+              issuedAt,
+              dueAt,
+              paidAt: paidAt || undefined,
+              interestApplied: Number(interestApplied) || 0,
+              taxId: taxId.trim(),
+              taxRatePct: rateNum,
+              taxAmount,
+              invoiceNumber: invoiceNumber.trim() || undefined,
+              poNumber: poNumber.trim() || undefined,
+              paymentTerms,
+              billingAddress: billingAddress.trim() || undefined,
+              notes: notes.trim() || undefined,
+              document: document || null,
+            },
+            action,
+          )
+          if (action === 'new') resetBlank()
+        }}
       />
     </ModalShell>
   )
@@ -414,14 +453,16 @@ export function InvoiceFormModal({
 export function RetainerFormModal({
   initial,
   clients,
+  metrics,
   onClose,
   onSave,
   onDelete,
 }: {
   initial?: RetainerPlan | null
   clients: { id: string; name: string }[]
+  metrics?: { active: number; posted: number; nextPost: string }
   onClose: () => void
-  onSave: (values: Omit<RetainerPlan, 'id'>) => void
+  onSave: (values: Omit<RetainerPlan, 'id'>, action?: ModalSaveAction) => void
   onDelete?: () => void
 }) {
   const defaultClient = clients[0]
@@ -444,6 +485,13 @@ export function RetainerFormModal({
 
   return (
     <ModalShell title={initial ? 'Edit retainer plan' : 'New retainer plan'} onClose={onClose}>
+      {metrics && (
+        <div style={{ display: 'flex', gap: 16, fontSize: 12, color: T.t2, marginBottom: 12 }}>
+          <span>Active plans: <strong>{metrics.active}</strong></span>
+          <span>Posted amount: <strong>${metrics.posted.toLocaleString()}</strong></span>
+          <span>Next post: <strong>{metrics.nextPost}</strong></span>
+        </div>
+      )}
       <Field label="Client">
         <select
           style={inputStyle}
@@ -492,16 +540,28 @@ export function RetainerFormModal({
         isEdit={Boolean(initial)}
         onClose={onClose}
         onDelete={onDelete}
-        onSave={() =>
-          onSave({
-            clientId,
-            clientName,
-            monthlyAmount: Number(monthlyAmount) || 0,
-            dayOfMonth: Math.min(28, Math.max(1, Number(dayOfMonth) || 1)),
-            active,
-            description: description.trim() || `Monthly retainer — ${clientName}`,
-          })
-        }
+        onSave={(action) => {
+          onSave(
+            {
+              clientId,
+              clientName,
+              monthlyAmount: Number(monthlyAmount) || 0,
+              dayOfMonth: Math.min(28, Math.max(1, Number(dayOfMonth) || 1)),
+              active,
+              description: description.trim() || `Monthly retainer — ${clientName}`,
+            },
+            action,
+          )
+          if (action === 'new') {
+            const client = clients[0]
+            setClientId(client?.id || '')
+            setClientName(client?.name || '')
+            setMonthlyAmount('5000')
+            setDayOfMonth('1')
+            setActive(true)
+            setDescription('')
+          }
+        }}
       />
     </ModalShell>
   )
@@ -519,7 +579,7 @@ export function EscrowFormModal({
   initial?: EscrowDeposit | null
   clientNames: string[]
   onClose: () => void
-  onSave: (values: Omit<EscrowDeposit, 'id'>) => void
+  onSave: (values: Omit<EscrowDeposit, 'id'>, action?: ModalSaveAction) => void
   onDelete?: () => void
 }) {
   const [clientName, setClientName] = useState(initial?.clientName || clientNames[0] || '')
@@ -588,17 +648,29 @@ export function EscrowFormModal({
         isEdit={Boolean(initial)}
         onClose={onClose}
         onDelete={onDelete}
-        onSave={() =>
-          onSave({
-            clientName,
-            project: project.trim() || 'Deposit',
-            amount: Number(amount) || 0,
-            receivedAt,
-            status,
-            invoiceId: invoiceId.trim() || undefined,
-            notes: notes.trim(),
-          })
-        }
+        onSave={(action) => {
+          onSave(
+            {
+              clientName,
+              project: project.trim() || 'Deposit',
+              amount: Number(amount) || 0,
+              receivedAt,
+              status,
+              invoiceId: invoiceId.trim() || undefined,
+              notes: notes.trim(),
+            },
+            action,
+          )
+          if (action === 'new') {
+            setClientName(clientNames[0] || '')
+            setProject('')
+            setAmount('0')
+            setReceivedAt(new Date().toISOString().slice(0, 10))
+            setStatus('pending')
+            setInvoiceId('')
+            setNotes('')
+          }
+        }}
       />
     </ModalShell>
   )
@@ -618,7 +690,7 @@ export function ExpenseFormModal({
   clientNames: string[]
   talentNames: string[]
   onClose: () => void
-  onSave: (values: Omit<ExpensePayoutLog, 'id'>) => void
+  onSave: (values: Omit<ExpensePayoutLog, 'id'>, action?: ModalSaveAction) => void
   onDelete?: () => void
 }) {
   const [project, setProject] = useState(initial?.project || '')
@@ -688,7 +760,7 @@ export function ExpenseFormModal({
         <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value as PayoutStatus)}>
           {(['pending', 'issued', 'completed'] as PayoutStatus[]).map((s) => (
             <option key={s} value={s}>
-              {s}
+              {payoutStatusLabel(s)}
             </option>
           ))}
         </select>
@@ -697,18 +769,29 @@ export function ExpenseFormModal({
         isEdit={Boolean(initial)}
         onClose={onClose}
         onDelete={onDelete}
-        onSave={() =>
-          onSave({
-            project: project.trim() || 'Job',
-            clientName,
-            talentName,
-            gross: grossNum,
-            agencyCommission,
-            talentShare,
-            status,
-            loggedAt: initial?.loggedAt || new Date().toISOString(),
-          })
-        }
+        onSave={(action) => {
+          onSave(
+            {
+              project: project.trim() || 'Job',
+              clientName,
+              talentName,
+              gross: grossNum,
+              agencyCommission,
+              talentShare,
+              status,
+              loggedAt: initial?.loggedAt || new Date().toISOString(),
+            },
+            action,
+          )
+          if (action === 'new') {
+            setProject('')
+            setClientName(clientNames[0] || '')
+            setTalentName(talentNames[0] || '')
+            setGross('0')
+            setCommissionPct('20')
+            setStatus('pending')
+          }
+        }}
       />
     </ModalShell>
   )
@@ -724,7 +807,7 @@ export function VendorFormModal({
 }: {
   initial?: Vendor | null
   onClose: () => void
-  onSave: (values: Omit<Vendor, 'id'>) => void
+  onSave: (values: Omit<Vendor, 'id'>, action?: ModalSaveAction) => void
   onDelete?: () => void
 }) {
   const [name, setName] = useState(initial?.name || '')
@@ -773,19 +856,31 @@ export function VendorFormModal({
         isEdit={Boolean(initial)}
         onClose={onClose}
         onDelete={onDelete}
-        onSave={() =>
-          onSave({
-            name: name.trim() || 'Vendor',
-            type,
-            bankLast4: bankLast4.padStart(4, '0').slice(-4),
-            taxFormsReady,
-            email: email.trim(),
-          })
-        }
+        onSave={(action) => {
+          onSave(
+            {
+              name: name.trim() || 'Vendor',
+              type,
+              bankLast4: bankLast4.padStart(4, '0').slice(-4),
+              taxFormsReady,
+              email: email.trim(),
+            },
+            action,
+          )
+          if (action === 'new') {
+            setName('')
+            setType('vendor')
+            setBankLast4('')
+            setTaxFormsReady(false)
+            setEmail('')
+          }
+        }}
       />
     </ModalShell>
   )
 }
+
+const PAYOUT_METHODS = ['ACH', 'Wire', 'Check'] as const
 
 /* ─── Disbursement ─── */
 
@@ -799,12 +894,16 @@ export function DisbursementFormModal({
   initial?: Disbursement | null
   payeeOptions: string[]
   onClose: () => void
-  onSave: (values: Omit<Disbursement, 'id'>) => void
+  onSave: (values: Omit<Disbursement, 'id'>, action?: ModalSaveAction) => void
   onDelete?: () => void
 }) {
   const [payee, setPayee] = useState(initial?.payee || payeeOptions[0] || '')
   const [amount, setAmount] = useState(String(initial?.amount ?? 0))
-  const [method, setMethod] = useState(initial?.method || 'Direct deposit')
+  const [method, setMethod] = useState(
+    PAYOUT_METHODS.includes(initial?.method as (typeof PAYOUT_METHODS)[number])
+      ? initial!.method
+      : 'ACH',
+  )
   const [status, setStatus] = useState<PayoutStatus>(initial?.status || 'pending')
   const [project, setProject] = useState(initial?.project || '')
   const [paidAt, setPaidAt] = useState(
@@ -838,7 +937,13 @@ export function DisbursementFormModal({
           <input style={inputStyle} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </Field>
         <Field label="Method">
-          <input style={inputStyle} value={method} onChange={(e) => setMethod(e.target.value)} />
+          <select style={inputStyle} value={method} onChange={(e) => setMethod(e.target.value)}>
+            {PAYOUT_METHODS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
         </Field>
       </div>
       <Field label="Project">
@@ -848,7 +953,7 @@ export function DisbursementFormModal({
         <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value as PayoutStatus)}>
           {(['pending', 'issued', 'completed'] as PayoutStatus[]).map((s) => (
             <option key={s} value={s}>
-              {s}
+              {payoutStatusLabel(s)}
             </option>
           ))}
         </select>
@@ -865,22 +970,31 @@ export function DisbursementFormModal({
         isEdit={Boolean(initial)}
         onClose={onClose}
         onDelete={onDelete}
-        onSave={() =>
-          onSave({
-            payee,
-            amount: Number(amount) || 0,
-            method: method.trim() || 'Direct deposit',
-            status,
-            project: project.trim() || 'Payout',
-            paidAt: paidAt ? new Date(paidAt).toISOString() : undefined,
-          })
-        }
+        onSave={(action) => {
+          onSave(
+            {
+              payee,
+              amount: Number(amount) || 0,
+              method: method.trim() || 'ACH',
+              status,
+              project: project.trim() || 'Payout',
+              paidAt: paidAt ? new Date(paidAt).toISOString() : undefined,
+            },
+            action,
+          )
+          if (action === 'new') {
+            setPayee(payeeOptions[0] || '')
+            setAmount('0')
+            setMethod('ACH')
+            setStatus('pending')
+            setProject('')
+            setPaidAt('')
+          }
+        }}
       />
     </ModalShell>
   )
 }
-
-const PAYOUT_METHODS = ['Direct deposit', 'ACH', 'Wire', 'Check'] as const
 
 function payoutAgingDays(loggedAt: string, asOf = new Date()): number {
   const ms = Date.parse(loggedAt)
@@ -914,7 +1028,11 @@ export function ApprovePayoutModal({
   onClose: () => void
   onApprove: (details: { notes: string; method: string; approvedBy: string }) => void
 }) {
-  const [method, setMethod] = useState(log.payoutMethod || 'Direct deposit')
+  const [method, setMethod] = useState(
+    PAYOUT_METHODS.includes(log.payoutMethod as (typeof PAYOUT_METHODS)[number])
+      ? (log.payoutMethod as string)
+      : 'ACH',
+  )
   const [notes, setNotes] = useState(log.notes || '')
   const [error, setError] = useState('')
   const aging = payoutAgingDays(log.loggedAt)

@@ -3,6 +3,8 @@ export const AUTH_EMAIL_PATHS = {
   confirmed: '/auth/confirmed',
   resetPassword: '/reset-password',
   guardianVerify: '/guardian/verify',
+  /** Google OAuth returns here. Allow this URL in Supabase Auth redirect URLs. */
+  googleReturn: '/login',
 } as const
 
 /** Absolute redirect for Auth emails (signup confirm, reset, magic link). */

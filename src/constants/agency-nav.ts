@@ -63,9 +63,7 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
           { id: 'support-tickets', label: 'Support Tickets', path: 'support-tickets' },
           { id: 'agency-tasks', label: 'Agency Tasks', path: 'agency-tasks' },
           { id: 'appointments', label: 'Appointments & Meetings', path: 'appointments' },
-          { id: 'new-ticket', label: 'New Tickets', path: 'new-ticket' },
           { id: 'calendar', label: 'Calendar', path: 'calendar' },
-          { id: 'university', label: 'TMX University', path: 'university' },
         ],
       },
     ],
@@ -163,7 +161,7 @@ export const AGENCY_MODULE_ACCESS: Record<string, readonly string[]> = {
 export function canAccessAgencyPath(role: Role, path: string): boolean {
   const normalized = path.replace(/^\//, '').split('?')[0]
   if (!normalized || normalized === 'workspace') return true
-  if (normalized === 'settings') return true
+  if (normalized === 'settings' || normalized === 'announcements') return true
   if (normalized === 'talent' || normalized.startsWith('talent/')) return true
   const paths = getRoleDef(role).module_paths
   if (normalized === 'applications' || normalized.startsWith('applications/')) {

@@ -268,7 +268,22 @@ export function TicketDetailModal({
               <Btn variant="secondary" onClick={cancelEdit}>
                 Cancel
               </Btn>
-              <Btn onClick={saveEdit}>Save</Btn>
+              <Btn
+                variant="secondary"
+                onClick={() => {
+                  saveEdit()
+                }}
+              >
+                Save and New
+              </Btn>
+              <Btn
+                onClick={() => {
+                  saveEdit()
+                  onClose()
+                }}
+              >
+                Save and Finish
+              </Btn>
             </>
           ) : (
             <>

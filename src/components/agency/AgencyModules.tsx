@@ -6,12 +6,15 @@ import { useAuth } from '@/hooks/useAuth'
 import { useViewport } from '@/hooks/useViewport'
 import { staffGridColumns } from '@/lib/viewport'
 import { AGENCY_STAFF, AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
+import { USERS } from '@/constants'
 import { filterAgencyNav, canAccessAgencyPath, type AgencyNavGroup } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
 import type { SupportTicket, TicketType } from '@/types/agency'
 import { TalentLink } from '@/components/talent/TalentLink'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
 import { AppointmentFormModal } from '@/components/agency/AppointmentFormModal'
+import { AnnouncementFooterLink, AnnouncementsModule } from '@/components/agency/AnnouncementsModule'
+import { WorkspaceCommandWidgets } from '@/components/agency/WorkspaceCommandWidgets'
 import { ProspectsCrmModule } from '@/components/agency/ProspectsCrmModule'
 import { ClientsModule } from '@/components/agency/ClientsModule'
 import { ProspectTrackingBoard } from '@/components/agency/ProspectTrackingBoard'
@@ -36,6 +39,7 @@ import {
   VendorFormModal,
   ApprovePayoutModal,
   invoiceTotal,
+  payoutStatusLabel,
 } from '@/components/agency/FinanceFormModals'
 import { DocViewer } from '@/components/ui/DocViewer'
 import type { UploadedDoc } from '@/types'
@@ -195,6 +199,7 @@ export function AgencyWorkspace() {
         </div>
         <div style={{ fontSize: 16, color: T.t3, marginTop: 8 }}>Let&apos;s get to work.</div>
       </div>
+      <WorkspaceCommandWidgets />
 
       <div
         style={{
@@ -299,18 +304,7 @@ export function AgencyWorkspace() {
           alignItems: 'center',
         }}
       >
-        <span style={{ fontSize: 14, color: T.t3 }}>
-          📢 <strong style={{ color: T.t1, fontSize: 15 }}>Announcements</strong> — No new announcements
-        </span>
-        <span
-          onClick={() => go('university')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && go('university')}
-          style={{ fontSize: 14, color: WS.accent, cursor: 'pointer' }}
-        >
-          🎓 TMX Academy
-        </span>
+        <AnnouncementFooterLink accent={WS.accent} onAcademy={() => go('university')} />
       </div>
     </div>
   )
@@ -318,6 +312,8 @@ export function AgencyWorkspace() {
 
 export function AgencyModule({ moduleId }: { moduleId: string }) {
   switch (moduleId) {
+    case 'announcements':
+      return <AnnouncementsModule />
     case 'prospects':
       return <ProspectsCrmModule />
     case 'renewal-offers':
@@ -398,7 +394,7 @@ function RenewalOffersModule() {
   const { talent, createRenewalOffer } = useAgencyData()
   const [msg, setMsg] = useState('')
   return (
-    <Panel title="Create Renewal Offers" subtitle="Draft renewal representation offers for signed roster talent.">
+    <Panel title="Create Renewal Offers">
       <Card>
         <Table
           headers={['Talent', 'Role', 'Status', '']}
@@ -422,6 +418,7 @@ function RenewalOffersModule() {
 
 function SendEmailModule() {
   const { sendMessage, messages, clients } = useAgencyData()
+  const { setHistory } = useAppData()
   const { user } = useAuth()
   const [to, setTo] = useState(clients[0]?.email || '')
   const [toName, setToName] = useState('')
@@ -455,17 +452,32 @@ function SendEmailModule() {
         replyTo: resolvedReplyTo || undefined,
         fromName: resolvedFromName || undefined,
       })
-      if (res.status === 'sent') {
+      if (res.status === 'sent' || res.status === 'skipped') {
         sendMessage({ channel: 'email', to, subject, preview: body.slice(0, 80) })
-        setResult({ type: 'ok', msg: 'Email sent successfully.' })
+        setHistory((prev) => [
+          {
+            id: `h_${Date.now()}`,
+            talent_id: null,
+            user_id: user?.id || null,
+            type: 'email',
+            text: body,
+            ts: new Date().toISOString(),
+            flagged: false,
+            is_document: false,
+            email_subject: subject,
+            email_to: to,
+            staff_name: user?.name,
+          },
+          ...prev,
+        ])
+        setResult(
+          res.status === 'sent'
+            ? { type: 'ok', msg: 'Email sent successfully.' }
+            : { type: 'skip', msg: 'Email service not configured — message logged locally.' },
+        )
         setSubject('')
         setBody('')
         setToName('')
-      } else if (res.status === 'skipped') {
-        sendMessage({ channel: 'email', to, subject, preview: body.slice(0, 80) })
-        setResult({ type: 'skip', msg: 'Email service not configured — message logged locally.' })
-        setSubject('')
-        setBody('')
       } else {
         setResult({ type: 'err', msg: res.message || 'Failed to send.' })
       }
@@ -477,7 +489,7 @@ function SendEmailModule() {
   }
 
   return (
-    <Panel title="Send Email" subtitle="Compose client or talent email from the agency desk.">
+    <Panel title="Send Email">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <Card>
           <Field label="To (email)">
@@ -523,10 +535,12 @@ function SendEmailModule() {
 
 function MessagingModule() {
   const { sendMessage, messages } = useAgencyData()
+  const { setHistory } = useAppData()
+  const { user } = useAuth()
   const [to, setTo] = useState('')
   const [preview, setPreview] = useState('')
   return (
-    <Panel title="Text Messaging Center" subtitle="SMS outreach to talent and client contacts.">
+    <Panel title="Text Messaging Center">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <Card>
           <Field label="Mobile / contact">
@@ -539,6 +553,21 @@ function MessagingModule() {
             onClick={() => {
               if (!to || !preview) return
               sendMessage({ channel: 'sms', to, subject: 'SMS', preview })
+              setHistory((prev) => [
+                {
+                  id: `h_${Date.now()}`,
+                  talent_id: null,
+                  user_id: user?.id || null,
+                  type: 'sms',
+                  text: preview,
+                  ts: new Date().toISOString(),
+                  flagged: false,
+                  is_document: false,
+                  email_to: to,
+                  staff_name: user?.name,
+                },
+                ...prev,
+              ])
               setPreview('')
             }}
           >
@@ -642,7 +671,6 @@ function SupportTicketsModule() {
   return (
     <Panel
       title="Support Tickets"
-      subtitle="Client requests and availability confirmations. Click a column header to sort."
       actions={<Btn onClick={() => nav('/new-ticket')}>+ New ticket</Btn>}
     >
       <Card>
@@ -709,7 +737,7 @@ function AgencyTasksModule() {
   const archived = tasks.filter((t) => t.status === 'done')
 
   return (
-    <Panel title="Agency Tasks" subtitle="Internal to-dos for booking agents and ops. Completed work moves to Archive.">
+    <Panel title="Agency Tasks">
       <Card style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
@@ -791,12 +819,17 @@ function AppointmentsModule() {
   return (
     <Panel
       title="Appointments & Meetings"
-      subtitle="Briefings, castings, and client calls. Add, edit, or delete appointments with full scheduling details."
       actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New appointment</Btn>}
     >
       <Card>
         <Table
-          headers={['Title', 'Clients', 'Agents', 'Talent', 'Starts', 'Ends', 'Location', '']}
+          headers={['Title', 'Clients', 'Agents', 'Talent', 'Starts', 'Ends', 'Location']}
+          onRowClick={(i) => {
+            const row = appointments[i]
+            if (!row) return
+            setSelectedId(row.id)
+            setModalMode('edit')
+          }}
           rows={appointments.map((a) => [
             a.title,
             (a.clientNames?.length ? a.clientNames : [a.withWhom]).filter(Boolean).join(', ') || '—',
@@ -813,16 +846,6 @@ function AppointmentsModule() {
             new Date(a.startsAt).toLocaleString(),
             new Date(a.endsAt).toLocaleString(),
             a.location,
-            <Btn
-              key={`e-${a.id}`}
-              variant="secondary"
-              onClick={() => {
-                setSelectedId(a.id)
-                setModalMode('edit')
-              }}
-            >
-              Edit
-            </Btn>,
           ])}
         />
       </Card>
@@ -831,9 +854,11 @@ function AppointmentsModule() {
           clientOptions={clientOptions}
           talentOptions={talentOptions}
           onClose={() => setModalMode(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             addAppointment(values)
-            setModalMode(null)
+            if (action !== 'new') {
+              setModalMode(null)
+            }
           }}
         />
       )}
@@ -846,10 +871,12 @@ function AppointmentsModule() {
             setModalMode(null)
             setSelectedId(null)
           }}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateAppointment(selected.id, values)
-            setModalMode(null)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setModalMode(null)
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteAppointment(selected.id)
@@ -879,7 +906,7 @@ function NewTicketModule() {
   const [priority, setPriority] = useState<SupportTicket['priority']>('high')
 
   return (
-    <Panel title="New Tickets" subtitle="Quickly create a support record for an inbound client request.">
+    <Panel title="New Tickets">
       <Card style={{ maxWidth: 520 }}>
         <Field label="Client">
           <input style={inputStyle} value={clients[0]?.name || 'Nike'} readOnly />
@@ -964,7 +991,6 @@ function CalendarModule() {
   return (
     <Panel
       title="Calendar"
-      subtitle="Shared agency calendar — bookings block talent availability for the whole team."
       actions={
         <Btn
           onClick={() =>
@@ -1013,12 +1039,17 @@ function InvoicesModule() {
   return (
     <Panel
       title="Client Invoices"
-      subtitle="Create and manage invoices with tax ID, tax calculation, payment terms, and supporting documents."
       actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New invoice</Btn>}
     >
       <Card>
         <Table
-          headers={['Invoice #', 'Client', 'Tax ID', 'Talent', 'Project', 'Subtotal', 'Tax', 'Total', 'Due', 'Doc', 'Status', '']}
+          onRowClick={(index) => {
+            const inv = invoices[index]
+            if (!inv) return
+            setSelectedId(inv.id)
+            setModalMode('edit')
+          }}
+          headers={['Invoice #', 'Client', 'Tax ID', 'Talent', 'Project', 'Subtotal', 'Tax', 'Total', 'Due', 'Doc', 'Status']}
           rows={invoices.map((inv) => [
             inv.invoiceNumber || inv.id,
             inv.clientName,
@@ -1052,16 +1083,6 @@ function InvoicesModule() {
               '—'
             ),
             <Badge key={`s-${inv.id}`} color={StatusColor(inv.status)}>{inv.status}</Badge>,
-            <Btn
-              key={`e-${inv.id}`}
-              variant="secondary"
-              onClick={() => {
-                setSelectedId(inv.id)
-                setModalMode('edit')
-              }}
-            >
-              Edit
-            </Btn>,
           ])}
         />
       </Card>
@@ -1070,9 +1091,11 @@ function InvoicesModule() {
           clients={clients}
           talentNames={talentNames}
           onClose={() => setModalMode(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             createInvoice(values)
-            setModalMode(null)
+            if (action !== 'new') {
+              setModalMode(null)
+            }
           }}
         />
       )}
@@ -1082,10 +1105,12 @@ function InvoicesModule() {
           clients={clients}
           talentNames={talentNames}
           onClose={() => { setModalMode(null); setSelectedId(null) }}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateInvoice(selected.id, values)
-            setModalMode(null)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setModalMode(null)
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteInvoice(selected.id)
@@ -1107,20 +1132,21 @@ function OverdueInterestModule() {
   const talentNames = talent.map((t) => t.name)
 
   return (
-    <Panel title="Post Overdue Interest" subtitle="Add late-fee penalties when 30-day terms are exceeded. Edit or delete invoices as needed.">
+    <Panel title="Post Overdue Interest">
       <Card>
         <Table
-          headers={['Client', 'Project', 'Amount', 'Interest applied', '', '']}
+          onRowClick={(index) => {
+            const inv = candidates[index]
+            if (inv) setSelectedId(inv.id)
+          }}
+          headers={['Client', 'Project', 'Amount', 'Interest applied', '']}
           rows={candidates.map((inv) => [
             inv.clientName,
             inv.project,
             <Money key={`a-${inv.id}`} value={inv.amount} />,
             <Money key={`i-${inv.id}`} value={inv.interestApplied} />,
-            <Btn key={`b-${inv.id}`} variant="danger" onClick={() => applyOverdueInterest(inv.id, 1.5)}>
+            <Btn key={`b-${inv.id}`} variant="danger" onClick={(e) => { e.stopPropagation(); applyOverdueInterest(inv.id, 1.5) }}>
               Post 1.5% interest
-            </Btn>,
-            <Btn key={`e-${inv.id}`} variant="secondary" onClick={() => setSelectedId(inv.id)}>
-              Edit
             </Btn>,
           ])}
         />
@@ -1131,9 +1157,11 @@ function OverdueInterestModule() {
           clients={clients}
           talentNames={talentNames}
           onClose={() => setSelectedId(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateInvoice(selected.id, values)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteInvoice(selected.id)
@@ -1146,17 +1174,39 @@ function OverdueInterestModule() {
 }
 
 function BatchReceiptsModule() {
-  const { invoices, batchReceipts, updateInvoice, deleteInvoice, clients, talent } = useAgencyData()
+  const { invoices, batchReceipts, updateInvoice, deleteInvoice, createInvoice, clients, talent } = useAgencyData()
   const [selected, setSelected] = useState<string[]>([])
   const [editId, setEditId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
   const open = invoices.filter((i) => i.status === 'sent' || i.status === 'overdue' || i.status === 'partial')
   const editing = invoices.find((i) => i.id === editId) || null
   const talentNames = talent.map((t) => t.name)
 
   return (
-    <Panel title="Batch Client Receipts" subtitle="Apply one client payment across multiple open invoices. Edit or delete individual invoices from this list.">
+    <Panel
+      title="Batch Client Receipts"
+      actions={
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Btn onClick={() => setCreating(true)}>Add / Create Client Receipt</Btn>
+          <Btn
+            variant="success"
+            disabled={selected.length === 0}
+            onClick={() => {
+              batchReceipts(selected)
+              setSelected([])
+            }}
+          >
+            Batch Client Receipts
+          </Btn>
+        </div>
+      }
+    >
       <Card>
         <Table
+          onRowClick={(index) => {
+            const inv = open[index]
+            if (inv) setEditId(inv.id)
+          }}
           selectAll={
             <SelectAllCheckbox
               checked={open.length > 0 && open.every((inv) => selected.includes(inv.id))}
@@ -1169,7 +1219,7 @@ function BatchReceiptsModule() {
             />
           }
           rowSelected={open.map((inv) => selected.includes(inv.id))}
-          headers={['', 'Client', 'Project', 'Amount', 'Status', '']}
+          headers={['', 'Client', 'Project', 'Amount', 'Status']}
           rows={open.map((inv) => [
             <input
               key={`c-${inv.id}`}
@@ -1187,33 +1237,31 @@ function BatchReceiptsModule() {
             inv.project,
             <Money key={`m-${inv.id}`} value={inv.amount} />,
             <Badge key={`s-${inv.id}`} color={StatusColor(inv.status)}>{inv.status}</Badge>,
-            <Btn key={`e-${inv.id}`} variant="secondary" onClick={() => setEditId(inv.id)}>
-              Edit
-            </Btn>,
           ])}
         />
-        <div style={{ marginTop: 12 }}>
-          <Btn
-            variant="success"
-            disabled={selected.length === 0}
-            onClick={() => {
-              batchReceipts(selected)
-              setSelected([])
-            }}
-          >
-            Clear selected invoices
-          </Btn>
-        </div>
       </Card>
+      {creating && (
+        <InvoiceFormModal
+          clients={clients}
+          talentNames={talentNames}
+          onClose={() => setCreating(false)}
+          onSave={(values, action) => {
+            createInvoice(values)
+            if (action !== 'new') setCreating(false)
+          }}
+        />
+      )}
       {editing && (
         <InvoiceFormModal
           initial={editing}
           clients={clients}
           talentNames={talentNames}
           onClose={() => setEditId(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateInvoice(editing.id, values)
-            setEditId(null)
+            if (action !== 'new') {
+              setEditId(null)
+            }
           }}
           onDelete={() => {
             deleteInvoice(editing.id)
@@ -1225,6 +1273,24 @@ function BatchReceiptsModule() {
   )
 }
 
+function retainerMetrics(retainers: { active: boolean; monthlyAmount: number; dayOfMonth: number }[]) {
+  const active = retainers.filter((plan) => plan.active)
+  const posted = active.reduce((sum, plan) => sum + plan.monthlyAmount, 0)
+  const today = new Date()
+  const upcoming = active
+    .map((plan) => {
+      const date = new Date(today.getFullYear(), today.getMonth(), plan.dayOfMonth)
+      if (date < today) date.setMonth(date.getMonth() + 1)
+      return date
+    })
+    .sort((a, b) => a.getTime() - b.getTime())
+  return {
+    active: active.length,
+    posted,
+    nextPost: upcoming[0] ? upcoming[0].toLocaleDateString() : '—',
+  }
+}
+
 function RetainerPlansModule() {
   const { retainers, addRetainer, updateRetainer, deleteRetainer, clients } = useAgencyData()
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null)
@@ -1234,38 +1300,36 @@ function RetainerPlansModule() {
   return (
     <Panel
       title="Manage Retainer Plans"
-      subtitle="Set up, edit, and remove ongoing monthly client retainer contracts."
       actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New retainer</Btn>}
     >
       <Card>
         <Table
-          headers={['Client', 'Monthly', 'Bill day', 'Active', 'Description', '']}
+          onRowClick={(index) => {
+            const plan = retainers[index]
+            if (!plan) return
+            setSelectedId(plan.id)
+            setModalMode('edit')
+          }}
+          headers={['Client', 'Monthly', 'Bill day', 'Active', 'Description']}
           rows={retainers.map((r) => [
             r.clientName,
             <Money key={`m-${r.id}`} value={r.monthlyAmount} />,
             String(r.dayOfMonth),
             r.active ? 'Yes' : 'No',
             r.description,
-            <Btn
-              key={`e-${r.id}`}
-              variant="secondary"
-              onClick={() => {
-                setSelectedId(r.id)
-                setModalMode('edit')
-              }}
-            >
-              Edit
-            </Btn>,
           ])}
         />
       </Card>
       {modalMode === 'create' && (
         <RetainerFormModal
           clients={clients}
+          metrics={retainerMetrics(retainers)}
           onClose={() => setModalMode(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             addRetainer(values)
-            setModalMode(null)
+            if (action !== 'new') {
+              setModalMode(null)
+            }
           }}
         />
       )}
@@ -1273,11 +1337,14 @@ function RetainerPlansModule() {
         <RetainerFormModal
           initial={selected}
           clients={clients}
+          metrics={retainerMetrics(retainers)}
           onClose={() => { setModalMode(null); setSelectedId(null) }}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateRetainer(selected.id, values)
-            setModalMode(null)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setModalMode(null)
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteRetainer(selected.id)
@@ -1291,16 +1358,15 @@ function RetainerPlansModule() {
 }
 
 function PostRetainersModule() {
-  const { retainers, postRetainers, updateRetainer, deleteRetainer, clients } = useAgencyData()
+  const { retainers, postRetainers } = useAgencyData()
   const [note, setNote] = useState('')
-  const [editId, setEditId] = useState<string | null>(null)
-  const editing = retainers.find((r) => r.id === editId) || null
+  const brands = [...new Set(retainers.map((plan) => plan.clientName))].sort()
 
   return (
-    <Panel title="Post Recurring Retainers" subtitle="Auto-bill active retainer plans. Manage plans below before posting.">
+    <Panel title="Post Recurring Retainers">
       <Card style={{ marginBottom: 12 }}>
         <p style={{ fontSize: 13, color: T.t2, marginBottom: 12 }}>
-          Active plans: <strong>{retainers.filter((r) => r.active).length}</strong>
+          Posted plans are view only. Active plans: <strong>{retainers.filter((r) => r.active).length}</strong>
         </p>
         <Btn
           onClick={() => {
@@ -1312,35 +1378,19 @@ function PostRetainersModule() {
         </Btn>
         {note && <div style={{ marginTop: 10, color: T.green }}>{note}</div>}
       </Card>
-      <Card>
-        <Table
-          headers={['Client', 'Monthly', 'Active', 'Description', '']}
-          rows={retainers.map((r) => [
-            r.clientName,
-            <Money key={`m-${r.id}`} value={r.monthlyAmount} />,
-            r.active ? 'Yes' : 'No',
-            r.description,
-            <Btn key={`e-${r.id}`} variant="secondary" onClick={() => setEditId(r.id)}>
-              Edit
-            </Btn>,
-          ])}
-        />
-      </Card>
-      {editing && (
-        <RetainerFormModal
-          initial={editing}
-          clients={clients}
-          onClose={() => setEditId(null)}
-          onSave={(values) => {
-            updateRetainer(editing.id, values)
-            setEditId(null)
-          }}
-          onDelete={() => {
-            deleteRetainer(editing.id)
-            setEditId(null)
-          }}
-        />
-      )}
+      {brands.map((brand) => (
+        <Card key={brand} style={{ marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>{brand}</div>
+          <Table
+            headers={['Monthly', 'Active', 'Description']}
+            rows={retainers.filter((plan) => plan.clientName === brand).map((r) => [
+              <Money key={`m-${r.id}`} value={r.monthlyAmount} />,
+              r.active ? 'Yes' : 'No',
+              r.description,
+            ])}
+          />
+        </Card>
+      ))}
     </Panel>
   )
 }
@@ -1355,12 +1405,17 @@ function EscrowModule() {
   return (
     <Panel
       title="Record Escrow / Deposit"
-      subtitle="Log, edit, and delete client wire payments in the agency holding account."
       actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ Record deposit</Btn>}
     >
       <Card>
         <Table
-          headers={['Client', 'Project', 'Amount', 'Received', 'Status', 'Notes', '']}
+          onRowClick={(index) => {
+            const row = escrow[index]
+            if (!row) return
+            setSelectedId(row.id)
+            setModalMode('edit')
+          }}
+          headers={['Client', 'Project', 'Amount', 'Received', 'Status', 'Notes']}
           rows={escrow.map((e) => [
             e.clientName,
             e.project,
@@ -1368,16 +1423,6 @@ function EscrowModule() {
             e.receivedAt,
             <Badge key={`s-${e.id}`} color={StatusColor(e.status)}>{e.status}</Badge>,
             e.notes,
-            <Btn
-              key={`ed-${e.id}`}
-              variant="secondary"
-              onClick={() => {
-                setSelectedId(e.id)
-                setModalMode('edit')
-              }}
-            >
-              Edit
-            </Btn>,
           ])}
         />
       </Card>
@@ -1385,9 +1430,11 @@ function EscrowModule() {
         <EscrowFormModal
           clientNames={clientNames}
           onClose={() => setModalMode(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             recordEscrow(values)
-            setModalMode(null)
+            if (action !== 'new') {
+              setModalMode(null)
+            }
           }}
         />
       )}
@@ -1396,10 +1443,12 @@ function EscrowModule() {
           initial={selected}
           clientNames={clientNames}
           onClose={() => { setModalMode(null); setSelectedId(null) }}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateEscrow(selected.id, values)
-            setModalMode(null)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setModalMode(null)
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteEscrow(selected.id)
@@ -1430,12 +1479,17 @@ function LogExpenseModule() {
   return (
     <Panel
       title="Log Expense / Payout"
-      subtitle="Split gross job proceeds into agency commission and talent payout. Add, edit, or delete logs."
       actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ Log expense</Btn>}
     >
       <Card>
         <Table
-          headers={['Project', 'Client', 'Talent', 'Gross', 'Agency', 'Talent share', 'Status', '']}
+          onRowClick={(index) => {
+            const row = expenseLogs[index]
+            if (!row) return
+            setSelectedId(row.id)
+            setModalMode('edit')
+          }}
+          headers={['Project', 'Client', 'Talent', 'Gross', 'Agency', 'Talent share', 'Status']}
           rows={expenseLogs.map((e) => [
             e.project,
             e.clientName,
@@ -1443,17 +1497,7 @@ function LogExpenseModule() {
             <Money key={`g-${e.id}`} value={e.gross} />,
             <Money key={`a-${e.id}`} value={e.agencyCommission} />,
             <Money key={`t-${e.id}`} value={e.talentShare} />,
-            <Badge key={`s-${e.id}`} color={StatusColor(e.status)}>{e.status}</Badge>,
-            <Btn
-              key={`ed-${e.id}`}
-              variant="secondary"
-              onClick={() => {
-                setSelectedId(e.id)
-                setModalMode('edit')
-              }}
-            >
-              Edit
-            </Btn>,
+            <Badge key={`s-${e.id}`} color={StatusColor(e.status)}>{payoutStatusLabel(e.status)}</Badge>,
           ])}
         />
       </Card>
@@ -1462,9 +1506,11 @@ function LogExpenseModule() {
           clientNames={clientNames}
           talentNames={talentNames}
           onClose={() => setModalMode(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             addExpenseLog(values)
-            setModalMode(null)
+            if (action !== 'new') {
+              setModalMode(null)
+            }
           }}
         />
       )}
@@ -1474,10 +1520,12 @@ function LogExpenseModule() {
           clientNames={clientNames}
           talentNames={talentNames}
           onClose={() => { setModalMode(null); setSelectedId(null) }}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateExpenseLog(selected.id, values)
-            setModalMode(null)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setModalMode(null)
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteExpenseLog(selected.id)
@@ -1499,37 +1547,34 @@ function VendorsModule() {
   return (
     <Panel
       title="Vendors & Service Providers"
-      subtitle="Directory of talent banking details and service vendors. Add, edit, or delete entries."
       actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New vendor</Btn>}
     >
       <Card>
         <Table
-          headers={['Name', 'Type', 'Bank last 4', 'Tax forms', 'Email', '']}
+          onRowClick={(index) => {
+            const row = vendors[index]
+            if (!row) return
+            setSelectedId(row.id)
+            setModalMode('edit')
+          }}
+          headers={['Name', 'Type', 'Bank last 4', 'Tax forms', 'Email']}
           rows={vendors.map((v) => [
             v.type === 'talent' ? <TalentLink key={v.id} name={v.name} /> : v.name,
             v.type,
             `•••• ${v.bankLast4}`,
             v.taxFormsReady ? <Badge color={T.green}>Ready</Badge> : <Badge color={T.red}>Missing</Badge>,
             v.email,
-            <Btn
-              key={`e-${v.id}`}
-              variant="secondary"
-              onClick={() => {
-                setSelectedId(v.id)
-                setModalMode('edit')
-              }}
-            >
-              Edit
-            </Btn>,
           ])}
         />
       </Card>
       {modalMode === 'create' && (
         <VendorFormModal
           onClose={() => setModalMode(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             addVendor(values)
-            setModalMode(null)
+            if (action !== 'new') {
+              setModalMode(null)
+            }
           }}
         />
       )}
@@ -1537,10 +1582,12 @@ function VendorsModule() {
         <VendorFormModal
           initial={selected}
           onClose={() => { setModalMode(null); setSelectedId(null) }}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateVendor(selected.id, values)
-            setModalMode(null)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setModalMode(null)
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteVendor(selected.id)
@@ -1564,29 +1611,24 @@ function DisbursementsModule() {
   return (
     <Panel
       title="Disbursements / Payouts"
-      subtitle="Master log of talent and vendor payments. Add, edit, or delete disbursements."
       actions={<Btn onClick={() => { setSelectedId(null); setModalMode('create') }}>+ New disbursement</Btn>}
     >
       <Card>
         <Table
-          headers={['Payee', 'Amount', 'Method', 'Project', 'Status', 'Paid at', '']}
+          onRowClick={(index) => {
+            const row = disbursements[index]
+            if (!row) return
+            setSelectedId(row.id)
+            setModalMode('edit')
+          }}
+          headers={['Payee', 'Amount', 'Method', 'Project', 'Status', 'Paid at']}
           rows={disbursements.map((d) => [
             <TalentLink key={`p-${d.id}`} name={d.payee} />,
             <Money key={`m-${d.id}`} value={d.amount} />,
             d.method,
             d.project,
-            <Badge key={`s-${d.id}`} color={StatusColor(d.status)}>{d.status}</Badge>,
+            <Badge key={`s-${d.id}`} color={StatusColor(d.status)}>{payoutStatusLabel(d.status)}</Badge>,
             d.paidAt ? new Date(d.paidAt).toLocaleString() : '—',
-            <Btn
-              key={`e-${d.id}`}
-              variant="secondary"
-              onClick={() => {
-                setSelectedId(d.id)
-                setModalMode('edit')
-              }}
-            >
-              Edit
-            </Btn>,
           ])}
         />
       </Card>
@@ -1594,9 +1636,11 @@ function DisbursementsModule() {
         <DisbursementFormModal
           payeeOptions={payeeOptions}
           onClose={() => setModalMode(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             addDisbursement(values)
-            setModalMode(null)
+            if (action !== 'new') {
+              setModalMode(null)
+            }
           }}
         />
       )}
@@ -1605,10 +1649,12 @@ function DisbursementsModule() {
           initial={selected}
           payeeOptions={payeeOptions}
           onClose={() => { setModalMode(null); setSelectedId(null) }}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateDisbursement(selected.id, values)
-            setModalMode(null)
-            setSelectedId(null)
+            if (action !== 'new') {
+              setModalMode(null)
+              setSelectedId(null)
+            }
           }}
           onDelete={() => {
             deleteDisbursement(selected.id)
@@ -1638,20 +1684,21 @@ function IssuePayoutsModule() {
   const chaseReady = isChaseConnected()
 
   return (
-    <Panel title="Issue Talent Payouts" subtitle="Execute payday deposits for pending talent shares. Edit or delete pending logs before payout.">
+    <Panel title="Issue Talent Payouts">
       {!chaseReady && <IntegrationNotice id="chase" />}
       <Card>
         <Table
-          headers={['Talent', 'Project', 'Amount', '', '']}
+          onRowClick={(index) => {
+            const row = pending[index]
+            if (row) setEditId(row.id)
+          }}
+          headers={['Talent', 'Project', 'Amount', '']}
           rows={pending.map((e) => [
             <TalentLink key={`tn-${e.id}`} name={e.talentName} />,
             e.project,
             <Money key={`m-${e.id}`} value={e.talentShare} />,
-            <Btn key={`b-${e.id}`} variant="success" disabled={!chaseReady} onClick={() => issuePayout(e.id)}>
+            <Btn key={`b-${e.id}`} variant="success" disabled={!chaseReady} onClick={(event) => { event.stopPropagation(); issuePayout(e.id) }}>
               Execute payout
-            </Btn>,
-            <Btn key={`ed-${e.id}`} variant="secondary" onClick={() => setEditId(e.id)}>
-              Edit
             </Btn>,
           ])}
         />
@@ -1667,9 +1714,11 @@ function IssuePayoutsModule() {
           clientNames={clientNames}
           talentNames={talentNames}
           onClose={() => setEditId(null)}
-          onSave={(values) => {
+          onSave={(values, action) => {
             updateExpenseLog(editing.id, values)
-            setEditId(null)
+            if (action !== 'new') {
+              setEditId(null)
+            }
           }}
           onDelete={() => {
             deleteExpenseLog(editing.id)
@@ -1686,7 +1735,7 @@ function ReportRosterScorecard() {
   const revenue = invoices.filter((i) => i.status === 'paid').reduce((s, i) => s + i.amount, 0)
   const commission = expenseLogs.reduce((s, e) => s + e.agencyCommission, 0)
   return (
-    <Panel title="Roster Performance Scorecard" subtitle="Active bookings and revenue across the roster.">
+    <Panel title="Roster Performance Scorecard">
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
         <Card><div style={{ fontSize: 22, fontWeight: 800 }}>{talent.filter((t) => t.status === 'active' || t.status === 'current').length}</div><div style={{ color: T.t3, fontSize: 12 }}>Active roster</div></Card>
         <Card><div style={{ fontSize: 22, fontWeight: 800 }}><Money value={revenue} /></div><div style={{ color: T.t3, fontSize: 12 }}>Paid bookings</div></Card>
@@ -1715,14 +1764,16 @@ function formatTimestamp(value?: string | null): string {
 function ReportApplicantPool() {
   const { prospects } = useAgencyData()
   const { applications } = useAppData()
+  const staffEmails = new Set(USERS.map((user) => user.email.toLowerCase()))
+  const people = prospects.filter((prospect) => !staffEmails.has((prospect.email || '').toLowerCase()))
   const byStage = useMemo(() => {
     const map: Record<string, number> = {}
-    for (const p of prospects) map[p.stage] = (map[p.stage] || 0) + 1
+    for (const p of people) map[p.stage] = (map[p.stage] || 0) + 1
     return map
-  }, [prospects])
+  }, [people])
   const apps = useMemo(
     () =>
-      Object.values(applications).sort((a, b) => {
+      Object.values(applications).filter((app) => !staffEmails.has((app.talent_email || '').toLowerCase())).sort((a, b) => {
         const aTs = Date.parse(a.last_saved || a.submitted_at || a.created_at || '') || 0
         const bTs = Date.parse(b.last_saved || b.submitted_at || b.created_at || '') || 0
         return bTs - aTs
@@ -1730,7 +1781,7 @@ function ReportApplicantPool() {
     [applications],
   )
   return (
-    <Panel title="Applicant Pool & Pipeline Log" subtitle="How many applicants are waiting for agent screenings.">
+    <Panel title="Applicant Pool & Pipeline Log">
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
         {Object.entries(byStage).map(([k, v]) => (
           <Card key={k} style={{ minWidth: 120 }}>
@@ -1743,7 +1794,7 @@ function ReportApplicantPool() {
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Pipeline log</div>
         <Table
           headers={['Account ID', 'Name', 'Stage', 'Work Area', 'Source', 'Entered', 'Notes']}
-          rows={prospects.map((p) => [
+          rows={people.map((p) => [
             <TalentLink key={`id-${p.id}`} accountId={p.accountId} name={p.name}>{p.accountId}</TalentLink>,
             <TalentLink key={`n-${p.id}`} accountId={p.accountId} name={p.name} />,
             p.stage,
@@ -1759,7 +1810,7 @@ function ReportApplicantPool() {
         <Table
           headers={['Name', 'Status', 'Created', 'Last saved', 'Submitted']}
           rows={apps.map((app) => {
-            const linked = prospects.find(
+            const linked = people.find(
               (p) =>
                 p.linkedApplicationId === app.id ||
                 (app.talent_email && p.email?.toLowerCase() === app.talent_email.toLowerCase()),
@@ -1792,7 +1843,7 @@ function ReportEscrow() {
   const { escrow } = useAgencyData()
   const held = escrow.filter((e) => e.status === 'cleared').reduce((s, e) => s + e.amount, 0)
   return (
-    <Panel title="Escrow & Deposit Balances" subtitle="Client project funds currently held in the agency account.">
+    <Panel title="Escrow & Deposit Balances">
       <Card style={{ marginBottom: 12 }}>
         <div style={{ fontSize: 13, color: T.t3 }}>Total cleared / held</div>
         <div style={{ fontSize: 28, fontWeight: 800 }}><Money value={held} /></div>
@@ -1815,7 +1866,7 @@ function ReportEscrow() {
 function ReportOnboarding() {
   const { talent, prospects } = useAgencyData()
   return (
-    <Panel title="Onboarding & Offboarding" subtitle="Talent moving onto or off the active roster.">
+    <Panel title="Onboarding & Offboarding">
       <Card>
         <Table
           headers={['Name', 'Type', 'Status']}
@@ -1839,16 +1890,34 @@ function ReportOnboarding() {
 
 function ReportOpenings() {
   const { talent } = useAgencyData()
+  const now = new Date()
+  const semester = `${now.getFullYear()}-${now.getMonth() < 6 ? 'Jan-Jun' : 'Jul-Dec'}`
+  const divisions = [
+    { label: 'Modeling', areas: ['Modeling'] },
+    { label: 'Acting', areas: ['Acting'] },
+    { label: 'Influencing/Content Creation', areas: ['Influencing', 'Influencer'] },
+    { label: 'Athletics', areas: ['Sports'] },
+  ]
+  const rows = divisions.map((division) => {
+    const filled = talent.filter((t) => {
+      if (!division.areas.includes(t.workArea)) return false
+      if (!t.contractStart) return true
+      const start = new Date(`${t.contractStart}T12:00:00`)
+      return start.getFullYear() === now.getFullYear() && (start.getMonth() < 6) === (now.getMonth() < 6)
+    }).length
+    return { label: division.label, filled }
+  })
+  const total = rows.reduce((sum, row) => sum + row.filled, 0)
   return (
-    <Panel title="Roster Openings & Availability" subtitle="Who is free for new bookings.">
+    <Panel title="Roster Openings & Availability">
+      <div style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>Semester {semester}. Capacity resets each January and July.</div>
       <Card>
         <Table
-          headers={['Talent', 'Available', 'Niches']}
-          rows={talent.map((t) => [
-            <TalentLink key={t.id} accountId={t.accountId} name={t.name} />,
-            t.available ? <Badge color={T.green}>Open</Badge> : <Badge color={T.amber}>Unavailable</Badge>,
-            t.niches.join(', '),
-          ])}
+          headers={['Division', 'Filled', 'Capacity']}
+          rows={[
+            ...rows.map((row) => [row.label, String(row.filled), `${row.filled}/50`]),
+            ['Total', String(total), `${total}/${divisions.length * 50}`],
+          ]}
         />
       </Card>
     </Panel>
@@ -1865,7 +1934,7 @@ function ReportGrossBookings() {
   const commission = rows.reduce((s, r) => s + r.split.agencyCommission, 0)
   const talentShare = rows.reduce((s, r) => s + r.split.talentShare, 0)
   return (
-    <Panel title="Gross Bookings & Commission Summary" subtitle="Agency retains 20% unless the invoice rate says otherwise; talent share is the remainder.">
+    <Panel title="Gross Bookings & Commission Summary">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
         <Card><div style={{ color: T.t3, fontSize: 12 }}>Gross bookings</div><div style={{ fontSize: 26, fontWeight: 800 }}><Money value={gross} /></div></Card>
         <Card><div style={{ color: T.t3, fontSize: 12 }}>Agency commission (20%)</div><div style={{ fontSize: 26, fontWeight: 800 }}><Money value={commission} /></div></Card>
@@ -1890,7 +1959,7 @@ function ReportGrossBookings() {
 function ReportArAging() {
   const { invoices } = useAgencyData()
   return (
-    <Panel title="Aged Client Invoices (AR Aging)" subtitle="Open receivables by due date.">
+    <Panel title="Aged Client Invoices (AR Aging)">
       <Card>
         <Table
           headers={['Client', 'Due', 'Amount', 'Status', 'Interest']}
@@ -1913,7 +1982,7 @@ function ReportOverdue() {
   const { invoices } = useAgencyData()
   const overdue = invoices.filter((i) => i.status === 'overdue')
   return (
-    <Panel title="Overdue Client Accounts" subtitle="Accounts past payment terms.">
+    <Panel title="Overdue Client Accounts">
       <Card>
         <Table
           headers={['Client', 'Project', 'Amount', 'Due']}
@@ -1950,7 +2019,7 @@ function ReportPendingPayouts() {
   }
 
   return (
-    <Panel title="Pending Talent Payouts (AP Aging)" subtitle="Ensure completed gigs are queued for payday. Admins approve a payout after reviewing the split and payee details.">
+    <Panel title="Pending Talent Payouts (AP Aging)">
       {!isChaseConnected() && <IntegrationNotice id="chase" compact />}
       <Card>
         <Table

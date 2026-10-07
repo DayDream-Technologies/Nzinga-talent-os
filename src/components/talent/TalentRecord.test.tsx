@@ -54,7 +54,7 @@ describe('TalentRecord', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(talent.phone)).toBeInTheDocument()
+    expect(screen.getByText(talent.phone || '')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '📞 Call' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '💬 SMS' })).toBeInTheDocument()
   })

@@ -5,6 +5,7 @@ import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { isDocHubConnected } from '@/lib/integrations'
+import { catalogNames } from '@/lib/lookup-catalogs'
 import { calculateRenewalWindow, previewRenewalOffer, type RenewalTerm } from '@/lib/renewal'
 import { createHistoryEntry } from '@/lib/history-ledger'
 import { T } from '@/lib/tokens'
@@ -20,8 +21,12 @@ export function RenewalOfferModal({
   const { createRenewalOffer, addProspectContract, prospects } = useAgencyData()
   const { setHistory } = useAppData()
   const { user } = useAuth()
-  const [term, setTerm] = useState<RenewalTerm>('1y')
-  const [sameTerms, setSameTerms] = useState(true)
+  const term: RenewalTerm = '1y'
+  const [existingRepresentation, setExistingRepresentation] = useState(true)
+  const [rateChanging, setRateChanging] = useState(false)
+  const [newRate, setNewRate] = useState('')
+  const [divisionChanging, setDivisionChanging] = useState(false)
+  const [newDivision, setNewDivision] = useState(talent.division || talent.workArea || 'Modeling')
   const [notes, setNotes] = useState('')
   const [preview, setPreview] = useState('')
   const windowDates = calculateRenewalWindow({
@@ -34,11 +39,11 @@ export function RenewalOfferModal({
 
   const text = previewRenewalOffer({
     legalName: talent.name,
-    division: talent.division || talent.workArea,
-    commissionRate: rate,
+    division: !existingRepresentation && divisionChanging ? newDivision : talent.division || talent.workArea,
+    commissionRate: !existingRepresentation && rateChanging && newRate.trim() ? newRate.trim() : rate,
     start: windowDates.start,
     end: windowDates.end,
-    sameTerms,
+    sameTerms: existingRepresentation,
     notes,
   })
 
@@ -46,25 +51,61 @@ export function RenewalOfferModal({
     <ModalShell title={`Renew · ${talent.name}`} onClose={onClose} width={560}>
       {!connected && <IntegrationNotice id="dochub" compact />}
       <Field label="Renewal term">
-        <select value={term} onChange={(e) => setTerm(e.target.value as RenewalTerm)} style={inputStyle}>
-          <option value="6m">6 Months</option>
-          <option value="1y">1 Year</option>
-          <option value="2y">2 Years</option>
-          <option value="3y">3 Years</option>
-          <option value="custom">Custom</option>
-        </select>
+        <input style={inputStyle} value="1 Year" readOnly />
       </Field>
       <div style={{ fontSize: 13, marginBottom: 10, color: T.t2 }}>
         Current % Rate: {rate}
         <br />
         New agreement: {windowDates.start} – {windowDates.end}
       </div>
-      <Field label="Existing representation terms staying the same?">
-        <select value={sameTerms ? 'yes' : 'no'} onChange={(e) => setSameTerms(e.target.value === 'yes')} style={inputStyle}>
+      <Field label="Existing representation">
+        <select
+          value={existingRepresentation ? 'yes' : 'no'}
+          onChange={(e) => setExistingRepresentation(e.target.value === 'yes')}
+          style={inputStyle}
+        >
           <option value="yes">Yes</option>
-          <option value="no">No — terms need review</option>
+          <option value="no">No</option>
         </select>
       </Field>
+      {!existingRepresentation && (
+        <>
+          <Field label="Is commission rate changing?">
+            <select
+              value={rateChanging ? 'yes' : 'no'}
+              onChange={(e) => setRateChanging(e.target.value === 'yes')}
+              style={inputStyle}
+            >
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </Field>
+          {rateChanging && (
+            <Field label="New rate">
+              <input style={inputStyle} value={newRate} onChange={(e) => setNewRate(e.target.value)} placeholder="25%" />
+            </Field>
+          )}
+          <Field label="Is division changing?">
+            <select
+              value={divisionChanging ? 'yes' : 'no'}
+              onChange={(e) => setDivisionChanging(e.target.value === 'yes')}
+              style={inputStyle}
+            >
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </Field>
+          {divisionChanging && (
+            <Field label="Division">
+              <select style={inputStyle} value={newDivision} onChange={(e) => setNewDivision(e.target.value)}>
+                {catalogNames('Roster Groups').map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
+              </select>
+            </Field>
+          )}
+        </>
+      )}
       <Field label="Additional notes / special terms">
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} style={inputStyle} />
       </Field>

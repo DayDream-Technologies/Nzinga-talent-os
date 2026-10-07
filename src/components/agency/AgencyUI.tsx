@@ -137,7 +137,7 @@ export function Btn({
   type = 'button',
 }: {
   children: ReactNode
-  onClick?: () => void
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'ghost' | 'info'
   disabled?: boolean
   loading?: boolean

@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
-import { loginWithCredentials } from '@/services/auth.service'
+import { useEffect, useState, type FormEvent } from 'react'
+import { loginWithCredentials, signInWithGoogle } from '@/services/auth.service'
+import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { T } from '@/lib/tokens'
 
 interface IdleReauthModalProps {
@@ -13,6 +14,15 @@ export function IdleReauthModal({ email, companyCode, onSuccess, onSignOut }: Id
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleIdentity, setGoogleIdentity] = useState(false)
+
+  useEffect(() => {
+    if (!supabaseConfigured || !supabase) return
+    void supabase.auth.getSession().then(({ data }) => {
+      const identities = data.session?.user.identities || []
+      setGoogleIdentity(identities.some((identity) => identity.provider === 'google'))
+    })
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -125,6 +135,28 @@ export function IdleReauthModal({ email, companyCode, onSuccess, onSignOut }: Id
         >
           {loading ? 'Verifying…' : 'Continue'}
         </button>
+        {googleIdentity && (
+        <button
+          type="button"
+          onClick={() => {
+            void signInWithGoogle(companyCode).catch((err: Error) => setError(err.message))
+          }}
+          style={{
+            width: '100%',
+            padding: '10px 14px',
+            borderRadius: 8,
+            border: `1px solid ${T.cardBorder}`,
+            background: T.cardBg,
+            color: T.t1,
+            fontSize: 13,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            marginBottom: 8,
+          }}
+        >
+          Continue with Google
+        </button>
+        )}
         <button
           type="button"
           onClick={onSignOut}

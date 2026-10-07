@@ -181,7 +181,7 @@ function Workspace({ currentUser, onNav }) {
         </div>
       </div>
       <div style={{ ...dashCardStyle(), marginTop:14, padding:"9px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-        <span style={{ fontSize:12,color:DASH.text.secondary }}>📢 <strong style={{ color:DASH.text.primary }}>Announcements</strong> — No new announcements</span>
+        <span onClick={()=>onNav("announcements")} style={{ fontSize:12,color:DASH.text.secondary,cursor:"pointer" }}>📢 <strong style={{ color:DASH.text.primary }}>Announcements</strong> — No new announcements</span>
         <span onClick={()=>onNav("training")} style={{ fontSize:12,color:DASH.blue.link,cursor:"pointer" }}>🎓 TMX Academy</span>
       </div>
     </div>

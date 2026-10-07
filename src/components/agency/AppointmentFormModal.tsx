@@ -19,7 +19,7 @@ interface AppointmentFormModalProps {
   clientOptions: string[]
   talentOptions: string[]
   onClose: () => void
-  onSave: (values: AppointmentFormValues) => void
+  onSave: (values: AppointmentFormValues, action?: 'new' | 'finish') => void
   onDelete?: () => void
 }
 
@@ -69,7 +69,7 @@ export function AppointmentFormModal({
     setTalentNames(initial.talentNames || [])
   }, [initial])
 
-  function submit() {
+  function submit(action: 'new' | 'finish') {
     if (!title.trim()) {
       setError('Title is required.')
       return
@@ -94,7 +94,19 @@ export function AppointmentFormModal({
       endsAt,
       location: location.trim() || 'TBD',
       notes: notes.trim(),
-    })
+    }, action)
+    if (action === 'new') {
+      const times = defaultTimes()
+      setTitle('')
+      setLocation('')
+      setNotes('')
+      setStartsLocal(toLocalDateTimeInput(times.startsAt))
+      setEndsLocal(toLocalDateTimeInput(times.endsAt))
+      setClientNames([])
+      setAgentNames([])
+      setTalentNames([])
+      setError('')
+    }
   }
 
   return (
@@ -149,7 +161,10 @@ export function AppointmentFormModal({
         <Btn variant="secondary" onClick={onClose}>
           Cancel
         </Btn>
-        <Btn onClick={submit}>{initial ? 'Save' : 'Create'}</Btn>
+        <Btn variant="secondary" onClick={() => submit('new')}>
+          Save and New
+        </Btn>
+        <Btn onClick={() => submit('finish')}>Save and Finish</Btn>
       </div>
       <ConfirmDialog
         open={confirmDelete}

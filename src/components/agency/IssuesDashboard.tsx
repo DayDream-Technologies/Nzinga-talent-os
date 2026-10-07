@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Badge, Btn, Card, Field, ModalShell, Panel, Table, inputStyle, StatusColor } from '@/components/agency/AgencyUI'
+import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
+import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useViewport } from '@/hooks/useViewport'
 import { createHistoryEntry } from '@/lib/history-ledger'
+import { catalogNames } from '@/lib/lookup-catalogs'
 import { T } from '@/lib/tokens'
 import type { TicketStatus, TicketType } from '@/types/agency'
 
@@ -35,15 +38,46 @@ export function NewIssueModal({
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [talentName, setTalentName] = useState(defaultTalent || talent[0]?.name || '')
-  const [division, setDivision] = useState('Modeling')
+  const divisions = catalogNames('Roster Groups')
+  const caseCategories = catalogNames('Request / Case Categories', CATEGORIES.map((c) => c.label))
+  const [division, setDivision] = useState(divisions[0] || 'Modeling')
+  const [categoryLabel, setCategoryLabel] = useState(caseCategories[0] || 'General')
   const [assignee, setAssignee] = useState(user?.name || '')
   const [status, setStatus] = useState<TicketStatus>('open')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium')
-  const [type, setType] = useState<TicketType>('general')
   const [dueDate, setDueDate] = useState('')
   const [followUp, setFollowUp] = useState('')
   const missing = !title.trim() ? ['Title'] : []
   const mobile = useViewport() === 'mobile'
+
+  function saveTicket() {
+    const matched = CATEGORIES.find((c) => c.label === categoryLabel)
+    addTicket({
+      subject: title.trim(),
+      clientId: clients[0]?.id || 'internal',
+      clientName: clients[0]?.name || talentName,
+      talentName,
+      status,
+      type: matched?.id || 'general',
+      priority,
+      dueDate: dueDate || new Date().toISOString().slice(0, 10),
+      body,
+      assignee,
+      createdBy: user?.name,
+      division,
+      followUpAt: followUp || null,
+    })
+    setHistory((prev) => [
+      createHistoryEntry({
+        type: 'issue',
+        text: `New support ticket submitted: ${title.trim()}`,
+        category: 'internal',
+        staffName: user?.name,
+        userId: user?.id,
+      }),
+      ...prev,
+    ])
+  }
 
   return (
     <ModalShell title="New Issue" onClose={onClose} width={720}>
@@ -88,7 +122,11 @@ export function NewIssueModal({
                 <input value={talentName} onChange={(e) => setTalentName(e.target.value)} style={inputStyle} />
               </Field>
               <Field label="Division">
-                <input value={division} onChange={(e) => setDivision(e.target.value)} style={inputStyle} />
+                <select value={division} onChange={(e) => setDivision(e.target.value)} style={inputStyle}>
+                  {divisions.map((name) => (
+                    <option key={name}>{name}</option>
+                  ))}
+                </select>
               </Field>
             </>
           )}
@@ -116,11 +154,9 @@ export function NewIssueModal({
                 </select>
               </Field>
               <Field label="Category">
-                <select value={type} onChange={(e) => setType(e.target.value as TicketType)} style={inputStyle}>
-                  {CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
+                <select value={categoryLabel} onChange={(e) => setCategoryLabel(e.target.value)} style={inputStyle}>
+                  {caseCategories.map((name) => (
+                    <option key={name}>{name}</option>
                   ))}
                 </select>
               </Field>
@@ -146,35 +182,21 @@ export function NewIssueModal({
         <Btn
           disabled={missing.length > 0}
           onClick={() => {
-            addTicket({
-              subject: title.trim(),
-              clientId: clients[0]?.id || 'internal',
-              clientName: clients[0]?.name || talentName,
-              talentName,
-              status,
-              type,
-              priority,
-              dueDate: dueDate || new Date().toISOString().slice(0, 10),
-              body,
-              assignee,
-              createdBy: user?.name,
-              division,
-              followUpAt: followUp || null,
-            })
-            setHistory((prev) => [
-              createHistoryEntry({
-                type: 'issue',
-                text: `New support ticket submitted: ${title.trim()}`,
-                category: 'internal',
-                staffName: user?.name,
-                userId: user?.id,
-              }),
-              ...prev,
-            ])
+            saveTicket()
+            setTitle('')
+            setBody('')
+          }}
+        >
+          Save and New
+        </Btn>
+        <Btn
+          disabled={missing.length > 0}
+          onClick={() => {
+            saveTicket()
             onClose()
           }}
         >
-          Create issue
+          Save and Finish
         </Btn>
       </div>
     </ModalShell>
@@ -183,9 +205,11 @@ export function NewIssueModal({
 
 export function IssuesDashboardModule() {
   const { tickets, updateTicket } = useAgencyData()
+  const { user } = useAuth()
   const [q, setQ] = useState('')
-  const [status, setStatus] = useState('all')
+  const [status, setStatus] = useState('unassigned')
   const [open, setOpen] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const rows = useMemo(
     () =>
       tickets.filter((t) => {
@@ -209,7 +233,6 @@ export function IssuesDashboardModule() {
   return (
     <Panel
       title="Issues / Support Tickets"
-      subtitle="Staff and portal tickets. Add issue opens the full staff form."
       actions={<Btn onClick={() => setOpen(true)}>+ Add Issue</Btn>}
     >
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -226,6 +249,7 @@ export function IssuesDashboardModule() {
       <Card>
         <Table
           headers={['Issue ID', 'Opened', 'Created By', 'Status', 'Age', 'Issue', 'Talent / Client', 'Division']}
+          onRowClick={(i) => setSelectedId(rows[i]?.id || null)}
           rows={rows.map((t) => [
             t.id,
             new Date(t.createdAt).toLocaleDateString(),
@@ -241,6 +265,15 @@ export function IssuesDashboardModule() {
         />
       </Card>
       {open && <NewIssueModal onClose={() => setOpen(false)} />}
+      {selectedId && tickets.find((t) => t.id === selectedId) && (
+        <TicketDetailModal
+          ticket={tickets.find((t) => t.id === selectedId)!}
+          onClose={() => setSelectedId(null)}
+          updateTicket={updateTicket}
+          isDirector={user?.role === 'director'}
+          agents={AGENCY_TICKET_AGENTS}
+        />
+      )}
     </Panel>
   )
 }

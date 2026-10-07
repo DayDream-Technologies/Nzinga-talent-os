@@ -32,7 +32,7 @@ vi.mock('@/context/AgencyDataContext', () => ({
 }))
 
 describe('ProspectTrackingBoard', () => {
-  it('opens the preview on card click and links to the talent full profile', () => {
+  it('links the prospect name to the full profile', () => {
     render(
       <MemoryRouter initialEntries={['/prospect-tracking']}>
         <Routes>
@@ -42,10 +42,9 @@ describe('ProspectTrackingBoard', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByText('Maya Rivera'))
-
-    expect(screen.getByText('Account 200101')).toBeInTheDocument()
-    const profileLink = screen.getByRole('link', { name: 'Open full profile' })
+    expect(screen.getByText(/Last contact: 2026-08-01/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add Prospects' })).toBeInTheDocument()
+    const profileLink = screen.getByRole('link', { name: 'Maya Rivera' })
     expect(profileLink).toHaveAttribute('href', '/talent/NZG-200101')
 
     fireEvent.click(profileLink)

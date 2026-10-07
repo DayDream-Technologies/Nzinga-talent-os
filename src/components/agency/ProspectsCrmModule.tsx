@@ -3,21 +3,63 @@ import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
-import { CreateProspectModal } from '@/components/agency/CreateProspectModal'
+import { CreateProspectModal, type CreateProspectInput } from '@/components/agency/CreateProspectModal'
+import { isAppComplete } from '@/constants/app-sections'
+import { completedSectionsFromData, prefillApplicationData } from '@/lib/application-prefill'
+import { sendGeneralEmail } from '@/lib/email'
 import { BulkActionsMenu, RowActionsMenu, stubGroups } from '@/components/agency/RowActionsMenu'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Badge, Btn, Field, ModalShell, Panel, SelectAllCheckbox, Table, inputStyle } from '@/components/agency/AgencyUI'
+import { Btn, Field, ModalShell, Panel, SelectAllCheckbox, Table, inputStyle } from '@/components/agency/AgencyUI'
 import {
   PROSPECT_STAGE_LABELS,
   PROSPECT_TRACKING_STAGES,
   normalizeProspectStage,
-  prospectStageLabel,
 } from '@/constants/prospect-stages'
+import { catalogNames } from '@/lib/lookup-catalogs'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
 import { resolvePipelineTalentId } from '@/lib/resolve-history-talent'
 import { T } from '@/lib/tokens'
 import type { AgencyProspect, ProspectStage } from '@/types/agency'
+import type { Application } from '@/types'
+
+const OFFICIAL_PROSPECT_STAGES = new Set([
+  'application_completed',
+  'screening_completed',
+  'application_approved',
+  'contact_published',
+  'contract_completed',
+])
+
+function invitationFor(prospect: AgencyProspect, companyCode: string): Application {
+  const talent = {
+    id: prospect.id,
+    name: prospect.name,
+    email: prospect.email,
+    phone: prospect.phone,
+    first_name: prospect.firstName,
+    last_name: prospect.lastName,
+    dob: prospect.dateOfBirth,
+    account_number: prospect.accountId,
+  }
+  const data = prefillApplicationData({ talent, prospect })
+  const code =
+    (prospect.name || 'APPL').toUpperCase().replace(/\s+/g, '').slice(0, 4) +
+    Math.floor(1000 + Math.random() * 8999)
+  return {
+    id: `app_${prospect.id}_${Date.now()}`,
+    talent_id: prospect.id,
+    access_code: code,
+    company_code: companyCode,
+    talent_name: prospect.name,
+    talent_email: prospect.email || '',
+    status: 'sent',
+    created_at: new Date().toISOString(),
+    last_saved: new Date().toISOString(),
+    completed_sections: completedSectionsFromData({ ...data, email: prospect.email || '' }),
+    data: { ...data, email: prospect.email || '' },
+  }
+}
 import { SendApplicationModal } from '@/components/application/ApplicationModals'
 
 export function ProspectsCrmModule() {
@@ -30,7 +72,7 @@ export function ProspectsCrmModule() {
     setProspectStage,
     sendMessage,
   } = useAgencyData()
-  const { handleSendApp, setHistory, talents } = useAppData()
+  const { handleSendApp, setHistory, talents, applications } = useAppData()
   const { user, companyCode } = useAuth()
   const navigate = useNavigate()
 
@@ -38,6 +80,7 @@ export function ProspectsCrmModule() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [showCreate, setShowCreate] = useState(false)
   const [sendAppFor, setSendAppFor] = useState<AgencyProspect | null>(null)
+  const [emailFor, setEmailFor] = useState<AgencyProspect | null>(null)
   const [deleteIds, setDeleteIds] = useState<string[] | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
   const [survivorId, setSurvivorId] = useState('')
@@ -47,13 +90,18 @@ export function ProspectsCrmModule() {
 
   const filtered = useMemo(() => {
     return prospects.filter((p) => {
+      const stage = normalizeProspectStage(p.stage)
+      const linked = p.linkedApplicationId ? applications[p.linkedApplicationId] : undefined
+      const complete = Boolean(linked && isAppComplete(linked) && linked.status === 'submitted')
+      const official = OFFICIAL_PROSPECT_STAGES.has(stage) || complete
+      if (!official && stageFilter !== 'lost') return false
       if (p.lost && stageFilter !== 'lost') return false
-      if (normalizeProspectStage(p.stage) === 'contract_completed' && stageFilter === 'all') return false
+      if (stage === 'contract_completed' && stageFilter === 'all') return false
       if (stageFilter === 'all') return !p.lost
       if (stageFilter === 'lost') return !!p.lost
-      return normalizeProspectStage(p.stage) === stageFilter
+      return stage === stageFilter
     })
-  }, [prospects, stageFilter])
+  }, [prospects, stageFilter, applications])
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -108,7 +156,10 @@ export function ProspectsCrmModule() {
       'Send Email': {
         id: 'Send Email',
         label: 'Send Email',
-        onClick: () => navigate('/send-email'),
+        onClick: () => {
+          const first = selectedList.find((p) => p.email)
+          if (first) setEmailFor(first)
+        },
       },
       'Set to Lost': {
         id: 'Set to Lost',
@@ -145,7 +196,6 @@ export function ProspectsCrmModule() {
   return (
     <Panel
       title="Prospects"
-      subtitle="Inbound leads and applicants. Applications sync here when sent or started."
       actions={
         <>
           <BulkActionsMenu groups={bulkGroups} disabled={selected.size === 0} />
@@ -154,19 +204,6 @@ export function ProspectsCrmModule() {
       }
     >
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select
-          style={{ ...inputStyle, width: 'auto', minWidth: 200 }}
-          value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value)}
-        >
-          <option value="all">All stages</option>
-          <option value="lost">Lost</option>
-          {PROSPECT_TRACKING_STAGES.map((s) => (
-            <option key={s} value={s}>
-              {PROSPECT_STAGE_LABELS[s]}
-            </option>
-          ))}
-        </select>
         {selected.size > 0 && (
           <span style={{ fontSize: 12, color: T.t3 }}>{selected.size} selected</span>
         )}
@@ -209,7 +246,6 @@ export function ProspectsCrmModule() {
             'Postal',
             'Account #',
             'Agent',
-            'Stage',
             '',
           ]}
           rows={filtered.map((p) => [
@@ -232,26 +268,13 @@ export function ProspectsCrmModule() {
               {formatAccountDisplay(p.accountId)}
             </span>,
             p.assignedAgentName || '—',
-            <Badge key={`st-${p.id}`} color={T.blue}>
-              {prospectStageLabel(p.stage)}
-            </Badge>,
             <RowActionsMenu
               key={`m-${p.id}`}
               items={[
                 {
                   id: 'email',
                   label: 'Send Email',
-                  onClick: () => {
-                    if (p.email) {
-                      sendMessage({
-                        channel: 'email',
-                        to: p.email,
-                        subject: `Message for ${p.name}`,
-                        preview: '',
-                      })
-                    }
-                    navigate('/send-email')
-                  },
+                  onClick: () => setEmailFor(p),
                 },
                 {
                   id: 'note',
@@ -301,10 +324,60 @@ export function ProspectsCrmModule() {
           defaultOrganization={(companyCode || user.company_code || 'NZG').toUpperCase()}
           agent={{ id: user.id, name: user.name }}
           onClose={() => setShowCreate(false)}
-          onCreate={(values) => {
-            const created = createProspect(values)
-            setShowCreate(false)
-            setSendAppFor(created)
+          onCreate={(values: CreateProspectInput, action) => {
+            const created = createProspect({ ...values, stage: 'application_sent' })
+            const code = companyCode || user.company_code || 'NZG'
+            const app = invitationFor(created, code.toUpperCase())
+            handleSendApp(app, { accountNumber: created.accountId })
+            updateProspect(created.id, { stage: 'application_sent', linkedApplicationId: app.id })
+            const origin = typeof window !== 'undefined' ? window.location.origin : ''
+            if (created.email) {
+              void sendGeneralEmail({
+                toEmail: created.email,
+                toName: created.name,
+                subject: 'Your Nzinga application',
+                textBody: `Finish your application at ${origin}/portal with access code ${app.access_code}.`,
+                htmlBody: `<p>Finish your application at <a href="${origin}/portal">${origin}/portal</a>.</p><p>Access code: <strong>${app.access_code}</strong></p>`,
+              })
+            }
+            if (action !== 'new') setShowCreate(false)
+          }}
+        />
+      )}
+
+      {emailFor && (
+        <InlineProspectEmail
+          prospect={emailFor}
+          onClose={() => setEmailFor(null)}
+          onSent={(subject, body) => {
+            setHistory((prev) => [
+              {
+                id: `h_${Date.now()}`,
+                talent_id: resolvePipelineTalentId(talents, {
+                  id: emailFor.id,
+                  email: emailFor.email,
+                  applicationId: emailFor.linkedApplicationId,
+                  accountId: emailFor.accountId,
+                }),
+                account_number: emailFor.accountId || null,
+                user_id: user?.id || null,
+                type: 'email',
+                text: `Email to ${emailFor.email}: ${subject}\n\n${body}`,
+                ts: new Date().toISOString(),
+                flagged: false,
+                is_document: false,
+                email_subject: subject,
+                email_to: emailFor.email || '',
+                staff_name: user?.name,
+              },
+              ...prev,
+            ])
+            sendMessage({
+              channel: 'email',
+              to: emailFor.email || '',
+              subject,
+              preview: body,
+            })
           }}
         />
       )}
@@ -391,7 +464,10 @@ export function ProspectsCrmModule() {
               value={stageBulk}
               onChange={(e) => setStageBulk(e.target.value as ProspectStage)}
             >
-              {PROSPECT_TRACKING_STAGES.map((s) => (
+              {(PROSPECT_TRACKING_STAGES.filter((s) => catalogNames('Recruitment Stages').includes(PROSPECT_STAGE_LABELS[s])).length
+                ? PROSPECT_TRACKING_STAGES.filter((s) => catalogNames('Recruitment Stages').includes(PROSPECT_STAGE_LABELS[s]))
+                : PROSPECT_TRACKING_STAGES
+              ).map((s) => (
                 <option key={s} value={s}>
                   {PROSPECT_STAGE_LABELS[s]}
                 </option>
@@ -478,5 +554,77 @@ export function ProspectsCrmModule() {
         }}
       />
     </Panel>
+  )
+}
+
+function InlineProspectEmail({
+  prospect,
+  onClose,
+  onSent,
+}: {
+  prospect: AgencyProspect
+  onClose: () => void
+  onSent: (subject: string, body: string) => void
+}) {
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const [error, setError] = useState('')
+
+  async function send(action: 'new' | 'finish') {
+    if (!prospect.email) {
+      setError('This prospect has no email.')
+      return
+    }
+    if (!subject.trim() || !body.trim()) {
+      setError('Subject and message are required.')
+      return
+    }
+    const result = await sendGeneralEmail({
+      toEmail: prospect.email,
+      toName: prospect.name,
+      subject: subject.trim(),
+      textBody: body.trim(),
+      htmlBody: `<p>${body.trim().replace(/\n/g, '<br/>')}</p>`,
+    })
+    if (result.status === 'failed') {
+      setError(result.message)
+      return
+    }
+    onSent(subject.trim(), body.trim())
+    if (action === 'new') {
+      setSubject('')
+      setBody('')
+      setError('')
+      return
+    }
+    onClose()
+  }
+
+  return (
+    <ModalShell title="Send Email" onClose={onClose} width={560}>
+      <Field label="To">
+        <input style={inputStyle} value={prospect.email || ''} readOnly />
+      </Field>
+      <Field label="Subject">
+        <input style={inputStyle} value={subject} onChange={(e) => setSubject(e.target.value)} />
+      </Field>
+      <Field label="Message">
+        <textarea
+          style={{ ...inputStyle, minHeight: 140, resize: 'vertical' }}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+        />
+      </Field>
+      {error && <div style={{ color: T.red, fontSize: 12, marginBottom: 8 }}>{error}</div>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+        <Btn variant="secondary" onClick={onClose}>
+          Cancel
+        </Btn>
+        <Btn variant="secondary" onClick={() => void send('new')}>
+          Save and New
+        </Btn>
+        <Btn onClick={() => void send('finish')}>Save and Finish</Btn>
+      </div>
+    </ModalShell>
   )
 }

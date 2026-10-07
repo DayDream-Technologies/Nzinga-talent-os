@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Btn, Card, Panel, Table, Money } from '@/components/agency/AgencyUI'
+import { Btn, Card, Field, ModalShell, Panel, Table, Money } from '@/components/agency/AgencyUI'
 import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { isChaseConnected, isPlaidConnected } from '@/lib/integrations'
@@ -8,7 +8,9 @@ import { T } from '@/lib/tokens'
 export function ReconciliationModule() {
   const { escrow, expenseLogs, invoices } = useAgencyData()
   const [checked, setChecked] = useState<Record<string, boolean>>({})
+  const [openId, setOpenId] = useState<string | null>(null)
   const deposits = escrow
+  const open = deposits.find((row) => row.id === openId) || null
   const selected = deposits.filter((d) => checked[d.id])
   const clearedDeposits = selected.reduce((s, d) => s + d.amount, 0)
   const clearedDebits = expenseLogs.filter((e) => e.status === 'issued' || e.status === 'completed').reduce((s, e) => s + e.talentShare, 0)
@@ -22,17 +24,22 @@ export function ReconciliationModule() {
   }, [selected])
 
   return (
-    <Panel title="Bank Reconciliation" subtitle="Match inbound brand deposits to TMX escrow. Post is disabled until Difference is $0.00.">
+    <Panel title="Bank Reconciliation">
       {!isPlaidConnected() && <IntegrationNotice id="plaid" />}
       {!isChaseConnected() && <IntegrationNotice id="chase" compact />}
       <Card>
         <Table
+          onRowClick={(index) => {
+            const row = deposits[index]
+            if (row) setOpenId(row.id)
+          }}
           headers={['', 'Client', 'Project', 'Amount', 'Received', 'Status']}
           rows={deposits.map((d) => [
             <input
               key={`c-${d.id}`}
               type="checkbox"
               checked={Boolean(checked[d.id])}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => setChecked((prev) => ({ ...prev, [d.id]: e.target.checked }))}
             />,
             d.clientName,
@@ -54,6 +61,18 @@ export function ReconciliationModule() {
         </div>
         <Btn disabled={!balanced || footerDiff !== 0}>Post Reconciliation</Btn>
       </div>
+      {open && (
+        <ModalShell title="Reconciliation line" onClose={() => setOpenId(null)}>
+          <Field label="Client"><div>{open.clientName}</div></Field>
+          <Field label="Project"><div>{open.project}</div></Field>
+          <Field label="Amount"><Money value={open.amount} /></Field>
+          <Field label="Received"><div>{open.receivedAt}</div></Field>
+          <Field label="Status"><div>{open.status}</div></Field>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Btn variant="secondary" onClick={() => setOpenId(null)}>Close</Btn>
+          </div>
+        </ModalShell>
+      )}
     </Panel>
   )
 }

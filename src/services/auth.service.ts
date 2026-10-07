@@ -40,6 +40,27 @@ export async function validateCompanyCodeFromDB(code: string): Promise<boolean> 
   return !!data
 }
 
+const GOOGLE_PENDING_KEY = 'nto_google_pending'
+export const GOOGLE_SIGN_IN_ERROR_KEY = 'nto_google_error'
+
+export async function signInWithGoogle(companyCode: string): Promise<void> {
+  if (!supabaseConfigured || !supabase) {
+    throw new Error('Google sign-in is available when Supabase Auth is configured.')
+  }
+  try {
+    sessionStorage.setItem(GOOGLE_PENDING_KEY, companyCode.toUpperCase())
+    sessionStorage.removeItem(GOOGLE_SIGN_IN_ERROR_KEY)
+  } catch {
+    /* ignore */
+  }
+  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo },
+  })
+  if (error) throw new Error(error.message)
+}
+
 export async function loginWithCredentials(
   email: string,
   password: string,
@@ -87,6 +108,34 @@ export async function restoreSession(): Promise<User | null> {
       .select('*')
       .eq('auth_uid', session.user.id)
       .maybeSingle()
+    let pendingCompany = ''
+    try {
+      pendingCompany = sessionStorage.getItem(GOOGLE_PENDING_KEY) || ''
+    } catch {
+      pendingCompany = ''
+    }
+    if (pendingCompany) {
+      try {
+        sessionStorage.removeItem(GOOGLE_PENDING_KEY)
+      } catch {
+        /* ignore */
+      }
+      const email = (session.user.email || '').toLowerCase()
+      const { data: byEmail } = email
+        ? await supabase.from('users').select('*').ilike('email', email).eq('company_code', pendingCompany).maybeSingle()
+        : { data: null }
+      const staff = (byEmail as User | null) || null
+      if (!staff || staff.company_code?.toUpperCase() !== pendingCompany) {
+        await supabase.auth.signOut()
+        try {
+          sessionStorage.setItem(GOOGLE_SIGN_IN_ERROR_KEY, 'That Google account is not a staff login for this company.')
+        } catch {
+          /* ignore */
+        }
+        return null
+      }
+      return staff
+    }
     // Prospect (or orphan) auth sessions have no staff profile — not an error
     return (profile as User) ?? null
   } catch {

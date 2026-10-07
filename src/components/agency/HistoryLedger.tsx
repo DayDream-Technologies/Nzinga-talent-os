@@ -49,6 +49,13 @@ export function HistoryLedger({
           <div style={{ fontSize: 12, color: T.t3, marginBottom: 8 }}>
             {new Date(open.ts).toLocaleString()} · {open.staff_name || 'System'}
           </div>
+          {(open.type === 'email' || open.type === 'sms') && (
+            <div style={{ fontSize: 13, marginBottom: 10, display: 'grid', gap: 4 }}>
+              {open.email_to && <div>To: {open.email_to}</div>}
+              <div>Sent: {new Date(open.ts).toLocaleString()}</div>
+              <div>From: {open.staff_name || 'System'}</div>
+            </div>
+          )}
           {open.email_subject && <div style={{ fontWeight: 700, marginBottom: 8 }}>{open.email_subject}</div>}
           <div style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: T.t1 }}>{open.text}</div>
           {open.doc_name && (
