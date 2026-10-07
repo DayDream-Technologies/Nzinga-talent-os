@@ -24,6 +24,8 @@ import { useAgencyData } from "@/context/AgencyDataContext";
 import { sendGeneralEmail } from "@/lib/email";
 import { uploadProfilePhoto } from "@/lib/profile-photo";
 import { uploadDocument, uploadOwnedFile } from "@/services/storage.service";
+import { fileToBase64, sendDocHubContract } from "@/lib/dochub";
+import { isDocHubConnected } from "@/lib/integrations";
 
 const NICHE_OPTIONS = ["Modeling", "Acting", "Sports & Athletics", "Influencing / Content Creation", "Model", "Actor", "Influencer", "Athlete"];
 
@@ -31,7 +33,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
   const { companyCode } = useAuth();
   const band = useViewport();
   const stack = staffGridColumns(band, "1fr 1fr");
-  const { upsertProspectSop, addProspectContract, prospects } = useAgencyData();
+  const { upsertProspectSop, addProspectContract, patchProspectContract, prospects } = useAgencyData();
   const { cropImage, cropper } = useImageCropper();
   const [local, setLocal] = useState(() => JSON.parse(JSON.stringify(talent)));
   const [err, setErr] = useState("");
@@ -285,20 +287,46 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
         stage: "contact_published",
         sopSubStatus: SOP_STATUS.contractPending,
       });
-      if (prospect) {
-        addProspectContract(prospect.id, markContractPendingSignature({
-          title: file.name.replace(/\.[^.]+$/, "") || "Representation agreement",
-          status: "pending_signature",
-          startDate: new Date().toISOString().slice(0, 10),
-          document: {
-            name: stored.name,
-            data: stored.data,
-            type: stored.type,
-            storagePath: stored.storagePath,
-            cdnUrl: stored.cdnUrl,
-            thumbnailUrl: stored.thumbnailUrl,
-          },
-        }));
+      const title = file.name.replace(/\.[^.]+$/, "") || "Representation agreement";
+      const pending = markContractPendingSignature({
+        title,
+        status: "pending_signature",
+        startDate: new Date().toISOString().slice(0, 10),
+        document: {
+          name: stored.name,
+          data: stored.data,
+          type: stored.type,
+          storagePath: stored.storagePath,
+          cdnUrl: stored.cdnUrl,
+          thumbnailUrl: stored.thumbnailUrl,
+        },
+      });
+      if (prospect) addProspectContract(prospect.id, pending);
+      if (isDocHubConnected() && prospect && !local.email) {
+        setErr("Add an email address before DocHub can send this agreement.");
+      }
+      if (isDocHubConnected() && prospect && local.email) {
+        const sent = await sendDocHubContract({
+          contractId: pending.id,
+          kind: "representation",
+          title,
+          signerName: local.name,
+          signerEmail: local.email,
+          talentAccount: local.account_number,
+          filename: file.name,
+          contentType: file.type || "application/pdf",
+          fileBase64: await fileToBase64(file),
+        });
+        if (!sent.ok) {
+          setErr(sent.error);
+        } else {
+          patchProspectContract(prospect.id, pending.id, {
+            dochubStatus: sent.data.status || "sent",
+            dochubDocumentId: sent.data.documentId,
+            dochubUrl: sent.data.documentUrl,
+            expiresAt: sent.data.expiresAt,
+          });
+        }
       }
       if (local.email) {
         await sendGeneralEmail({
@@ -827,7 +855,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
           {hasPermission(role, "publish_contract") && local.stage === "team2_audit" && local.applicant_stage_status === SOP_STATUS.approvedFuture && (
             <Section title="Publish contract" accent={T.cyan}>
               <div style={{ fontSize: 11, color: T.t3, marginBottom: 8 }}>
-                Attach the representation agreement. The client is emailed to log in and sign. Status becomes Contract Published / Pending Signature.
+                Attach the representation agreement. DocHub emails the client a signing link that expires in 3 days. Status becomes Contract Published / Pending Signature.
               </div>
               <label style={{ display: "inline-block", border: `1px dashed ${T.inputBorder}`, borderRadius: 6, padding: "8px 12px", fontSize: 12, cursor: "pointer" }}>
                 Upload and publish contract

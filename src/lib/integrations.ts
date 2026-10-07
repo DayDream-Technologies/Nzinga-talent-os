@@ -17,8 +17,9 @@ export function isTwilioConnected(): boolean {
   return envFlag('VITE_TWILIO_CONNECTED') && supabaseConfigured
 }
 
+/** The API key stays in Supabase secrets. Demo mode (no Supabase) stays on Coming soon. */
 export function isDocHubConnected(): boolean {
-  return envFlag('VITE_DOCHUB_CONNECTED') && supabaseConfigured
+  return supabaseConfigured
 }
 
 export function isStripeConnected(): boolean {

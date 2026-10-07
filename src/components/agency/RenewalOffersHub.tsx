@@ -5,6 +5,7 @@ import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { isDocHubConnected } from '@/lib/integrations'
+import { sendDocHubContract } from '@/lib/dochub'
 import { catalogNames } from '@/lib/lookup-catalogs'
 import { calculateRenewalWindow, previewRenewalOffer, type RenewalTerm } from '@/lib/renewal'
 import { createHistoryEntry } from '@/lib/history-ledger'
@@ -29,6 +30,8 @@ export function RenewalOfferModal({
   const [newDivision, setNewDivision] = useState(talent.division || talent.workArea || 'Modeling')
   const [notes, setNotes] = useState('')
   const [preview, setPreview] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
   const windowDates = calculateRenewalWindow({
     currentStart: talent.contractStart,
     currentEnd: talent.contractEnd,
@@ -112,6 +115,7 @@ export function RenewalOfferModal({
       {preview && (
         <pre style={{ whiteSpace: 'pre-wrap', background: T.mutedBg, padding: 12, borderRadius: 8, fontSize: 12 }}>{preview}</pre>
       )}
+      {sendError && <div style={{ color: T.red, fontSize: 12, marginBottom: 8 }}>{sendError}</div>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <Btn variant="secondary" onClick={onClose}>
           Cancel
@@ -120,35 +124,64 @@ export function RenewalOfferModal({
           Preview Offer
         </Btn>
         <Btn
-          disabled={!connected || !preview}
+          disabled={!connected || !preview || sending}
           onClick={() => {
-            createRenewalOffer(talent.id)
-            const prospect = prospects.find((p) => p.id === talent.linkedProspectId)
-            if (prospect) {
+            void (async () => {
+              setSendError('')
+              const prospect = prospects.find((p) => p.id === talent.linkedProspectId)
+              const contractId = `ctr_${Date.now()}`
+              if (!prospect?.email) {
+                setSendError('This talent needs a prospect email before DocHub can send the offer.')
+                return
+              }
+              setSending(true)
+              const sent = await sendDocHubContract({
+                contractId,
+                kind: 'renewal',
+                title: `Renewal ${windowDates.start} – ${windowDates.end}`,
+                signerName: talent.name,
+                signerEmail: prospect.email,
+                talentAccount: talent.accountId,
+                filename: 'renewal.html',
+                contentType: 'text/html',
+                html: `<!doctype html><html><body><pre style="font-family:Georgia,serif;white-space:pre-wrap">${text
+                  .replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')}</pre></body></html>`,
+              })
+              setSending(false)
+              if (!sent.ok) {
+                setSendError(sent.error)
+                return
+              }
+              createRenewalOffer(talent.id)
               addProspectContract(prospect.id, {
+                id: contractId,
                 title: `Renewal ${windowDates.start} – ${windowDates.end}`,
                 status: 'pending_signature',
                 startDate: windowDates.start,
                 endDate: windowDates.end,
-                document: { name: 'renewal-draft.txt', data: `data:text/plain,${encodeURIComponent(text)}`, type: 'text/plain' },
-                dochubStatus: 'draft',
+                document: { name: 'renewal.html', data: `data:text/html,${encodeURIComponent(text)}`, type: 'text/html' },
+                dochubStatus: sent.data.status || 'sent',
+                dochubDocumentId: sent.data.documentId,
+                dochubUrl: sent.data.documentUrl,
+                expiresAt: sent.data.expiresAt,
               })
-            }
-            setHistory((prev) => [
-              createHistoryEntry({
-                type: 'document',
-                text: `Renewal offer drafted for ${talent.name} (${windowDates.start}–${windowDates.end})`,
-                category: 'internal',
-                staffName: user?.name,
-                userId: user?.id,
-                accountNumber: talent.accountId,
-              }),
-              ...prev,
-            ])
-            onClose()
+              setHistory((prev) => [
+                createHistoryEntry({
+                  type: 'document',
+                  text: `Renewal offer sent via DocHub for ${talent.name} (${windowDates.start}–${windowDates.end})`,
+                  category: 'internal',
+                  staffName: user?.name,
+                  userId: user?.id,
+                  accountNumber: talent.accountId,
+                }),
+                ...prev,
+              ])
+              onClose()
+            })()
           }}
         >
-          Create & Send Document
+          {sending ? 'Sending…' : 'Create & Send Document'}
         </Btn>
       </div>
     </ModalShell>

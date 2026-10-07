@@ -177,10 +177,11 @@ export interface ProspectContract {
   signedName?: string | null
   dochubStatus?: DocHubStatus
   dochubDocumentId?: string | null
+  dochubUrl?: string | null
   expiresAt?: string | null
 }
 
-export type DocHubStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'completed' | 'expired'
+export type DocHubStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'completed' | 'expired' | 'voided' | 'rejected'
 
 export interface BrandAccount {
   id: string

@@ -3,10 +3,11 @@ TMX — External attention and account configuration
 Items in this file cannot be completed in application code alone. They need
 an outside vendor account, DNS, bank setup, or a legal/ops decision.
 Until each item is connected, TMX shows a Coming soon placeholder and
-disables send/execute actions instead of faking success. Talent and brand
+disables send/execute actions instead of faking success. DocHub send is
+on when Supabase is configured (see section 2). Talent and brand
 portals never mention this file.
 
-Last updated: 2026-09-08
+Last updated: 2026-10-07
 Product owner: Nzinga MGMT / Talent Manager X
 
 ----------------------------------------------------------------------
@@ -36,34 +37,29 @@ What to do:
 Blocked product: /messaging, header SMS badge, TalentRecord click-to-call.
 
 ----------------------------------------------------------------------
-2. DocHub (exclusive e-sign) — REPLACES in-app name confirmation
+2. DocHub (exclusive e-sign)
 ----------------------------------------------------------------------
-Why it blocks: Renew, representation agreements, usage buyouts, and
-portal signing cannot dispatch or complete until DocHub is connected.
-Create & Send stays disabled; records stay Draft.
+The app calls https://dochub.com/api/v2 with DOCHUB_API_KEY (header
+X-API-Token). dochub-webhook verifies X-DocHub-Signature-256
+(HMAC-SHA256 of timestamp + "." + raw body, prefix dochub_v1=).
 
-Who: Director / Success Manager
-What to do:
-  - Create a DocHub Business account (dochub.com) for Nzinga MGMT.
-  - Generate API key / OAuth credentials. Store as:
-      DOCHUB_API_KEY
-      DOCHUB_WEBHOOK_SECRET
-  - Build and save these templates (merge fields in brackets):
-      * Representation agreement  [legal_name] [division] [start_date]
-        [end_date] [commission_rate] [agency_split] [talent_share]
-      * Renewal offer            same fields + [renewal_term]
-      * Usage / buyout           [brand] [project] [shoot_dates]
-        [guarantee] [usage_term]
-  - Point webhook to:
-      https://<project>.supabase.co/functions/v1/dochub-webhook
-    Events: document.sent, document.signed, document.completed,
-    document.expired.
-  - Enable Web Embed SDK so /talent/files and /client/contracts
-    can sign without leaving TMX.
-  - Confirm 72-hour default expiry on signature requests.
+Send paths:
+  - Publish contract (PDF or image on the talent record)
+  - Create & Send on a renewal preview (HTML)
+  - Brands → Send usage agreement (HTML)
+Each request expires in 3 days (DocHub's expiry unit is whole days;
+72 hours is sent as 3). The signer annotates in DocHub (canFreeEdit)
+because this flow does not pre-place signature fields.
 
-Blocked product: Renew, publish contract, talent Files sign, brand
-portal contracts.
+Webhook URL:
+  https://rvuchforbheotenhkxnm.supabase.co/functions/v1/dochub-webhook
+Subscribe to: sign_request.created, signer.finalized, signer.rejected,
+sign_request.voided, document.status_changed.
+document.status_changed is the terminal event (completed, expired,
+voided, rejected). DocHub does not emit document.sent / document.signed.
+
+Open in DocHub uses the document fullUrl (https://dochub.com/d/{id}).
+Demo mode (no Supabase) still shows Coming soon and does not send.
 
 ----------------------------------------------------------------------
 3. Stripe Connect — brand invoice checkout

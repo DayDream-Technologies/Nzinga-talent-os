@@ -1,7 +1,9 @@
 import { Link, Navigate, Outlet, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { T } from '@/lib/tokens'
 import { isDocHubConnected, isStripeConnected } from '@/lib/integrations'
+import { supabase } from '@/lib/supabase'
+import type { DocHubEnvelopeRow } from '@/lib/dochub'
 import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
 import { Btn, Card, Money, Panel, Table } from '@/components/agency/AgencyUI'
 import { INVOICES_SEED } from '@/constants/agency-seed'
@@ -126,10 +128,53 @@ export function BrandBillingPage() {
 }
 
 export function BrandContractsPage() {
+  const session = brandSession()
+  const connected = isDocHubConnected()
+  const [rows, setRows] = useState<DocHubEnvelopeRow[]>([])
+  useEffect(() => {
+    const email = session?.email?.trim().toLowerCase()
+    if (!supabase || !email) return
+    let cancel = false
+    void supabase
+      .from('dochub_envelopes')
+      .select('contract_id, kind, title, status, document_id, document_url, expires_at, signer_name, signer_email')
+      .eq('kind', 'usage')
+      .eq('signer_email', email)
+      .then(({ data }) => {
+        if (!cancel && data) setRows(data as DocHubEnvelopeRow[])
+      })
+    return () => {
+      cancel = true
+    }
+  }, [session?.email])
+
   return (
     <Panel title="Contracts & Licenses">
-      {!isDocHubConnected() && <IntegrationNotice id="dochub" audience="public" />}
-      <p>Usage agreements will open here for review and e-sign when contract sending is live.</p>
+      {!connected && <IntegrationNotice id="dochub" audience="public" />}
+      {connected && rows.length === 0 && (
+        <p>
+          Usage agreements sent to {session?.email} open here when this browser is signed in to Talent OS with that
+          same email. DocHub also emails a signing link that expires in 3 days.
+        </p>
+      )}
+      {rows.length > 0 && (
+        <Card>
+          <Table
+            headers={['Agreement', 'Status', '']}
+            rows={rows.map((row) => [
+              row.title,
+              row.status,
+              <Btn
+                key={row.contract_id}
+                disabled={!row.document_url}
+                onClick={() => row.document_url && window.open(row.document_url, '_blank', 'noopener,noreferrer')}
+              >
+                Open in DocHub
+              </Btn>,
+            ])}
+          />
+        </Card>
+      )}
     </Panel>
   )
 }

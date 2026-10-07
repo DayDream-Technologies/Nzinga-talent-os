@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -49,6 +50,8 @@ import { nextProspectStage, normalizeProspectStage, PROSPECT_TRACKING_STAGES } f
 import { shouldAdvanceSopStatus } from '@/constants/sop-status'
 import { AGENCY_PROPERTY } from '@/lib/session-storage'
 import { clientFromSignedProspect, signPendingContract } from '@/lib/sop-workflow'
+import { mergeDocHubEnvelope, type DocHubEnvelopeRow } from '@/lib/dochub'
+import { supabase } from '@/lib/supabase'
 
 interface AgencyDataValue {
   clients: AgencyClient[]
@@ -142,6 +145,7 @@ interface AgencyDataValue {
   archiveClients: (ids: string[]) => void
   restoreClients: (ids: string[]) => void
   addProspectContract: (prospectId: string, contract: Omit<ProspectContract, 'id' | 'uploadedAt'> & { id?: string; uploadedAt?: string }) => void
+  patchProspectContract: (prospectId: string, contractId: string, patch: Partial<ProspectContract>) => void
   upsertProspectSop: (input: {
     email?: string
     name?: string
@@ -746,6 +750,18 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const patchProspectContract = useCallback((prospectId: string, contractId: string, patch: Partial<ProspectContract>) => {
+    setProspects((prev) =>
+      prev.map((p) => {
+        if (p.id !== prospectId) return p
+        return {
+          ...p,
+          contracts: (p.contracts || []).map((c) => (c.id === contractId ? { ...c, ...patch } : c)),
+        }
+      }),
+    )
+  }, [])
+
   const upsertProspectSop = useCallback(
     (input: {
       email?: string
@@ -857,6 +873,60 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
     [talent],
   )
 
+  const signedDocHub = useRef(new Set<string>())
+  const contractSyncKey = prospects
+    .map((p) => (p.contracts || []).map((c) => `${c.id}:${c.status}:${c.dochubStatus || ''}`).join(','))
+    .join('|')
+
+  useEffect(() => {
+    if (!supabase) return
+    const ids = prospects.flatMap((p) => (p.contracts || []).map((c) => c.id))
+    if (!ids.length) return
+    let cancel = false
+
+    async function pull() {
+      const { data, error } = await supabase!
+        .from('dochub_envelopes')
+        .select('contract_id, kind, title, status, document_id, document_url, expires_at, signer_name, signer_email')
+        .in('contract_id', ids)
+      if (cancel || error || !data?.length) return
+      const rows = data as DocHubEnvelopeRow[]
+      setProspects((prev) => {
+        let changed = false
+        const next = prev.map((p) => {
+          let contracts = p.contracts || []
+          for (const row of rows) {
+            const match = contracts.find((c) => c.id === row.contract_id)
+            if (!match) continue
+            const promote = !(row.kind === 'representation' && row.status === 'completed' && match.status === 'pending_signature')
+            const merged = mergeDocHubEnvelope(contracts, row, { promoteToCurrent: promote })
+            if (merged !== contracts) {
+              contracts = merged
+              changed = true
+            }
+          }
+          return contracts === (p.contracts || []) ? p : { ...p, contracts }
+        })
+        return changed ? next : prev
+      })
+      for (const row of rows) {
+        if (row.kind !== 'representation' || row.status !== 'completed') continue
+        if (signedDocHub.current.has(row.contract_id)) continue
+        const prospect = prospects.find((p) => (p.contracts || []).some((c) => c.id === row.contract_id && c.status === 'pending_signature'))
+        if (!prospect) continue
+        signedDocHub.current.add(row.contract_id)
+        signProspectContract(prospect.id, row.contract_id, row.signer_name || 'Signed in DocHub')
+      }
+    }
+
+    void pull()
+    const timer = window.setInterval(() => void pull(), 20000)
+    return () => {
+      cancel = true
+      window.clearInterval(timer)
+    }
+  }, [contractSyncKey, prospects, signProspectContract])
+
   const advanceProspect = useCallback((id: string) => {
     setProspects((prev) =>
       prev.map((p) => {
@@ -938,6 +1008,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       archiveClients,
       restoreClients,
       addProspectContract,
+      patchProspectContract,
       upsertProspectSop,
       signProspectContract,
       advanceProspect,
@@ -1005,6 +1076,7 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       archiveClients,
       restoreClients,
       addProspectContract,
+      patchProspectContract,
       upsertProspectSop,
       signProspectContract,
       advanceProspect,

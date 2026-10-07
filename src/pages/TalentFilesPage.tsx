@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DocViewer } from '@/components/ui/DocViewer'
 import { portalCard, portalGhost, portalMuted, portalPrimary } from '@/components/talent-portal/TalentPortalShell'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
@@ -7,13 +7,32 @@ import { collectPortalFiles } from '@/lib/talent-portal'
 import { resolveProfilePhoto } from '@/lib/profile-photo'
 import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
 import { isDocHubConnected } from '@/lib/integrations'
+import { supabase } from '@/lib/supabase'
+import type { DocHubEnvelopeRow } from '@/lib/dochub'
 import type { UploadedDoc } from '@/types'
 
 const GROUPS = ['Contracts & agreements', 'Photos, videos & assets', 'Agency-uploaded materials'] as const
 
 export function TalentFilesPage() {
-  const { talent, displayName, prospect, rosterTalent } = useTalentPortal()
+  const { talent, displayName, prospect, rosterTalent, session } = useTalentPortal()
   const [viewDoc, setViewDoc] = useState<UploadedDoc | null>(null)
+  const [envelopes, setEnvelopes] = useState<DocHubEnvelopeRow[]>([])
+  const signerEmail = (session?.profile?.email || prospect?.email || talent?.email || '').trim().toLowerCase()
+
+  useEffect(() => {
+    if (!supabase || !signerEmail) return
+    let cancel = false
+    void supabase
+      .from('dochub_envelopes')
+      .select('contract_id, kind, title, status, document_id, document_url, expires_at, signer_name, signer_email')
+      .eq('signer_email', signerEmail)
+      .then(({ data }) => {
+        if (!cancel && data) setEnvelopes(data as DocHubEnvelopeRow[])
+      })
+    return () => {
+      cancel = true
+    }
+  }, [signerEmail])
   const files = useMemo(
     () =>
       collectPortalFiles({
@@ -35,14 +54,17 @@ export function TalentFilesPage() {
         Contracts, photos, videos, and materials your agency has shared with {displayName}.
       </p>
 
-      {pending.length > 0 && (
+      {(pending.length > 0 || envelopes.some((row) => row.status !== 'completed' && row.status !== 'voided')) && (
         <section style={{ ...portalCard, marginBottom: 16 }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Review and sign</h2>
           <p style={{ fontSize: 13, color: portalMuted, margin: '0 0 12px' }}>
             Contracts are signed in DocHub. In-app name confirmation has been removed.
           </p>
           {!isDocHubConnected() && <IntegrationNotice id="dochub" audience="public" />}
-          {pending.map((c) => (
+          {pending.map((c) => {
+            const envelope = envelopes.find((row) => row.contract_id === c.id)
+            const url = c.dochubUrl || envelope?.document_url
+            return (
             <div key={c.id} style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{c.title}</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
@@ -56,12 +78,35 @@ export function TalentFilesPage() {
                 <button type="button" style={portalGhost} onClick={() => downloadUploadedDoc(c.document)}>
                   Download
                 </button>
-                <button type="button" style={portalPrimary} disabled={!isDocHubConnected()}>
+                <button
+                  type="button"
+                  style={portalPrimary}
+                  disabled={!isDocHubConnected() || !url}
+                  onClick={() => url && window.open(url, '_blank', 'noopener,noreferrer')}
+                >
                   Open in DocHub
                 </button>
               </div>
             </div>
-          ))}
+            )
+          })}
+          {envelopes
+            .filter((row) => row.status !== 'completed' && row.status !== 'voided' && !pending.some((c) => c.id === row.contract_id))
+            .map((row) => (
+              <div key={row.contract_id} style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{row.title}</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    style={portalPrimary}
+                    disabled={!row.document_url}
+                    onClick={() => row.document_url && window.open(row.document_url, '_blank', 'noopener,noreferrer')}
+                  >
+                    Open in DocHub
+                  </button>
+                </div>
+              </div>
+            ))}
         </section>
       )}
 

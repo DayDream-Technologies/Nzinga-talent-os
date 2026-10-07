@@ -8,6 +8,8 @@ export function getSupabaseFunctionUrls() {
   const base = getSupabaseUrl()
   return {
     sendEmail: `${base}/functions/v1/send-email`,
+    dochubSend: `${base}/functions/v1/dochub-send`,
+    dochubWebhook: `${base}/functions/v1/dochub-webhook`,
     ringcentralOauth: `${base}/functions/v1/ringcentral-oauth`,
     ringcentralCall: `${base}/functions/v1/ringcentral-call`,
     ringcentralSms: `${base}/functions/v1/ringcentral-sms`,

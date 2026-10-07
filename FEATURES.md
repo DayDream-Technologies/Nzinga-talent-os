@@ -131,8 +131,8 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 
 ### Contracts and onboarding
 
-- Success Manager (or Director) **publish contract**. Signing is **DocHub only** (in-app name confirmation removed). Until DocHub is live, Create & Send stays disabled and staff/talent/brand contract screens show **Coming soon**.
-- Renew opens a term form (6 months–3 years), previews the template (Division, Contract, Current % Rate), then sends via DocHub.
+- Success Manager (or Director) **publish contract** uploads the agreement and sends it through DocHub. The signer gets DocHub’s email; the link expires in 3 days. In-app name confirmation stays removed. Demo mode (Supabase off) still shows **Coming soon** and does not call DocHub.
+- Renew opens a term form (6 months–3 years), previews the template (Division, Contract, Current % Rate), then sends that preview through DocHub. Create & Send stays disabled in demo mode.
 - On executed signature the CRM prospect becomes a **Clients · Active** roster record.
 
 ### Clients / roster
@@ -140,7 +140,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Shared account profile: compact header, widget grid, History ledger, and sticky right-hand actions (no cluttered horizontal action row).
 - UDF (user-defined roster fields) is staff-maintained; application answers prefill empty fields only.
 - Clients list with lifecycle (current / future / past), contracts, and account number.
-- **Brands** directory and **Brand portal** (`/client/*`) for invoices, contracts, and projects. Pay Invoice and e-sign show **Coming soon** until Stripe and DocHub are live.
+- **Brands** directory and **Brand portal** (`/client/*`) for invoices, contracts, and projects. Pay Invoice shows **Coming soon** until Stripe is live. Brands can send a usage agreement through DocHub when Supabase is configured; the brand contracts page lists those agreements for a signed-in Talent OS user with the same email.
 
 ### Communication
 
@@ -188,14 +188,14 @@ Signed clients (and approved prospects waiting to sign) use `/talent`:
 - **Home** — status, agent, calendar, trust/earnings snapshot.
 - **Activity** — appointments and related events.
 - **Money** — invoices, commissions, payout request when tax/banking are ready.
-- **Files** — documents and DocHub signing when a contract is published (no in-app name sign). Open in DocHub stays disabled with **Coming soon** until e-sign is live.
+- **Files** — documents and DocHub signing when a contract is published (no in-app name sign). Open in DocHub opens the DocHub document. Demo mode shows **Coming soon** and leaves the button disabled.
 - **Messages** — support request form (Payment, Contract, Booking, Profile, Other).
 - **Settings** — portal preferences. Direct-deposit bank linking shows **Coming soon** until Plaid is live.
 - Full-width layout with denser cards. Below 768px the nav is off-canvas.
 
 ### Brand portal
 
-Corporate reps use `/client/login` then dashboard, projects, invoices (Pay Invoice **Coming soon** until Stripe), and contracts (e-sign **Coming soon** until DocHub). Demo login still works.
+Corporate reps use `/client/login` then dashboard, projects, invoices (Pay Invoice **Coming soon** until Stripe), and contracts. Usage agreements sent through DocHub are listed when this browser has a Talent OS session for that email; otherwise the signer uses the DocHub email. Demo mode still shows **Coming soon** on contracts.
 
 ---
 
