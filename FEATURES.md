@@ -116,6 +116,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 ### Applications
 
 - NZG short application: Basic Information, Representation Interest, About You, then conditional Modeling / Acting / Sports / Influencing sections, Representation & Conflicts, Availability, Social & Portfolio, ID Verification, Final & Signature.
+- Final & Signature shows the Application Acknowledgment & Consent Agreement (Nzinga Management Agency LLC). Applicants scroll through it before the consent checkboxes and electronic signature. Signing the acknowledgment does not create a representation relationship.
 - Access-code lookup, autosave, file uploads to Amazon S3 (with a cropper for profile photos and headshots), duplicate-email protection, and guardian flow for minors.
 - Staff Applications list with progress, filters (in progress, pending parent, ready to import, incomplete), and applicant account profile.
 - **Import to Pipeline** only for complete submitted apps (not pending guardian). Opens the pipeline record as **Application Submitted / Under Vetting** and does not rewind a later SOP stage.
