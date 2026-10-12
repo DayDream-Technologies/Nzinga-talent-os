@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
-import { DEMO_TALENT_LOGIN, DEMO_TALENT_LOGIN_HINT } from '@/constants/demo-talent'
 import { TMXLogo, TMXMark } from '@/components/branding'
 import { useTalentAuth } from '@/context/TalentAuthContext'
 import {
@@ -10,8 +9,8 @@ import {
   sendPasswordResetEmail,
   TALENT_LOGIN_DEMO_MESSAGE,
 } from '@/services/auth.service'
-import { STORAGE_COMPANY_CODE, readStorage } from '@/lib/session-storage'
 import { supabaseConfigured } from '@/lib/supabase'
+import { isSubdomainLocked } from '@/lib/subdomain'
 
 const pageShell: React.CSSProperties = {
   minHeight: '100vh',
@@ -37,23 +36,16 @@ const inputStyle: React.CSSProperties = {
   fontFamily: 'inherit',
 }
 
-function talentLoginOrg(): string {
-  return (readStorage(STORAGE_COMPANY_CODE) || DEMO_TALENT_LOGIN.companyCode).toUpperCase()
-}
-
 export function TalentLoginPage() {
   const navigate = useNavigate()
   const { session, loading: sessionLoading, setSession } = useTalentAuth()
-  const orgCode = talentLoginOrg()
-  const isNzgOrg = orgCode === DEMO_TALENT_LOGIN.companyCode
-  const [email, setEmail] = useState(() => (isNzgOrg ? DEMO_TALENT_LOGIN.email : ''))
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [loading, setLoading] = useState(false)
   const [resetting, setResetting] = useState(false)
   const demoMode = !supabaseConfigured
-  const showDemoHint = isNzgOrg && (demoMode || Boolean(import.meta.env.DEV))
 
   if (!sessionLoading && session) {
     return <Navigate to="/talent/home" replace />
@@ -86,12 +78,6 @@ export function TalentLoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     await signIn(email, password)
-  }
-
-  async function handleMayaLogin() {
-    setEmail(DEMO_TALENT_LOGIN.email)
-    setPassword(DEMO_TALENT_LOGIN.password)
-    await signIn(DEMO_TALENT_LOGIN.email, DEMO_TALENT_LOGIN.password)
   }
 
   async function handleReset() {
@@ -217,24 +203,6 @@ export function TalentLoginPage() {
             Success Manager approves your packet and publishes a contract.
           </p>
 
-          {showDemoHint && (
-            <div
-              role="status"
-              style={{
-                marginBottom: 16,
-                padding: '12px 14px',
-                borderRadius: 8,
-                background: 'rgba(34, 197, 94, 0.12)',
-                border: '1px solid rgba(34, 197, 94, 0.35)',
-                fontSize: 13,
-                lineHeight: 1.45,
-                color: '#86efac',
-              }}
-            >
-              {DEMO_TALENT_LOGIN_HINT}
-            </div>
-          )}
-
           <form onSubmit={(e) => void handleSubmit(e)}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: 'rgba(232,238,244,0.65)', marginBottom: 6 }}>
               Email
@@ -291,29 +259,6 @@ export function TalentLoginPage() {
             </button>
           </form>
 
-          {isNzgOrg && (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => void handleMayaLogin()}
-              style={{
-                width: '100%',
-                marginTop: 10,
-                padding: '12px 16px',
-                borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.18)',
-                background: 'rgba(255,255,255,0.06)',
-                color: '#e8eef4',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              Log in as Maya Rivera
-            </button>
-          )}
-
           <div style={{ marginTop: 16, textAlign: 'center' }}>
             <button
               type="button"
@@ -339,11 +284,13 @@ export function TalentLoginPage() {
               Open application portal
             </Link>
           </p>
-          <p style={{ marginTop: 10, fontSize: 12, textAlign: 'center' }}>
-            <Link to="/tmx" style={{ color: 'rgba(232,238,244,0.65)' }}>
-              ← Back to company code
-            </Link>
-          </p>
+          {!isSubdomainLocked() && (
+            <p style={{ marginTop: 10, fontSize: 12, textAlign: 'center' }}>
+              <Link to="/tmx" style={{ color: 'rgba(232,238,244,0.65)' }}>
+                ← Back to company code
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </div>

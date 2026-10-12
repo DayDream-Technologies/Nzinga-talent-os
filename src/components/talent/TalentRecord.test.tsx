@@ -2,10 +2,67 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { TalentRecord } from '@/components/talent/TalentRecord'
-import { TALENTS_SEED, USERS } from '@/constants'
+import type { Talent, User } from '@/types'
+
+const currentUser: User = {
+  id: 'staff_1',
+  name: 'Alex Director',
+  initials: 'AD',
+  role: 'director',
+  email: 'alex@example.com',
+  password: '',
+  title: 'Director',
+  color: '#111827',
+}
+
+const talent = {
+  id: 't1',
+  account_number: 'NZG-100001',
+  name: 'Alex Rivera',
+  phone: '555-0100',
+  email: 'alex.rivera@example.com',
+  stage: 'holding_entry',
+  niches: [],
+  scout_id: null,
+  created_at: '2026-01-01T00:00:00Z',
+  social_handle: '',
+  follower_count: '',
+  er_pct: '',
+  platform: '',
+  location: 'Atlanta, GA',
+  pillar_scores: [0, 0, 0, 0, 0],
+  pillar_rationales: ['', '', '', '', ''],
+  jordan_score: 0,
+  revenue_path: '',
+  scout_summary: '',
+  team1_notes: '',
+  team1_decision: null,
+  compliance: {},
+  rep_type: '',
+  commission: '',
+  term_length: '',
+  team2_notes: '',
+  team2_decision: null,
+  director_decision: null,
+  portal_setup: false,
+  technical_routing: false,
+  warm_handoff: '',
+  warm_handoff_confirmed: false,
+  revenue_ytd: '0',
+  revenue_projected: '0',
+  last_contacted: '2026-01-01',
+  application_id: null,
+  application_status: null,
+  uploaded_docs: {},
+  audit_log: [],
+} as Talent
 
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: USERS[0], companyCode: 'NZG' }),
+  useAuth: () => ({ user: currentUser, companyCode: 'NZG' }),
+}))
+
+vi.mock('@/hooks/useStaffDirectory', () => ({
+  useStaffDirectory: () => [currentUser],
 }))
 
 vi.mock('@/context/AppDataContext', () => ({
@@ -33,14 +90,11 @@ vi.mock('@/lib/phone', () => ({
 
 describe('TalentRecord', () => {
   it('renders call/SMS actions when the talent has a phone', async () => {
-    const talent = TALENTS_SEED.find((row) => row.phone) || TALENTS_SEED[0]
-    expect(talent.phone).toBeTruthy()
-
     render(
       <MemoryRouter>
         <TalentRecord
           talent={talent}
-          currentUser={USERS[0]}
+          currentUser={currentUser}
           allHistory={[]}
           setHistory={vi.fn()}
           allTasks={[]}

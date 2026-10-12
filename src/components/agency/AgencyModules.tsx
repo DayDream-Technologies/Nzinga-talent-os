@@ -5,8 +5,7 @@ import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useViewport } from '@/hooks/useViewport'
 import { staffGridColumns } from '@/lib/viewport'
-import { AGENCY_STAFF, AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
-import { USERS } from '@/constants'
+import { staffTicketAgents, useStaffDirectory } from '@/hooks/useStaffDirectory'
 import { filterAgencyNav, canAccessAgencyPath, type AgencyNavGroup } from '@/constants/agency-nav'
 import { T } from '@/lib/tokens'
 import type { SupportTicket, TicketType } from '@/types/agency'
@@ -164,7 +163,7 @@ export function AgencyWorkspace() {
   const nav = useNavigate()
   const { user } = useAuth()
   const band = useViewport()
-  const firstName = (user?.name || AGENCY_STAFF.name).split(' ')[0]
+  const firstName = (user?.name || 'there').split(' ')[0]
   const role = user?.role || 'scout'
 
   const filteredNav = filterAgencyNav(role)
@@ -591,6 +590,7 @@ function MessagingModule() {
 function SupportTicketsModule() {
   const { tickets, updateTicket } = useAgencyData()
   const { user } = useAuth()
+  const ticketAgents = staffTicketAgents(useStaffDirectory())
   const nav = useNavigate()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [sortIndex, setSortIndex] = useState(5) // due by default
@@ -722,7 +722,7 @@ function SupportTicketsModule() {
           onClose={() => setSelectedId(null)}
           updateTicket={updateTicket}
           isDirector={isDirector}
-          agents={AGENCY_TICKET_AGENTS}
+          agents={ticketAgents}
         />
       )}
     </Panel>
@@ -733,7 +733,7 @@ function AgencyTasksModule() {
   const { tasks, addTask, completeTask } = useAgencyData()
   const { user } = useAuth()
   const [title, setTitle] = useState('')
-  const actor = user?.name || AGENCY_STAFF.name
+  const actor = user?.name || 'Staff'
   const openTasks = tasks.filter((t) => t.status === 'open')
   const archived = tasks.filter((t) => t.status === 'done')
 
@@ -743,7 +743,7 @@ function AgencyTasksModule() {
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             style={{ ...inputStyle, flex: 1 }}
-            placeholder='e.g. Send contract agreement to Nike production team'
+            placeholder="Task for the team"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => {
@@ -753,7 +753,7 @@ function AgencyTasksModule() {
                 assignee: actor,
                 due: new Date().toISOString().slice(0, 10),
                 status: 'open',
-                relatedClient: 'Nike',
+                relatedClient: '',
               })
               setTitle('')
             }}
@@ -766,7 +766,7 @@ function AgencyTasksModule() {
                 assignee: actor,
                 due: new Date().toISOString().slice(0, 10),
                 status: 'open',
-                relatedClient: 'Nike',
+                relatedClient: '',
               })
               setTitle('')
             }}
@@ -893,13 +893,12 @@ function AppointmentsModule() {
 function NewTicketModule() {
   const { addTicket, clients } = useAgencyData()
   const { user } = useAuth()
+  const ticketAgents = staffTicketAgents(useStaffDirectory())
   const nav = useNavigate()
   const isDirector = user?.role === 'director'
-  const defaultAssignee = isDirector
-    ? AGENCY_STAFF.name
-    : user?.name || AGENCY_STAFF.name
+  const defaultAssignee = user?.name || ''
   const defaultDue = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10)
-  const [subject, setSubject] = useState('Last-minute schedule change')
+  const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [assignee, setAssignee] = useState(defaultAssignee)
   const [type, setType] = useState<TicketType>('scheduling')
@@ -910,7 +909,7 @@ function NewTicketModule() {
     <Panel title="New Tickets">
       <Card style={{ maxWidth: 520 }}>
         <Field label="Client">
-          <input style={inputStyle} value={clients[0]?.name || 'Nike'} readOnly />
+          <input style={inputStyle} value={clients[0]?.name || ''} readOnly placeholder="No clients yet" />
         </Field>
         <Field label="Subject">
           <input style={inputStyle} value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -951,7 +950,7 @@ function NewTicketModule() {
         {isDirector ? (
           <Field label="Assign to">
             <select style={inputStyle} value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-              {AGENCY_TICKET_AGENTS.map((a) => (
+              {ticketAgents.map((a) => (
                 <option key={a.id} value={a.name}>
                   {a.name} — {a.title}
                 </option>
@@ -967,14 +966,14 @@ function NewTicketModule() {
           onClick={() => {
             addTicket({
               subject,
-              clientId: clients[0]?.id || 'client_nike',
-              clientName: clients[0]?.name || 'Nike',
-              talentName: 'Maya Rivera',
+              clientId: clients[0]?.id || '',
+              clientName: clients[0]?.name || '',
+              talentName: '',
               status: 'open',
               type,
               priority,
               dueDate: dueDate || defaultDue,
-              body: body || 'Client called with a last-minute schedule change.',
+              body,
               assignee,
             })
             nav('/support-tickets')
@@ -988,26 +987,9 @@ function NewTicketModule() {
 }
 
 function CalendarModule() {
-  const { calendar, addCalendarEvent, scenario } = useAgencyData()
+  const { calendar } = useAgencyData()
   return (
-    <Panel
-      title="Calendar"
-      actions={
-        <Btn
-          onClick={() =>
-            addCalendarEvent({
-              title: `${scenario.talent} — ${scenario.name}`,
-              date: '2026-08-12',
-              talentName: scenario.talent,
-              clientName: scenario.client,
-              type: 'booking',
-            })
-          }
-        >
-          Add Maya shoot block
-        </Btn>
-      }
-    >
+    <Panel title="Calendar">
       <Card>
         <Table
           headers={['Date', 'Title', 'Talent', 'Client', 'Type', 'Call time']}
@@ -1765,7 +1747,7 @@ function formatTimestamp(value?: string | null): string {
 function ReportApplicantPool() {
   const { prospects } = useAgencyData()
   const { applications } = useAppData()
-  const staffEmails = new Set(USERS.map((user) => user.email.toLowerCase()))
+  const staffEmails = new Set(useStaffDirectory().map((user) => user.email.toLowerCase()))
   const people = prospects.filter((prospect) => !staffEmails.has((prospect.email || '').toLowerCase()))
   const byStage = useMemo(() => {
     const map: Record<string, number> = {}

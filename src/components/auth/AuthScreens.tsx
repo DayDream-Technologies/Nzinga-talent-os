@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { CompanyLogo, TMXLogo, TMXMark } from "@/components/branding";
 import { useViewport } from "@/hooks/useViewport";
@@ -49,7 +49,7 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
   async function go(){
     setErr("");setResetSent(false);setLoading(true);
     try{
-      const u=onSignIn?await onSignIn(email,pass):USERS.find(u=>u.email===email&&u.password===pass);
+      const u=onSignIn?await onSignIn(email,pass):null;
       setLoading(false);
       if(u)onLoginSuccess(u);else setErr(friendlyAuthError("Invalid login credentials"));
     }catch(e){
@@ -120,12 +120,14 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
           <TMXMark size="sm"/>
           <span style={{ fontSize:15,fontWeight:700,color:"#e8eef4",letterSpacing:"0.02em" }}>{PLATFORM_BRAND.name}</span>
         </button>
-        <button type="button" className="mh-link-underline" onClick={onBack} disabled={!navReady} style={{
-          background:"none",border:"none",color:"#8fa3b5",fontSize:13,fontWeight:500,cursor:navReady?"pointer":"default",fontFamily:"inherit",
-          opacity: navReady ? 1 : 0.45,
-        }}>
-          ← Company code
-        </button>
+        {changeCode && (
+          <button type="button" className="mh-link-underline" onClick={onBack} disabled={!navReady} style={{
+            background:"none",border:"none",color:"#8fa3b5",fontSize:13,fontWeight:500,cursor:navReady?"pointer":"default",fontFamily:"inherit",
+            opacity: navReady ? 1 : 0.45,
+          }}>
+            ← Company code
+          </button>
+        )}
       </header>
 
       <div style={{ position:"relative",zIndex:1,flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"32px 16px 48px" }}>
@@ -135,10 +137,12 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
           boxShadow:"0 12px 40px rgba(0,0,0,0.35)",overflow:"hidden",backdropFilter:"blur(12px)",
         }}>
           <div className="animate-fade-in-up" style={{ flex:1,padding:mobile?"24px 18px":"36px 32px" }}>
-            <button type="button" className="mh-link-underline" onClick={onBack} disabled={!navReady} style={{
-              background:"none",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",marginBottom:18,fontFamily:"inherit",padding:0,
-              opacity: navReady ? 1 : 0.45,
-            }}>← Back to company code</button>
+            {changeCode && (
+              <button type="button" className="mh-link-underline" onClick={onBack} disabled={!navReady} style={{
+                background:"none",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",marginBottom:18,fontFamily:"inherit",padding:0,
+                opacity: navReady ? 1 : 0.45,
+              }}>← Back to company code</button>
+            )}
 
             <div style={{ fontSize:11,color:"#8fa3b5",marginBottom:14 }}>
               Current code: <strong style={{ color:"#3d9fd4" }}>{companyCode}</strong>
@@ -157,7 +161,7 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
                   value={email}
                   onChange={e=>setEmail(e.target.value)}
                   onKeyDown={e=>e.key==="Enter"&&go()}
-                  placeholder="email@nzinga.co"
+                  placeholder="you@company.com"
                   style={fieldStyle}
                   onFocus={e=>{e.currentTarget.style.borderColor="#3d9fd4";e.currentTarget.style.boxShadow="0 0 0 3px rgba(61,159,212,0.18)";}}
                   onBlur={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.12)";e.currentTarget.style.boxShadow="none";}}
@@ -219,12 +223,14 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
                 Continue with Google
               </button>
             )}
-            <div style={{ marginTop:14,textAlign:"center" }}>
-              <button type="button" className="mh-link-underline" onClick={changeCode} disabled={!navReady} style={{
-                background:"transparent",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",fontFamily:"inherit",
-                opacity: navReady ? 1 : 0.45,
-              }}>Use a different company code</button>
-            </div>
+            {changeCode && (
+              <div style={{ marginTop:14,textAlign:"center" }}>
+                <button type="button" className="mh-link-underline" onClick={changeCode} disabled={!navReady} style={{
+                  background:"transparent",border:"none",color:"#8fa3b5",fontSize:12,cursor:navReady?"pointer":"default",fontFamily:"inherit",
+                  opacity: navReady ? 1 : 0.45,
+                }}>Use a different company code</button>
+              </div>
+            )}
           </div>
 
           {!mobile && <div className="animate-slide-right stagger-2" style={{
@@ -244,30 +250,8 @@ function LoginScreen({ companyCode, onSignIn, onLoginSuccess, onBack, onChangeCo
               }}>
                 <TMXLogo size="md" theme="dark"/>
               </button>
-              <div style={{ fontSize:12,color:"#8fa3b5",lineHeight:1.6,marginBottom:22 }}>
+              <div style={{ fontSize:12,color:"#8fa3b5",lineHeight:1.6 }}>
                 {PLATFORM_BRAND.tagline} — multi-role talent pipeline with full compliance tracking.
-              </div>
-              <div style={{ fontSize:10,color:"#3d9fd4",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10,fontWeight:600 }}>
-                Quick Demo Access
-              </div>
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:6 }}>
-                {USERS.map((u,i)=>(
-                  <div
-                    key={u.id}
-                    className={`hover-lift stagger-${Math.min(i+1,8)}`}
-                    onClick={()=>{setEmail(u.email);setPass(u.password);}}
-                    style={{
-                      background:"rgba(255,255,255,0.05)",
-                      border:`1px solid ${u.color}55`,
-                      borderRadius:7,
-                      padding:"7px 8px",
-                      cursor:"pointer",
-                    }}
-                  >
-                    <div style={{ fontSize:10,color:u.color,fontWeight:600 }}>{ROLE_LABELS[u.role]}</div>
-                    <div style={{ fontSize:10,color:"rgba(232,238,244,0.45)" }}>{u.name.split(" ")[0]}</div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>}

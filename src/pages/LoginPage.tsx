@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { LoginScreen } from '@/components/auth/AuthScreens'
 import { useAuth } from '@/hooks/useAuth'
 import { GOOGLE_SIGN_IN_ERROR_KEY, signInWithGoogle } from '@/services/auth.service'
+import { isSubdomainLocked } from '@/lib/subdomain'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const { companyCode, setCompanyCode, login } = useAuth()
   const [googleError, setGoogleError] = useState('')
+  const locked = isSubdomainLocked()
 
   useEffect(() => {
     if (!companyCode) navigate('/tmx', { replace: true })
@@ -33,10 +35,14 @@ export function LoginPage() {
       onSignIn={(email: string, password: string) => login(email, password)}
       onLoginSuccess={() => navigate('/workspace')}
       onBack={() => navigate('/tmx')}
-      onChangeCode={() => {
-        setCompanyCode('')
-        navigate('/tmx')
-      }}
+      onChangeCode={
+        locked
+          ? undefined
+          : () => {
+              setCompanyCode('')
+              navigate('/tmx')
+            }
+      }
       onHome={() => navigate('/')}
       googleError={googleError}
       onGoogle={() => {

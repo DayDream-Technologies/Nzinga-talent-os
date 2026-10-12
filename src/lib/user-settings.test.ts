@@ -16,7 +16,7 @@ const baseUser: User = {
   initials: 'JH',
   role: 'scout',
   email: 'jordan@nzinga.co',
-  password: 'scout123',
+  password: '',
   title: 'Talent Scout',
   color: '#7c3aed',
   company_code: 'NZG',

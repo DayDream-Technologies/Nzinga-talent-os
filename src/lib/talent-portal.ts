@@ -1,5 +1,3 @@
-import { AGENCY_STAFF } from '@/constants/agency-seed'
-import { DEMO_TALENT_LOGIN } from '@/constants/demo-talent'
 import type {
   AgencyProspect,
   AgencyTalent,
@@ -74,10 +72,10 @@ export function formatMoney(value: number): string {
 }
 
 export function agentContact(prospect: AgencyProspect | null): { name: string; email: string } {
-  const name = prospect?.assignedAgentName || DEMO_TALENT_LOGIN.agentName
-  const email =
-    (name === AGENCY_STAFF.name ? AGENCY_STAFF.email : undefined) || DEMO_TALENT_LOGIN.agentEmail
-  return { name, email }
+  return {
+    name: prospect?.assignedAgentName?.trim() || '',
+    email: '',
+  }
 }
 
 export function agentMailto(opts: { agentName: string; agentEmail: string; talentName: string; subject?: string }): string {

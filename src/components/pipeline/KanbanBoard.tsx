@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
-  USERS,
   ROLE_LABELS,
   STAGES,
   STAGE_LABELS,
@@ -9,6 +8,7 @@ import {
   canRoleMoveTalent,
 } from '@/constants'
 import { T } from '@/components/ui-compat'
+import { useStaffDirectory } from '@/hooks/useStaffDirectory'
 import type { Role, Talent, TalentStage, User } from '@/types'
 
 const DRAG_THRESHOLD_PX = 6
@@ -47,11 +47,6 @@ function formatNextAction(t: Talent): string {
   return '—'
 }
 
-function scoutName(scoutId: string | null | undefined): string {
-  if (!scoutId) return '—'
-  return USERS.find((u) => u.id === scoutId)?.name || '—'
-}
-
 type DragState = {
   talentId: string
   originStage: TalentStage
@@ -82,6 +77,8 @@ function KanbanCard({
   onSelect,
   onPointerDown,
 }: KanbanCardProps) {
+  const staff = useStaffDirectory()
+  const scoutLabel = talent.scout_id ? staff.find((u) => u.id === talent.scout_id)?.name || '—' : '—'
   return (
     <div
       data-kanban-card={talent.id}
@@ -122,7 +119,7 @@ function KanbanCard({
       <CardLine label="Division" value={formatDivision(talent)} />
       <CardLine label="Specs" value={formatSpecs(talent)} />
       <CardLine label="Base" value={talent.location?.trim() || '—'} />
-      <CardLine label="Assigned Scout" value={scoutName(talent.scout_id)} />
+      <CardLine label="Assigned Scout" value={scoutLabel} />
       <CardLine label="Next Action" value={formatNextAction(talent)} accent />
       {!canDrag && (
         <div

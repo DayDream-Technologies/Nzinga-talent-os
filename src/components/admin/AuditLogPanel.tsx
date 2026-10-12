@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AuditEntry } from '@/services/admin.service'
 import { queryAuditLog, listUsers } from '@/services/admin.service'
-import { USERS } from '@/constants'
 import { useAuth } from '@/hooks/useAuth'
 import { T } from '@/lib/tokens'
 import { Btn, TH, TD } from '@/components/ui-compat'
@@ -28,7 +27,7 @@ export function AuditLogPanel() {
   const [eventType, setEventType] = useState('')
   const [userId, setUserId] = useState('')
   const [offset, setOffset] = useState(0)
-  const [staff, setStaff] = useState<{ id: string; name: string }[]>(USERS)
+  const [staff, setStaff] = useState<{ id: string; name: string }[]>([])
   const limit = 25
 
   useEffect(() => {

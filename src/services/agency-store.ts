@@ -1,13 +1,10 @@
-import {
-  AGENCY_PROSPECTS_SEED,
-  AGENCY_TALENT_SEED,
-} from '@/constants/agency-seed'
 import { nextAccountNumber } from '@/lib/account-number'
 import { normalizeProspectStage } from '@/constants/prospect-stages'
 import { AGENCY_PROPERTY } from '@/lib/session-storage'
 import type { AgencyProspect, AgencyTalent, ClientLifecycleStatus, WorkArea } from '@/types/agency'
 
-const STORAGE_KEY = 'nto_agency_records_v2'
+const STORAGE_KEY = 'nto_agency_records_v3'
+const LEGACY_KEYS = ['nto_agency_records_v1', 'nto_agency_records_v2']
 
 const DEFAULT_WORK_AREA: WorkArea = 'Acting'
 
@@ -39,11 +36,9 @@ function normalizeClientStatus(status: string | undefined): ClientLifecycleStatu
 
 function hydrateProspects(list: AgencyProspect[], used: string[]): AgencyProspect[] {
   const ids = [...used]
-  const seedById = Object.fromEntries(AGENCY_PROSPECTS_SEED.map((s) => [s.id, s]))
   return list.map((p) => {
     const accountId = p.accountId?.trim() || nextAccountNumber(ids)
     if (!p.accountId?.trim()) ids.push(accountId)
-    const seed = seedById[p.id]
     const names = splitName(p.name)
     return {
       ...p,
@@ -54,17 +49,17 @@ function hydrateProspects(list: AgencyProspect[], used: string[]): AgencyProspec
       organization: p.organization || 'NZG',
       property: p.property || AGENCY_PROPERTY,
       stage: normalizeProspectStage(p.stage),
-      street: p.street ?? seed?.street ?? '',
-      city: p.city ?? seed?.city ?? '',
-      state: p.state ?? seed?.state ?? '',
-      postal: p.postal ?? seed?.postal ?? '',
+      street: p.street ?? '',
+      city: p.city ?? '',
+      state: p.state ?? '',
+      postal: p.postal ?? '',
       messageEmails:
         Array.isArray(p.messageEmails) && p.messageEmails.length > 0
           ? p.messageEmails
           : [p.email].filter(Boolean),
-      contracts: Array.isArray(p.contracts) ? p.contracts : seed?.contracts ?? [],
-      contractStart: p.contractStart !== undefined ? p.contractStart : seed?.contractStart ?? null,
-      contractEnd: p.contractEnd !== undefined ? p.contractEnd : seed?.contractEnd ?? null,
+      contracts: Array.isArray(p.contracts) ? p.contracts : [],
+      contractStart: p.contractStart ?? null,
+      contractEnd: p.contractEnd ?? null,
     }
   })
 }
@@ -90,53 +85,30 @@ function hydrateTalent(list: AgencyTalent[], used: string[]): AgencyTalent[] {
   })
 }
 
-function tryLoadV1(): Partial<AgencyRecords> | null {
+function dropLegacyDemoRecords(): void {
   try {
-    const raw = localStorage.getItem('nto_agency_records_v1')
-    if (!raw) return null
-    return JSON.parse(raw) as Partial<AgencyRecords>
+    for (const key of LEGACY_KEYS) localStorage.removeItem(key)
   } catch {
-    return null
+    // ignore storage errors
   }
 }
 
-function mergeMissingSeed<T extends { id: string }>(saved: T[], seed: T[]): T[] {
-  const ids = new Set(saved.map((row) => row.id))
-  const missing = seed.filter((row) => !ids.has(row.id))
-  return missing.length ? [...saved, ...missing] : saved
-}
-
 export function loadAgencyRecords(): AgencyRecords {
+  dropLegacyDemoRecords()
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<AgencyRecords>
-      const prospectsIn = mergeMissingSeed(
-        Array.isArray(parsed.prospects) ? parsed.prospects : AGENCY_PROSPECTS_SEED,
-        AGENCY_PROSPECTS_SEED,
-      )
-      const talentIn = mergeMissingSeed(
-        Array.isArray(parsed.talent) ? parsed.talent : AGENCY_TALENT_SEED,
-        AGENCY_TALENT_SEED,
-      )
-      const prospects = hydrateProspects(prospectsIn, usedAccountIds(prospectsIn, talentIn))
-      const talent = hydrateTalent(talentIn, usedAccountIds(prospects, talentIn))
-      return { prospects, talent }
-    }
-    const v1 = tryLoadV1()
-    if (v1) {
-      const prospectsIn = Array.isArray(v1.prospects) ? v1.prospects : AGENCY_PROSPECTS_SEED
-      const talentIn = Array.isArray(v1.talent) ? v1.talent : AGENCY_TALENT_SEED
+      const prospectsIn = Array.isArray(parsed.prospects) ? parsed.prospects : []
+      const talentIn = Array.isArray(parsed.talent) ? parsed.talent : []
       const prospects = hydrateProspects(prospectsIn, usedAccountIds(prospectsIn, talentIn))
       const talent = hydrateTalent(talentIn, usedAccountIds(prospects, talentIn))
       return { prospects, talent }
     }
   } catch {
-    // fall through to seed
+    // start empty
   }
-  const prospects = hydrateProspects(AGENCY_PROSPECTS_SEED, [])
-  const talent = hydrateTalent(AGENCY_TALENT_SEED, usedAccountIds(prospects, []))
-  return { prospects, talent }
+  return { prospects: [], talent: [] }
 }
 
 export function saveAgencyRecords(records: AgencyRecords): void {

@@ -2,8 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TalentLoginPage } from '@/pages/TalentLoginPage'
-import { DEMO_TALENT_LOGIN } from '@/constants/demo-talent'
-import { STORAGE_COMPANY_CODE } from '@/lib/session-storage'
 
 const { loginApprovedTalent, setSession } = vi.hoisted(() => ({
   loginApprovedTalent: vi.fn(),
@@ -24,46 +22,43 @@ vi.mock('@/services/auth.service', () => ({
   loginApprovedTalent,
   sendPasswordResetEmail: vi.fn(),
   friendlyAuthError: (msg: string) => msg,
-  TALENT_LOGIN_DEMO_MESSAGE: 'demo reset unavailable',
+  TALENT_LOGIN_DEMO_MESSAGE: 'Password reset is not available until the database is configured.',
 }))
 
-describe('TalentLoginPage NZG Maya login', () => {
+vi.mock('@/lib/supabase', () => ({
+  supabaseConfigured: true,
+}))
+
+describe('TalentLoginPage', () => {
   beforeEach(() => {
     setSession.mockReset()
     loginApprovedTalent.mockReset()
     loginApprovedTalent.mockResolvedValue({
-      profile: { id: 'demo_profile_t_maya', email: DEMO_TALENT_LOGIN.email, name: DEMO_TALENT_LOGIN.name },
-      talent: { id: DEMO_TALENT_LOGIN.talentId, name: DEMO_TALENT_LOGIN.name, stage: 'signed_onboarding' },
+      profile: { id: 'profile_1', email: 'client@example.com', name: 'Client Example' },
+      talent: { id: 't1', name: 'Client Example', stage: 'signed_onboarding' },
       error: null,
     })
-    localStorage.setItem(STORAGE_COMPANY_CODE, 'NZG')
   })
 
-  it('signs in as Maya Rivera for the NZG org', async () => {
+  it('signs in with the email and password entered on the form', async () => {
     render(
       <MemoryRouter>
         <TalentLoginPage />
       </MemoryRouter>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Log in as Maya Rivera' }))
+    expect(screen.queryByRole('button', { name: 'Log in as Maya Rivera' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/demo client/i)).not.toBeInTheDocument()
+
+    const email = document.querySelector('input[type="email"]') as HTMLInputElement
+    const password = document.querySelector('input[type="password"]') as HTMLInputElement
+    fireEvent.change(email, { target: { value: 'client@example.com' } })
+    fireEvent.change(password, { target: { value: 'a-real-password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
     await waitFor(() => {
-      expect(loginApprovedTalent).toHaveBeenCalledWith(
-        DEMO_TALENT_LOGIN.email,
-        DEMO_TALENT_LOGIN.password,
-      )
+      expect(loginApprovedTalent).toHaveBeenCalledWith('client@example.com', 'a-real-password')
     })
     expect(setSession).toHaveBeenCalled()
-  })
-
-  it('hides the Maya shortcut for other company codes', () => {
-    localStorage.setItem(STORAGE_COMPANY_CODE, 'TCG')
-    render(
-      <MemoryRouter>
-        <TalentLoginPage />
-      </MemoryRouter>,
-    )
-    expect(screen.queryByRole('button', { name: 'Log in as Maya Rivera' })).not.toBeInTheDocument()
   })
 })

@@ -33,7 +33,7 @@ const scout: User = {
   initials: 'JH',
   role: 'scout',
   email: 'jordan@nzinga.co',
-  password: 'scout123',
+  password: '',
   title: 'Talent Scout',
 }
 

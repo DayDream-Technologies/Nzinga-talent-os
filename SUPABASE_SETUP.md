@@ -71,7 +71,7 @@ Run in order (copy/paste each file’s full contents):
 
 - **Table Editor** should show: `users`, `talents`, `applications`, `tasks`, `history`, `uploaded_docs`, `prospect_profiles`, `company_codes`.
 - `company_codes` should contain `NZG`, `NZINGA`, `TCG`.
-- `users` should have 6 seed staff rows (`auth_uid` will be `NULL` until Step 4).
+- `users` starts empty. Invite the first director from the Supabase dashboard, then invite the rest inside the app.
 
 **Optimal:** For teams, track migrations in git and apply the same files to dev → staging → prod in that order. Do not edit production schema by hand without a migration file.
 
@@ -85,32 +85,11 @@ Run in order (copy/paste each file’s full contents):
 2. For **development**, you may disable “Confirm email” so staff can log in immediately.
 3. For **production**, enable email confirmation and configure SMTP (Supabase → Project Settings → Auth → SMTP) or use a custom domain.
 
-### Staff users (6 roles)
+### Staff users
 
-Create one Auth user per seed staff email (passwords are for dev only; use strong passwords in production):
+Create the first director in **Authentication** → **Users** → **Add user**, then insert a matching `public.users` row with that user's UID as `auth_uid`, role `director`, and the company code. Further staff are invited from Admin inside the app. Do not insert sample talent, applications, or shared passwords.
 
-| Email | Role (in `users` table) |
-|-------|-------------------------|
-| jordan@nzinga.co | scout |
-| marcus@nzinga.co | team1_lead |
-| priya@nzinga.co | ops_specialist |
-| devon@nzinga.co | team2_lead |
-| simone@nzinga.co | director |
-| alexis@nzinga.co | success_manager |
-
-**Authentication** → **Users** → **Add user** → create each with email + password.
-
-### Link Auth users to `public.users`
-
-For each Auth user, copy their **User UID** from the dashboard, then run in SQL Editor:
-
-```sql
-UPDATE users SET auth_uid = '<auth-user-uuid>' WHERE email = 'jordan@nzinga.co';
-UPDATE users SET auth_uid = '<auth-user-uuid>' WHERE email = 'marcus@nzinga.co';
--- repeat for u3–u6
-```
-
-Staff login in the app uses `supabase.auth.signInWithPassword` and then loads the row from `users` where `auth_uid = auth.uid()`.
+Staff login uses `supabase.auth.signInWithPassword` and then loads the row from `users` where `auth_uid = auth.uid()`.
 
 ### Prospect users
 
@@ -260,6 +239,7 @@ Also required in [URL Configuration](https://supabase.com/dashboard/project/rvuc
   - `https://talentmanagerx.com/reset-password`
   - `https://talentmanagerx.com/guardian/verify`
   - `https://talentmanagerx.com/**`
+  - `https://*.talentmanagerx.com/**` ← covers all org subdomains (nzinga, tcg, etc.)
 
 Rate limit for Auth emails is under [Rate Limits](https://supabase.com/dashboard/project/rvuchforbheotenhkxnm/auth/rate-limits) (raised from 2/hour to 60/hour after enabling custom SMTP). Gmail consumer accounts cap around 500 sends/day; Google Workspace is higher.
 
@@ -358,7 +338,7 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 | `supabase/migrations/002_auth_and_fixes.sql` | Auth columns, prospect_profiles, RLS, indexes |
 | `supabase/migrations/004_ringcentral.sql` | RingCentral tokens table + telephony history fields |
 | `supabase/migrations/005_fix_rc_tokens_auth_uid.sql` | Fix token table to use auth_uid + subscription id |
-| `supabase/seed.sql` | Staff users + company codes |
+| `supabase/seed.sql` | Company codes only |
 | `supabase/functions/ringcentral-oauth/` | RC OAuth Edge Function |
 | `supabase/functions/ringcentral-call/` | RC outbound call Edge Function |
 | `supabase/functions/ringcentral-sms/` | RC SMS Edge Function |
@@ -380,7 +360,7 @@ This repo ships SQL migrations as files; you can apply them via the dashboard or
 1. Create project (prefer team org, correct region).
 2. Run `001` → `002` → `004` → `005` → `seed.sql`.
 3. Create `documents` bucket (private).
-4. Create Auth users for staff; link `auth_uid`.
+4. Create the first director Auth user and a matching `public.users` row. Invite everyone else from Admin.
 5. Configure `.env` with URL, anon key, `VITE_DEMO_MODE=false`.
 6. Set Supabase secrets for RingCentral (see above).
 7. Deploy Edge Functions: `npm run supabase:deploy`.

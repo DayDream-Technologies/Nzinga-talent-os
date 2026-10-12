@@ -1,7 +1,6 @@
 import type { Application, ApplicationData, ApplicationsMap } from '@/types'
 import { isApplicationStorageRef, isEmbeddedDataUrl, isS3Ref } from '@/lib/application-files'
-import { supabase, supabaseConfigured } from '@/lib/supabase'
-import { demoStore } from './demo-store'
+import { requireSupabase, supabase } from '@/lib/supabase'
 
 export function sanitizeApplicationData(data: ApplicationData | undefined): ApplicationData {
   const next: ApplicationData = {}
@@ -61,10 +60,8 @@ async function linkProspectProfile(applicationId: string) {
 }
 
 export async function fetchApplications(): Promise<ApplicationsMap> {
-  if (!supabaseConfigured || !supabase) {
-    return demoStore.getApplications()
-  }
-  const { data, error } = await supabase.from('applications').select('*')
+  const db = requireSupabase()
+  const { data, error } = await db.from('applications').select('*')
   if (error) throw error
   const map: ApplicationsMap = {}
   for (const row of data ?? []) {
@@ -76,22 +73,9 @@ export async function fetchApplications(): Promise<ApplicationsMap> {
 
 export async function saveApplication(app: Application): Promise<Application> {
   const incoming = sanitizeApplicationData(app.data)
-  const local: Application = { ...app, data: incoming }
+  const db = requireSupabase()
 
-  if (!supabaseConfigured || !supabase) {
-    const prev = demoStore.getApplications()[app.id]
-    const merged: Application = {
-      ...local,
-      data: mergeApplicationData(prev?.data, incoming, {
-        incomingSavedAt: app.last_saved,
-        existingSavedAt: prev?.last_saved,
-      }),
-    }
-    demoStore.setApplications({ ...demoStore.getApplications(), [app.id]: merged })
-    return merged
-  }
-
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await db
     .from('applications')
     .select('data, last_saved')
     .eq('id', app.id)
@@ -111,7 +95,7 @@ export async function saveApplication(app: Application): Promise<Application> {
   const payload = toApplicationRow(app, mergedData)
 
   // Prefer UPDATE so submit does not hit INSERT RLS on upsert-of-existing-row.
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await db
     .from('applications')
     .update(payload)
     .eq('id', app.id)
@@ -125,14 +109,14 @@ export async function saveApplication(app: Application): Promise<Application> {
     return updated as Application
   }
 
-  const { data: inserted, error: insertError } = await supabase
+  const { data: inserted, error: insertError } = await db
     .from('applications')
     .insert(payload)
     .select()
     .single()
   if (insertError) {
     if (insertError.code === '23505') {
-      const { data: retry, error: retryError } = await supabase
+      const { data: retry, error: retryError } = await db
         .from('applications')
         .update(payload)
         .eq('id', app.id)
@@ -209,12 +193,10 @@ export async function checkDuplicateApplicant(
     companyCode?: string
   },
 ): Promise<boolean> {
-  if (!supabaseConfigured || !supabase) {
-    return Object.values(demoStore.getApplications()).some((a) => isDuplicateCandidate(a, opts))
-  }
+  const db = requireSupabase()
 
   if (opts.email?.trim()) {
-    let qb = supabase
+    let qb = db
       .from('applications')
       .select('id,status,talent_email,company_code,data')
       .ilike('talent_email', opts.email.trim())
@@ -225,7 +207,7 @@ export async function checkDuplicateApplicant(
   }
 
   // Broader pull for phone / name+DOB within tenant (demo-friendly; capped).
-  let listQ = supabase.from('applications').select('id,status,talent_email,company_code,data').limit(200)
+  let listQ = db.from('applications').select('id,status,talent_email,company_code,data').limit(200)
   if (opts.companyCode) listQ = listQ.eq('company_code', opts.companyCode.trim().toUpperCase())
   const { data: rows } = await listQ
   return (rows ?? []).some((row) => isDuplicateCandidate(row as Application, opts))
@@ -243,18 +225,8 @@ export async function fetchApplicationByCode(
   code: string,
   companyCode?: string,
 ): Promise<Application | null> {
-  if (!supabaseConfigured || !supabase) {
-    const apps = demoStore.getApplications()
-    const tenant = companyCode?.trim().toUpperCase()
-    return (
-      Object.values(apps).find(
-        (a) =>
-          a.access_code === code &&
-          (!tenant || String(a.company_code || 'NZG').toUpperCase() === tenant),
-      ) ?? null
-    )
-  }
-  let qb = supabase.from('applications').select('*').eq('access_code', code)
+  const db = requireSupabase()
+  let qb = db.from('applications').select('*').eq('access_code', code)
   if (companyCode) {
     qb = qb.eq('company_code', companyCode.trim().toUpperCase())
   }
@@ -264,10 +236,8 @@ export async function fetchApplicationByCode(
 }
 
 export async function fetchApplicationById(id: string): Promise<Application | null> {
-  if (!supabaseConfigured || !supabase) {
-    return demoStore.getApplications()[id] ?? null
-  }
-  const { data, error } = await supabase.from('applications').select('*').eq('id', id).single()
+  const db = requireSupabase()
+  const { data, error } = await db.from('applications').select('*').eq('id', id).single()
   if (error || !data) return null
   return data as Application
 }
@@ -276,18 +246,8 @@ export async function fetchApplicationByEmail(
   email: string,
   companyCode?: string,
 ): Promise<Application | null> {
-  if (!supabaseConfigured || !supabase) {
-    const normalized = email.trim().toLowerCase()
-    const tenant = companyCode?.trim().toUpperCase()
-    return (
-      Object.values(demoStore.getApplications()).find(
-        (a) =>
-          String(a.talent_email || '').trim().toLowerCase() === normalized &&
-          (!tenant || String(a.company_code || 'NZG').toUpperCase() === tenant),
-      ) ?? null
-    )
-  }
-  let qb = supabase
+  const db = requireSupabase()
+  let qb = db
     .from('applications')
     .select('*')
     .ilike('talent_email', email.trim())

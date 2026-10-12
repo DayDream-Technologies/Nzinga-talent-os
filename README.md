@@ -32,7 +32,7 @@ By default `VITE_DEMO_MODE=true` (or leave Supabase vars unset). All data uses i
 
 1. Create a project at [supabase.com](https://supabase.com)
 2. Run migrations in `supabase/migrations/001_initial_schema.sql`
-3. Optional seed: `supabase/seed.sql`
+3. Optional company-code seed: `supabase/seed.sql`
 4. Set in `.env`:
 
 ```
@@ -44,20 +44,11 @@ VITE_CDN_URL=https://dxxxx.cloudfront.net
 
 5. Create the S3 media bucket and CloudFront distribution ([S3_SETUP.md](./S3_SETUP.md))
 
-## Demo Credentials
+## Accounts
 
-**Company Code:** `NZG`
+Staff sign in with a company code (`NZG`, `NZINGA`, or `TCG`) and an account created in Supabase Auth. Directors invite staff from Admin. There are no built-in test logins.
 
-| Role | Email | Password |
-|---|---|---|
-| Scout | jordan@nzinga.co | scout123 |
-| Team 1 Lead | marcus@nzinga.co | lead123 |
-| Ops Specialist | priya@nzinga.co | ops123 |
-| Team 2 Lead | devon@nzinga.co | lead2123 |
-| Director | simone@nzinga.co | director123 |
-| Success Manager | alexis@nzinga.co | success123 |
-
-**Prospect Portal Access Code:** `KAI2026`
+Signed talent uses the same email and password as their application account, after a Success Manager approves the packet.
 
 ## Project Structure
 
@@ -75,7 +66,7 @@ src/
 │   └── application/         # Prospect portal, modals
 ├── context/                 # AuthContext, AppDataContext
 ├── hooks/                   # useAuth, useTalents, useApplications, …
-├── services/                # Supabase + demo-store data layer
+├── services/                # Supabase data layer
 ├── types/                   # TypeScript domain types
 ├── constants/               # Stages, roles, app sections, seed data
 └── lib/                     # supabase client, utils, legacy tokens

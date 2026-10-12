@@ -7,7 +7,8 @@ import {
   restoreSession,
   logout as authLogout,
 } from '@/services/auth.service'
-import { clearLocalAuthSession, supabaseConfigured, onAuthStateChange } from '@/lib/supabase'
+import { clearLocalAuthSession, supabaseConfigured, onAuthStateChange, ensureSession } from '@/lib/supabase'
+import { getSubdomainCompanyCode, isSubdomainLocked } from '@/lib/subdomain'
 import {
   IDLE_MS,
   STORAGE_COMPANY_CODE,
@@ -40,6 +41,8 @@ interface AuthContextValue {
   companyCode: string
   isRestoringSession: boolean
   needsReauth: boolean
+  /** True when the company code is determined by the subdomain (change-code UI hidden). */
+  subdomainLocked: boolean
   setCompanyCode: (code: string) => void
   validateCode: (code: string) => boolean
   validateCodeAsync: (code: string) => Promise<boolean>
@@ -49,11 +52,16 @@ interface AuthContextValue {
   clearNeedsReauth: () => void
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [companyCode, setCompanyCodeState] = useState(() => readStorage(STORAGE_COMPANY_CODE) || '')
+  const [companyCode, setCompanyCodeState] = useState(() => {
+    // Subdomain takes priority — e.g. nzinga.talentmanagerx.com → NZG
+    const subCode = getSubdomainCompanyCode()
+    if (subCode) return subCode
+    return readStorage(STORAGE_COMPANY_CODE) || ''
+  })
   const [isRestoringSession, setIsRestoringSession] = useState(true)
   const [needsReauth, setNeedsReauth] = useState(false)
   const userRef = useRef<User | null>(null)
@@ -89,19 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!supabaseConfigured) {
-      // Demo: restore last demo user if present in sessionStorage
-      try {
-        const demo = sessionStorage.getItem('nto_demo_user_id')
-        if (demo) {
-          void import('@/constants/seed-data').then(({ USERS }) => {
-            const u = USERS.find((x) => x.id === demo) ?? null
-            finish(u)
-          })
-          return
-        }
-      } catch {
-        /* ignore */
-      }
       finish(null)
       return
     }
@@ -167,6 +162,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, needsReauth])
 
+  // Periodic session health check — detects expired Supabase Auth sessions
+  // that the idle timer and onAuthStateChange might miss (e.g., token expired
+  // while the tab was backgrounded and auto-refresh silently failed).
+  useEffect(() => {
+    if (!user || !supabaseConfigured || needsReauth) return
+
+    const checkSession = async () => {
+      if (!userRef.current) return
+      const alive = await ensureSession()
+      if (!alive && userRef.current) {
+        setNeedsReauth(true)
+      }
+    }
+
+    // Check every 5 minutes
+    const interval = window.setInterval(checkSession, 5 * 60_000)
+    return () => window.clearInterval(interval)
+  }, [user, needsReauth])
+
   const validateCode = useCallback((code: string) => validateCompanyCode(code), [])
   const validateCodeAsync = useCallback((code: string) => validateCompanyCodeFromDB(code), [])
 
@@ -182,13 +196,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCompanyCodeState(code)
         writeStorage(STORAGE_COMPANY_CODE, code)
       }
-      if (!supabaseConfigured) {
-        try {
-          sessionStorage.setItem('nto_demo_user_id', u.id)
-        } catch {
-          /* ignore */
-        }
-      }
       return adopted
     }
     return u
@@ -198,13 +205,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(adoptUser(u))
     touchActivity()
     setNeedsReauth(false)
-    if (!supabaseConfigured) {
-      try {
-        sessionStorage.setItem('nto_demo_user_id', u.id)
-      } catch {
-        /* ignore */
-      }
-    }
   }, [])
 
   const logout = useCallback(async () => {
@@ -226,11 +226,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearFreshLoginMark()
     removeStorage(STORAGE_COMPANY_CODE)
     removeStorage(STORAGE_LAST_PATH)
-    try {
-      sessionStorage.removeItem('nto_demo_user_id')
-    } catch {
-      /* ignore */
-    }
   }, [])
 
   const clearNeedsReauth = useCallback(() => {
@@ -238,12 +233,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     touchActivity()
   }, [])
 
+  const subdomainLocked = isSubdomainLocked()
+
   const value = useMemo(
     () => ({
       user,
       companyCode,
       isRestoringSession,
       needsReauth,
+      subdomainLocked,
       setCompanyCode,
       validateCode,
       validateCodeAsync,
@@ -257,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       companyCode,
       isRestoringSession,
       needsReauth,
+      subdomainLocked,
       setCompanyCode,
       validateCode,
       validateCodeAsync,

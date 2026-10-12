@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AGENCY_STAFF } from '@/constants/agency-seed'
 import { portalCard, portalInput, portalMuted, portalPrimary, useTalentPortalPrefs } from '@/components/talent-portal/TalentPortalShell'
 import { useTalentPortal } from '@/hooks/useTalentPortal'
 import { agentContact, agentMailto, belongingToTalent, opportunityStatusLabel } from '@/lib/talent-portal'
@@ -64,7 +63,7 @@ export function TalentMessagesPage() {
       clientId: 'talent_portal',
       clientName: 'Talent request',
       talentName: displayName,
-      assignee: agent.name || AGENCY_STAFF.name,
+      assignee: agent.name || 'Unassigned',
       dueDate: due.toISOString().slice(0, 10),
     })
     setNotice('Request sent to your agency. You can track it under Career activity.')
@@ -82,12 +81,12 @@ export function TalentMessagesPage() {
       </p>
 
       <div style={{ display: 'grid', gap: 16 }}>
-        {showEmail ? (
+        {showEmail && agent.name ? (
           <section style={portalCard}>
             <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>Message your assigned agent</h2>
             <p style={{ fontSize: 13, color: portalMuted, lineHeight: 1.5, margin: '0 0 12px' }}>
-              {agent.name} is your booking agent. Open your email app with a prefilled address and subject — this is the
-              fastest way to reach them.
+              {agent.name} is your booking agent. Open your email app with a prefilled subject — this is the fastest way
+              to reach them.
             </p>
             <a
               href={mailto}
@@ -104,7 +103,16 @@ export function TalentMessagesPage() {
             >
               Email {agent.name}
             </a>
-            <p style={{ fontSize: 12, color: portalMuted, margin: '10px 0 0' }}>{agent.email}</p>
+            {agent.email ? (
+              <p style={{ fontSize: 12, color: portalMuted, margin: '10px 0 0' }}>{agent.email}</p>
+            ) : null}
+          </section>
+        ) : showEmail ? (
+          <section style={portalCard}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>No agent assigned yet</h2>
+            <p style={{ fontSize: 13, color: portalMuted, margin: 0 }}>
+              Your agency has not assigned an agent on your profile. Use a structured request below.
+            </p>
           </section>
         ) : (
           <section style={portalCard}>

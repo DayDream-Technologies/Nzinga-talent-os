@@ -1,10 +1,12 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { useStaffDirectory } from "@/hooks/useStaffDirectory";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { TalentLink } from "@/components/talent/TalentLink";
 
 function HistoryMod({ history, setHistory, talents, currentUser, initialFilter }) {
+  const staff = useStaffDirectory()
   const [filter, setFilter] = useState(initialFilter || 'all')
   useEffect(() => {
     if (initialFilter) setFilter(initialFilter)
@@ -145,7 +147,7 @@ function HistoryMod({ history, setHistory, talents, currentUser, initialFilter }
         ) : (
           filt.map((h) => {
             const tal = talents.find((t) => t.id === h.talent_id)
-            const usr = USERS.find((u) => u.id === h.user_id)
+            const usr = staff.find((u) => u.id === h.user_id)
             return (
               <div
                 key={h.id}

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { useStaffDirectory } from "@/hooks/useStaffDirectory";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { TalentLink } from "@/components/talent/TalentLink";
 
@@ -32,6 +33,7 @@ function dashAlertStyle(variant = 'accent') {
 }
 
 function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav, applications }) {
+  const staff = useStaffDirectory()
   const role=currentUser.role;
   const actionStage=ROLE_ACTION_STAGE[role];
   const accessible=ROLE_STAGE_ACCESS[role]||[];
@@ -120,7 +122,7 @@ function Dashboard({ talents, tasks, history, currentUser, onSelectTalent, onNav
             <span style={{ fontSize:12,fontWeight:700,color:DASH.text.primary,textTransform:"uppercase",letterSpacing:"0.05em" }}>Recent Activity</span>
           </div>
           <div style={{ padding:"8px 14px" }}>
-            {history.slice(0,5).map(h=>{const tal=talents.find(t=>t.id===h.talent_id);const usr=USERS.find(u=>u.id===h.user_id);return <div key={h.id} style={{ display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid #f0f4f8" }}>
+            {history.slice(0,5).map(h=>{const tal=talents.find(t=>t.id===h.talent_id);const usr=staff.find(u=>u.id===h.user_id);return <div key={h.id} style={{ display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid #f0f4f8" }}>
               <HIcon type={h.type}/>
               <div style={{ flex:1 }}><TalentLink accountId={tal?.account_number} name={tal?.name} /><span style={{ color:DASH.text.muted,fontSize:11 }}> · {usr?.name}</span><div style={{ fontSize:11,color:DASH.text.secondary }}>{h.text.slice(0,60)}{h.text.length>60?"…":""}</div></div>
             </div>;})}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Badge, Btn, Card, Field, ModalShell, Panel, Table, inputStyle, StatusColor } from '@/components/agency/AgencyUI'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
-import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
+import { staffTicketAgents, useStaffDirectory } from '@/hooks/useStaffDirectory'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -206,6 +206,7 @@ export function NewIssueModal({
 export function IssuesDashboardModule() {
   const { tickets, updateTicket } = useAgencyData()
   const { user } = useAuth()
+  const ticketAgents = staffTicketAgents(useStaffDirectory())
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('unassigned')
   const [open, setOpen] = useState(false)
@@ -271,7 +272,7 @@ export function IssuesDashboardModule() {
           onClose={() => setSelectedId(null)}
           updateTicket={updateTicket}
           isDirector={user?.role === 'director'}
-          agents={AGENCY_TICKET_AGENTS}
+          agents={ticketAgents}
         />
       )}
     </Panel>

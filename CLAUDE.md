@@ -70,16 +70,7 @@ Key components: `Btn`, `FInput`, `FTextarea`, `FSelect`, `Section`, `FileUpload`
 
 ## Roles & RBAC
 
-| Role | Email | Password | Sees Stages |
-|---|---|---|---|
-| scout | jordan@nzinga.co | scout123 | holding_entry, scout_complete |
-| team1_lead | marcus@nzinga.co | lead123 | scout_complete, team1_review |
-| ops_specialist | priya@nzinga.co | ops123 | team1_review, ops_processing |
-| team2_lead | devon@nzinga.co | lead2123 | ops_processing, team2_audit |
-| director | simone@nzinga.co | director123 | ALL stages |
-| success_manager | alexis@nzinga.co | success123 | executive_review, signed_onboarding |
-
-Company Code: **NZG** (also: NZINGA, TCG)
+Staff accounts live in Supabase Auth and the `users` table. They are invited by a Director. Company codes: **NZG**, **NZINGA**, **TCG**. There are no seeded passwords in the app.
 
 ## Pipeline Stages (sequential)
 `holding_entry → scout_complete → team1_review → ops_processing → team2_audit → executive_review → signed_onboarding`

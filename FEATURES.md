@@ -17,7 +17,7 @@ This file is the product capability catalog. Setup and development live in [READ
 
 | Audience | How they get in | What they do |
 |---|---|---|
-| **Staff** | Company code, then email and password or Continue with Google | Run CRM, pipeline, packets, contracts, finance, and admin |
+| **Staff** | Company code (or auto-detected from subdomain), then email and password or Continue with Google. Accounts are invited by a Director — the app does not ship test logins or sample talent. | Run CRM, pipeline, packets, contracts, finance, and admin |
 | **Prospects** | `/portal` with an access code (or start a new application) | Fill the NZG short application |
 | **Guardians** | `/guardian/verify` magic link | Confirm a minor applicant |
 | **Signed talent** | `/talent/login` then `/talent/*` | Home, activity, money, files (DocHub sign), messages, settings |
@@ -92,6 +92,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 ### Auth and tenancy
 
 - Company code selects the tenant (NZG, NZINGA, TCG). Staff then sign in with email and password.
+- **Subdomain routing**: When served at `<org>.talentmanagerx.com` (e.g. `nzinga.talentmanagerx.com`), the company code is auto-detected from the subdomain and the code-entry screen is skipped. `www` and the naked domain show the manual code-entry screen. The mapping is in `SUBDOMAIN_TO_COMPANY_CODE` in `src/constants/company-branding.ts`.
 - Signup confirmation, password reset, and guardian links are sent by Supabase Auth (custom SMTP).
 - Per-user settings: display name/title, light/dark theme, sidebar preference, password reset request.
 - Command Launch in the top nav finds people, applications, and pages. Pages match by title or path substring, not by letter-sequence matches against names (searching “Rico” does not suggest Applicant Pool).

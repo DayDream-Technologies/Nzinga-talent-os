@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from 'react'
-import { USERS } from '@/constants'
+import { useStaffDirectory } from '@/hooks/useStaffDirectory'
 import {
   T,
   Av,
@@ -15,6 +15,7 @@ import {
 import { TalentLink } from '@/components/talent/TalentLink'
 
 function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
+  const staff = useStaffDirectory()
   const [filter, setFilter] = useState(initialFilter || 'mine')
   useEffect(() => {
     if (initialFilter) setFilter(initialFilter)
@@ -127,7 +128,7 @@ function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
               <FSelect
                 value={nt.assigned_to}
                 onChange={(v) => np('assigned_to', v)}
-                options={USERS.map((u) => ({ v: u.id, l: u.name }))}
+                options={staff.map((u) => ({ v: u.id, l: u.name }))}
                 style={{ width: '100%' }}
               />
             </div>
@@ -192,7 +193,7 @@ function Tasks({ tasks, setTasks, talents, currentUser, initialFilter }) {
             </tr>
           )}
           {filt.map((tk) => {
-            const asn = USERS.find((u) => u.id === tk.assigned_to)
+            const asn = staff.find((u) => u.id === tk.assigned_to)
             const rel = talents.find((t) => t.id === tk.related_talent)
             const od = tk.due && new Date(tk.due) < new Date() && tk.status === 'open'
             return (

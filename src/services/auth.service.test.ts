@@ -1,42 +1,26 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { DEMO_TALENT_LOGIN, DEMO_TALENT_SESSION_KEY } from '@/constants/demo-talent'
-import {
-  loginApprovedTalent,
-  logout,
-  restoreApprovedTalentSession,
-} from '@/services/auth.service'
-import { demoStore } from '@/services/demo-store'
+import { describe, expect, it, vi } from 'vitest'
 
-describe('demo talent login', () => {
-  beforeEach(() => {
-    demoStore.reset()
-    sessionStorage.clear()
-  })
+vi.mock('@/lib/supabase', () => ({
+  supabaseConfigured: false,
+  supabase: null,
+  clearLocalAuthSession: vi.fn(),
+}))
 
-  it('signs in the seeded demo client and restores the session', async () => {
-    const result = await loginApprovedTalent(DEMO_TALENT_LOGIN.email, DEMO_TALENT_LOGIN.password)
-    expect(result.error).toBeNull()
-    expect(result.talent?.id).toBe(DEMO_TALENT_LOGIN.talentId)
-    expect(result.talent?.stage).toBe('signed_onboarding')
-    expect(result.profile?.email).toBe(DEMO_TALENT_LOGIN.email)
-    expect(sessionStorage.getItem(DEMO_TALENT_SESSION_KEY)).toBe(DEMO_TALENT_LOGIN.email)
+import { loginApprovedTalent, logout, restoreApprovedTalentSession } from '@/services/auth.service'
 
-    const restored = await restoreApprovedTalentSession()
-    expect(restored.talent?.id).toBe('t_maya')
-    expect(restored.profile?.name).toBe('Maya Rivera')
-  })
-
-  it('rejects the wrong password', async () => {
-    const result = await loginApprovedTalent(DEMO_TALENT_LOGIN.email, 'nope')
+describe('talent login', () => {
+  it('does not accept a hardcoded demo password when the database is not configured', async () => {
+    const result = await loginApprovedTalent('maya@example.com', 'talent123')
+    expect(result.profile).toBeNull()
     expect(result.talent).toBeNull()
-    expect(result.error).toMatch(/incorrect email or password/i)
+    expect(result.error).toMatch(/not configured/i)
   })
 
-  it('clears the demo session on logout', async () => {
-    await loginApprovedTalent(DEMO_TALENT_LOGIN.email, DEMO_TALENT_LOGIN.password)
-    await logout()
+  it('does not restore a leftover demo talent session', async () => {
+    sessionStorage.setItem('nto_demo_talent_email', 'maya@example.com')
     const restored = await restoreApprovedTalentSession()
     expect(restored.profile).toBeNull()
     expect(restored.talent).toBeNull()
+    await logout()
   })
 })

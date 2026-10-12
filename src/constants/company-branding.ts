@@ -36,6 +36,18 @@ export const COMPANY_CODE_TO_BRAND: Record<string, CompanyBrandId> = {
   TCG: 'tcg',
 }
 
+/**
+ * Map subdomains to company codes.
+ * When the app is served at `<subdomain>.talentmanagerx.com`, the company code
+ * is auto-set so users skip the code-entry screen.
+ *
+ * Add a new entry here when onboarding a new organization that gets its own subdomain.
+ */
+export const SUBDOMAIN_TO_COMPANY_CODE: Record<string, string> = {
+  nzinga: 'NZG',
+  tcg: 'TCG',
+}
+
 export function resolveCompanyBrand(companyCode: string): CompanyBrandId {
   return COMPANY_CODE_TO_BRAND[companyCode.trim().toUpperCase()] ?? 'nzinga'
 }

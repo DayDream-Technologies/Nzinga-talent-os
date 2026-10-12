@@ -103,6 +103,28 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 
 ---
 
+## Subdomain routing (multi-org)
+
+Each onboarded organization can have its own subdomain (e.g. `nzinga.talentmanagerx.com`, `tcg.talentmanagerx.com`). The app auto-detects the subdomain, sets the company code, and skips the code-entry screen.
+
+### AWS Amplify configuration
+
+1. **Custom domain**: In the Amplify console → **Hosting → Custom domains**, add `talentmanagerx.com` as the primary domain.
+2. **Wildcard subdomain**: Add `*.talentmanagerx.com` → same branch. Amplify provisions a wildcard SSL certificate.
+3. **DNS**: Add a CNAME record for `*.talentmanagerx.com` → the Amplify CloudFront distribution domain. Confirm the naked domain (`talentmanagerx.com`) and `www.talentmanagerx.com` also resolve correctly.
+
+### Supabase Auth
+
+Add `https://*.talentmanagerx.com/**` to **Authentication → URL Configuration → Redirect URLs** so auth emails and OAuth callbacks work on any subdomain.
+
+### Adding a new organization subdomain
+
+1. Add a row to `SUBDOMAIN_TO_COMPANY_CODE` in `src/constants/company-branding.ts`.
+2. Ensure the company code exists in the `company_codes` DB table.
+3. No Amplify or DNS changes needed — the wildcard covers all subdomains.
+
+---
+
 ## Local development vs Amplify
 
 | | Local (`.env`) | Amplify |

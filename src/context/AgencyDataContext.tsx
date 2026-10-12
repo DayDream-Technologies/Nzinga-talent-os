@@ -19,7 +19,6 @@ import {
   EXPENSE_LOGS_SEED,
   INVOICES_SEED,
   MESSAGES_SEED,
-  PROJECT_SCENARIO,
   RETAINER_PLANS_SEED,
   SUPPORT_TICKETS_SEED,
   VENDORS_SEED,
@@ -70,7 +69,6 @@ interface AgencyDataValue {
   vendors: Vendor[]
   disbursements: Disbursement[]
   messages: MessageThread[]
-  scenario: typeof PROJECT_SCENARIO
   addTicket: (t: Omit<SupportTicket, 'id' | 'createdAt'>) => void
   updateTicket: (id: string, patch: Partial<SupportTicket>) => void
   addTask: (t: Omit<AgencyTask, 'id'>) => void
@@ -1012,7 +1010,6 @@ export function AgencyDataProvider({ children }: { children: ReactNode }) {
       vendors,
       disbursements,
       messages,
-      scenario: PROJECT_SCENARIO,
       addTicket,
       updateTicket,
       addTask,

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, isTalentVisibleToRole, hasPermission } from "@/constants";
+import { COMPANY_CODES, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED, isTalentVisibleToRole, hasPermission } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { CompanyLogo } from "@/components/branding";
 import { AGENCY_SIDEBAR, filterAgencyNav, filterAgencySidebar, canAccessAgencyPath } from "@/constants/agency-nav";
@@ -74,9 +74,7 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
       {!mobile && (
       <div style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"2px 8px" }}>
         <div style={{ fontSize:9,color:"#94a3b8",textTransform:"uppercase",letterSpacing:"0.06em" }}>Role</div>
-        <select value={user.role} onChange={e=>{const u=USERS.find(u=>u.role===e.target.value);if(u)onLogout(u);}} style={{ background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>
-          {USERS.map(u=><option key={u.id} value={u.role} style={{ background:"#1a2332" }}>{ROLE_LABELS[u.role]} – {u.name}</option>)}
-        </select>
+        <div style={{ color:"#fff",fontSize:11,fontWeight:600 }}>{ROLE_LABELS[user.role]}</div>
       </div>
       )}
       <div style={{ position:"relative" }}>
@@ -86,11 +84,6 @@ function TopNav({ user, companyCode, onMenu, onLogout, onNav, talents, onSelectT
             <div style={{ display:"flex",alignItems:"center",gap:8 }}><Av user={user} size={30}/><div><div style={{ fontSize:12,fontWeight:600,color:T.t1 }}>{user.name}</div><div style={{ fontSize:11,color:user.color,fontWeight:500 }}>{user.title}</div></div></div>
           </div>
           <div style={{ padding:6 }}>
-            {mobile && (
-              <select value={user.role} onChange={e=>{const u=USERS.find(u=>u.role===e.target.value);if(u)onLogout(u);}} style={{ width:"100%",marginBottom:6,padding:"8px 6px",fontSize:12,fontFamily:"inherit" }}>
-                {USERS.map(u=><option key={u.id} value={u.role}>{ROLE_LABELS[u.role]} – {u.name}</option>)}
-              </select>
-            )}
             <div onClick={()=>{onNav("settings");setProfileOpen(false);}} style={{ padding:"7px 8px",cursor:"pointer",color:T.t1,fontSize:12,borderRadius:4 }}>Settings</div>
             <div onClick={()=>onLogout(null)} style={{ padding:"7px 8px",cursor:"pointer",color:T.red,fontSize:12,borderRadius:4 }}>Sign Out</div>
           </div>

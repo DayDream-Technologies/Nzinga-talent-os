@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { createHistoryEntry } from '@/lib/history-ledger'
 import { T } from '@/lib/tokens'
 import { AUTO_STACK_GRID } from '@/lib/viewport'
-import { USERS } from '@/constants/seed-data'
+import { useStaffDirectory } from '@/hooks/useStaffDirectory'
 
 export function AddTaskModal({
   onClose,
@@ -18,6 +18,7 @@ export function AddTaskModal({
   const { addTask, talent } = useAgencyData()
   const { setHistory } = useAppData()
   const { user } = useAuth()
+  const staff = useStaffDirectory()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('Default')
@@ -49,7 +50,7 @@ export function AddTaskModal({
           <Field label="Assigned users">
             <input value={assignees} onChange={(e) => setAssignees(e.target.value)} style={inputStyle} />
             <div style={{ fontSize: 11, color: T.t3, marginTop: 4 }}>
-              {USERS.map((u) => u.name).join(', ')}
+              {staff.map((u) => u.name).join(', ') || 'Staff names load from your company directory.'}
             </div>
           </Field>
           <Field label="Due date">

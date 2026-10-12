@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState } from "react";
 import {
-  USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, STAGES, STAGE_LABELS, PILLAR_NAMES, REQUIRED_DOCS,
+  ROLE_LABELS, ROLE_STAGE_ACCESS, STAGES, STAGE_LABELS, PILLAR_NAMES, REQUIRED_DOCS,
   validateSection, getVisibleSections,
   APPLICANT_STAGE_STATUSES, ROSTER_DIVISIONS, isScoutReadOnlyView, hasPermission, SOP_STATUS,
 } from "@/constants";
@@ -12,6 +12,7 @@ import { PhoneActions } from "@/components/talent/PhoneActions";
 import { ScreeningWorkspace } from "@/components/agency/ScreeningWorkspace";
 import { TalentLink } from "@/components/talent/TalentLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useStaffDirectory } from "@/hooks/useStaffDirectory";
 import { useViewport } from "@/hooks/useViewport";
 import { staffGridColumns } from "@/lib/viewport";
 import { useResolvedImageUrl } from "@/hooks/useResolvedImageUrl";
@@ -31,6 +32,7 @@ const NICHE_OPTIONS = ["Modeling", "Acting", "Sports & Athletics", "Influencing 
 
 function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, setTasks, onClose, onUpdate, onSendApp, applications, refreshAll }) {
   const { companyCode } = useAuth();
+  const staff = useStaffDirectory();
   const band = useViewport();
   const stack = staffGridColumns(band, "1fr 1fr");
   const { upsertProspectSop, addProspectContract, patchProspectContract, prospects } = useAgencyData();
@@ -52,11 +54,11 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
   const role = currentUser.role;
   const tHistory = allHistory.filter((h) => h.talent_id === local.id);
   const tTasks = allTasks.filter((t) => t.related_talent === local.id);
-  const scoutUser = USERS.find((u) => u.id === local.scout_id);
+  const scoutUser = staff.find((u) => u.id === local.scout_id);
   const scoutReadOnly = isScoutReadOnlyView(role, local.stage, local.scout_id, currentUser.id);
   const canEdit = !scoutReadOnly;
   const canEditStage = hasPermission(role, "admin_access") || hasPermission(role, "approve_client_packet") || (!scoutReadOnly && ROLE_STAGE_ACCESS[role]?.includes(local.stage));
-  const creatorUser = USERS.find((u) => u.id === local.created_by);
+  const creatorUser = staff.find((u) => u.id === local.created_by);
   const createdByLabel = local.created_by === null ? "Prospect" : creatorUser ? `${ROLE_LABELS[creatorUser.role]} (${creatorUser.name})` : "System";
   const linkedApp = local.application_id ? applications[local.application_id] : null;
   const profilePhoto = (local.uploaded_docs || {}).profile_photo;
@@ -355,15 +357,15 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
     if (!opsReturnNotes.trim()) { setErr("Return notes required for Team 1 Lead."); return; }
     setErr("");
     void save({ ...local, stage: "team1_review", team1_notes: opsReturnNotes, audit_log: auditLog("Returned to Client Packet Review", "ops_processing") }, true);
-    const t1User = USERS.find((u) => u.role === "success_manager");
-    setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Ops Return — Review: " + local.name, assigned_to: t1User ? t1User.id : "u2", related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: opsReturnNotes }, ...prev]);
+    const t1User = staff.find((u) => u.role === "success_manager");
+    setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Ops Return — Review: " + local.name, assigned_to: t1User ? t1User.id : currentUser.id, related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: opsReturnNotes }, ...prev]);
   }
   function t2(d) {
     if (d === "approved") { void save({ ...local, stage: "executive_review", team2_decision: "approved", audit_log: auditLog("Approved for Director Review", "team2_audit") }, true); }
     else if (d === "returned") {
       void save({ ...local, stage: "ops_processing", team2_decision: "returned", audit_log: auditLog("Returned to Success Manager Validation", "team2_audit") }, true);
-      const opsUser = USERS.find((u) => u.role === "account_manager");
-      setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Returned from Audit: " + local.name, assigned_to: opsUser ? opsUser.id : "u3", related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: local.team2_notes || "Returned from audit." }, ...prev]);
+      const opsUser = staff.find((u) => u.role === "account_manager");
+      setTasks((prev) => [{ id: "tk_" + Date.now(), title: "Returned from Audit: " + local.name, assigned_to: opsUser ? opsUser.id : currentUser.id, related_talent: local.id, due: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), priority: "high", status: "open", created_by: currentUser.id, created_at: new Date().toISOString(), notes: local.team2_notes || "Returned from audit." }, ...prev]);
     } else {
       setPendingConfirm({
         title: "Reject this talent?",
@@ -745,7 +747,7 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                 <div style={{ padding: 14, color: T.t4, fontSize: 12, textAlign: "center" }}>No history yet.</div>
               ) : (
                 (historyFilter === "all" ? filtHistory : filtHistory.filter((h) => h.type === historyFilter)).map((h) => {
-                  const u = USERS.find((x) => x.id === h.user_id);
+                  const u = staff.find((x) => x.id === h.user_id);
                   return (
                     <div key={h.id} style={{ display: "grid", gridTemplateColumns: band === "mobile" ? "1fr" : "88px 56px 1fr", padding: "7px 10px", borderBottom: "1px solid #f5f5f5", gap: 6 }}>
                       <span style={{ fontSize: 11, color: T.t3 }}>{new Date(h.ts).toLocaleDateString()}</span>

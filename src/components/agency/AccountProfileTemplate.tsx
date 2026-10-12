@@ -27,7 +27,7 @@ import { NewIssueModal } from '@/components/agency/IssuesDashboard'
 import { AddTaskModal } from '@/components/agency/AgencyTasksBoard'
 import { RenewalOfferModal } from '@/components/agency/RenewalOffersHub'
 import { createHistoryEntry } from '@/lib/history-ledger'
-import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
+import { staffTicketAgents, useStaffDirectory } from '@/hooks/useStaffDirectory'
 import { isApplicationReadyToImport } from '@/lib/application-prefill'
 import { STAGE_LABELS } from '@/constants/stages'
 import { useAgencyData } from '@/context/AgencyDataContext'
@@ -158,6 +158,7 @@ export function AccountProfileTemplate({
   const navigate = useNavigate()
   const band = useViewport()
   const { user, companyCode } = useAuth()
+  const ticketAgents = staffTicketAgents(useStaffDirectory())
   const { cropImage, cropper } = useImageCropper()
   const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent, talents, saveApp } = useAppData()
   const {
@@ -749,7 +750,7 @@ export function AccountProfileTemplate({
           onClose={() => setSelectedTicketId(null)}
           updateTicket={updateTicket}
           isDirector={user?.role === 'director'}
-          agents={AGENCY_TICKET_AGENTS}
+          agents={ticketAgents}
         />
       )}
     </Panel>

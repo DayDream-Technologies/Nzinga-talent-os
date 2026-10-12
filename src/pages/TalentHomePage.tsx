@@ -100,7 +100,8 @@ export function TalentHomePage() {
             Welcome, {displayName}
           </h1>
           <p style={{ color: portalMuted, fontSize: 14, margin: '6px 0 0' }}>
-            Home · {talent.account_number || 'Account'} · Agent {agent.name}
+            Home · {talent.account_number || 'Account'}
+            {agent.name ? ` · Agent ${agent.name}` : ''}
           </p>
         </div>
       </div>
@@ -151,7 +152,7 @@ export function TalentHomePage() {
             Contracts & assets →
           </Link>
           <Link to="/talent/messages" style={{ color: '#16a34a', fontSize: 13, fontWeight: 600 }}>
-            Email {agent.name} →
+            {agent.name ? `Email ${agent.name}` : 'Messages'} →
           </Link>
           <Link to="/talent/settings" style={{ color: '#16a34a', fontSize: 13, fontWeight: 600 }}>
             Settings →

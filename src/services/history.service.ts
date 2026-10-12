@@ -1,6 +1,5 @@
 import type { HistoryEntry } from '@/types'
-import { supabase, supabaseConfigured } from '@/lib/supabase'
-import { demoStore } from './demo-store'
+import { requireSupabase, supabase } from '@/lib/supabase'
 
 export type HistoryRow = {
   id: string
@@ -68,10 +67,8 @@ export function sanitizeHistoryRows(
 }
 
 export async function fetchHistory(): Promise<HistoryEntry[]> {
-  if (!supabaseConfigured || !supabase) {
-    return demoStore.getHistory()
-  }
-  const { data, error } = await supabase.from('history').select('*')
+  const db = requireSupabase()
+  const { data, error } = await db.from('history').select('*')
   if (error) throw error
   return (data ?? []) as HistoryEntry[]
 }
@@ -114,13 +111,7 @@ export async function saveHistory(
       : entries.filter((h) => JSON.stringify(prevById.get(h.id)) !== JSON.stringify(h))
   if (changed.length === 0) return
 
-  if (!supabaseConfigured || !supabase) {
-    const byId = new Map(demoStore.getHistory().map((h) => [h.id, h]))
-    for (const entry of changed) byId.set(entry.id, entry)
-    demoStore.setHistory([...byId.values()].sort((a, b) => (a.ts < b.ts ? 1 : -1)))
-    return
-  }
-
+  const db = requireSupabase()
   const rows = changed.map(toHistoryRow)
   const [validTalents, validUsers] = await Promise.all([
     fetchValidIds(
@@ -133,10 +124,10 @@ export async function saveHistory(
     ),
   ])
   let cleaned = sanitizeHistoryRows(rows, validTalents, validUsers)
-  let { error } = await supabase.from('history').upsert(cleaned)
+  let { error } = await db.from('history').upsert(cleaned)
   if (isHistoryFkError(error)) {
     cleaned = cleaned.map((row) => ({ ...row, talent_id: null, user_id: null }))
-    const retry = await supabase.from('history').upsert(cleaned)
+    const retry = await db.from('history').upsert(cleaned)
     error = retry.error
   }
   if (error) throw error

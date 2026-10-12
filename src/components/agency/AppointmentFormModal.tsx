@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Appointment } from '@/types/agency'
-import { AGENCY_TICKET_AGENTS } from '@/constants/agency-seed'
+import { staffTicketAgents, useStaffDirectory } from '@/hooks/useStaffDirectory'
 import {
   Btn,
   Field,
@@ -50,9 +50,8 @@ export function AppointmentFormModal({
     toLocalDateTimeInput(initial?.endsAt || defaults.endsAt),
   )
   const [clientNames, setClientNames] = useState<string[]>(initial?.clientNames || [])
-  const [agentNames, setAgentNames] = useState<string[]>(
-    initial?.agentNames || [AGENCY_TICKET_AGENTS[0]?.name].filter(Boolean),
-  )
+  const agentOptions = staffTicketAgents(useStaffDirectory()).map((agent) => agent.name)
+  const [agentNames, setAgentNames] = useState<string[]>(initial?.agentNames || [])
   const [talentNames, setTalentNames] = useState<string[]>(initial?.talentNames || [])
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -138,7 +137,7 @@ export function AppointmentFormModal({
       <MultiCheck label="Client(s)" options={clientOptions} selected={clientNames} onChange={setClientNames} />
       <MultiCheck
         label="Agent(s)"
-        options={AGENCY_TICKET_AGENTS.map((a) => a.name)}
+        options={agentOptions}
         selected={agentNames}
         onChange={setAgentNames}
       />

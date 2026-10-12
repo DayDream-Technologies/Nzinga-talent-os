@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { COMPANY_CODES } from '@/constants/roles'
 import { PLATFORM_BRAND, canApplyWithCompanyCode, getCompanyBrand } from '@/constants/company-branding'
 import { TMXLogo, TMXMark } from '@/components/branding'
+import { isSubdomainLocked } from '@/lib/subdomain'
 
 const pageShell: React.CSSProperties = {
   minHeight: '100vh',
@@ -69,8 +70,10 @@ const secondaryBtn: React.CSSProperties = {
 export function CompanyCodePage() {
   const navigate = useNavigate()
   const { setCompanyCode, companyCode } = useAuth()
+  const locked = isSubdomainLocked()
   const [code, setCode] = useState(companyCode || '')
   const [error, setError] = useState('')
+  // When the subdomain auto-set the company code, start on 'choice' directly
   const [step, setStep] = useState<'code' | 'choice'>(companyCode ? 'choice' : 'code')
 
   // Keep the choice screen if a code is already stored (don't ask again after nav).
@@ -327,23 +330,25 @@ export function CompanyCodePage() {
                 </button>
               </div>
 
-              <div style={{ marginTop: 20, textAlign: 'center' }}>
-                <button
-                  type="button"
-                  className="mh-link-underline"
-                  onClick={handleChangeCode}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--auth-muted)',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  Use a different company code
-                </button>
-              </div>
+              {!locked && (
+                <div style={{ marginTop: 20, textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    className="mh-link-underline"
+                    onClick={handleChangeCode}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--auth-muted)',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Use a different company code
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

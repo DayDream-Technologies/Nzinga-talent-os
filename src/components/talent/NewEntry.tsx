@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { useState } from 'react'
 import {
-  USERS,
   ROLE_LABELS,
   REQUIRED_DOCS,
   ROSTER_DIVISIONS,
@@ -18,6 +17,7 @@ import {
 } from '@/constants'
 import { T, Btn, Lbl, FInput, FTextarea, FSelect, FileUpload } from '@/components/ui-compat'
 import { PageContent } from '@/components/layout/PageContent'
+import { useStaffDirectory } from '@/hooks/useStaffDirectory'
 import { AUTO_STACK_GRID } from '@/lib/viewport'
 
 const EMPTY_FORM = {
@@ -104,6 +104,7 @@ function Field({ label, required, children, full }) {
  * @param {{ currentUser: any, onSave: Function, onCancel: Function, onSendApp?: Function }} props
  */
 function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
+  const staff = useStaffDirectory()
   const [entryType, setEntryType] = useState('manual')
   const [f, setF] = useState({
     ...EMPTY_FORM,
@@ -120,7 +121,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
   const saveMedia = (docId, data, name, type, extra = {}) =>
     setMedia((x) => ({ ...x, [docId]: { data, name, type, ...extra } }))
 
-  const agentOptions = USERS.filter((u) =>
+  const agentOptions = staff.filter((u) =>
     ['scout', 'director', 'success_manager'].includes(u.role),
   )
 

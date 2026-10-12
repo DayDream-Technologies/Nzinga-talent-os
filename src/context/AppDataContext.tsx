@@ -64,7 +64,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [localTasks, setLocalTasks] = useState<Task[] | null>(null)
   const [localHistory, setLocalHistory] = useState<HistoryEntry[] | null>(null)
 
-  const queryEnabled = !supabaseConfigured || !!user
+  const queryEnabled = supabaseConfigured && !!user
 
   const talentsQuery = useQuery({ queryKey: ['talents'], queryFn: fetchTalents, enabled: queryEnabled })
   const appsQuery = useQuery({ queryKey: ['applications'], queryFn: fetchApplications, enabled: queryEnabled })

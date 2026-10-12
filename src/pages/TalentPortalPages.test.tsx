@@ -6,7 +6,7 @@ import { TalentMessagesPage } from '@/pages/TalentMessagesPage'
 import { TalentActivityPage } from '@/pages/TalentActivityPage'
 import { TalentSettingsPage } from '@/pages/TalentSettingsPage'
 import { TalentPortalPrefsProvider } from '@/components/talent-portal/TalentPortalShell'
-import { AGENCY_TALENT_SEED, INVOICES_SEED, ESCROW_SEED, EXPENSE_LOGS_SEED, DISBURSEMENTS_SEED, SUPPORT_TICKETS_SEED, CALENDAR_EVENTS_SEED, AGENCY_PROSPECTS_SEED } from '@/constants/agency-seed'
+import type { AgencyProspect, AgencyTalent, CalendarEvent, ClientInvoice, Disbursement, EscrowDeposit, ExpensePayoutLog, SupportTicket } from '@/types/agency'
 
 const addDisbursement = vi.fn()
 const addTicket = vi.fn()
@@ -15,8 +15,117 @@ const updateCalendarEvent = vi.fn()
 const updateTalent = vi.fn()
 const updateProspect = vi.fn()
 
-const maya = AGENCY_TALENT_SEED.find((row) => row.id === 'talent_maya')!
-const prospect = AGENCY_PROSPECTS_SEED.find((row) => row.id === 'pros_maya')!
+const maya = {
+  id: 'talent_maya',
+  accountId: 'NZG-200101',
+  name: 'Maya Rivera',
+  email: 'maya@example.com',
+  role: 'Signed Model',
+  status: 'current',
+  workArea: 'Modeling',
+  niches: ['Commercial'],
+  bankReady: true,
+  taxFormsReady: true,
+  available: true,
+  bookedDates: [],
+  udf: { height: `5'9"`, socialHandles: '@mayarivera', usageRights: 'North America, 1 year.' },
+} as AgencyTalent
+
+const prospect = {
+  id: 'pros_maya',
+  accountId: 'NZG-200101',
+  name: 'Maya Rivera',
+  email: 'maya@example.com',
+  workArea: 'Modeling',
+  stage: 'contract_completed',
+  source: 'Signed client',
+  submittedAt: '2025-08-20T10:00:00Z',
+  notes: '',
+  organization: 'NZG',
+  assignedAgentName: 'Sarah Chen',
+} as AgencyProspect
+
+const invoices = [
+  {
+    id: 'inv_shoot',
+    clientId: 'c1',
+    clientName: 'Northwind',
+    talentName: 'Maya Rivera',
+    project: 'Commercial Shoot',
+    amount: 10000,
+    commissionPct: 20,
+    status: 'sent',
+    issuedAt: '2026-08-14',
+    dueAt: '2026-09-13',
+    interestApplied: 0,
+    taxId: '',
+    taxRatePct: 0,
+    taxAmount: 0,
+    document: null,
+  },
+  {
+    id: 'inv_usage',
+    clientId: 'c1',
+    clientName: 'Northwind',
+    talentName: 'Maya Rivera',
+    project: 'Usage Buyout — Social Cutdowns',
+    amount: 2800,
+    commissionPct: 20,
+    status: 'sent',
+    issuedAt: '2026-08-12',
+    dueAt: '2026-09-11',
+    interestApplied: 0,
+    taxId: '',
+    taxRatePct: 0,
+    taxAmount: 0,
+    document: null,
+  },
+] as ClientInvoice[]
+
+const escrow = [
+  {
+    id: 'esc_1',
+    clientName: 'Northwind',
+    talentName: 'Maya Rivera',
+    project: 'Commercial Shoot',
+    amount: 8000,
+    receivedAt: '2026-08-14',
+    status: 'pending',
+    notes: '',
+  },
+] as EscrowDeposit[]
+
+const expenseLogs = [] as ExpensePayoutLog[]
+const disbursements = [] as Disbursement[]
+
+const tickets = [
+  {
+    id: 'tkt_1',
+    subject: 'Confirm availability',
+    clientId: 'c1',
+    clientName: 'Northwind',
+    talentName: 'Maya Rivera',
+    status: 'open',
+    type: 'availability',
+    priority: 'high',
+    createdAt: '2026-08-05T08:15:00Z',
+    dueDate: '2026-08-08',
+    body: 'Need a yes or no.',
+    assignee: 'Sarah Chen',
+  },
+] as SupportTicket[]
+
+const calendar = [
+  {
+    id: 'cal_2',
+    title: 'Shoot day',
+    date: '2026-08-12',
+    talentName: 'Maya Rivera',
+    type: 'booking',
+    callTime: '07:00',
+    talentCallResponse: 'pending',
+  },
+] as CalendarEvent[]
 
 vi.mock('@/hooks/useTalentPortal', () => ({
   useTalentPortal: () => ({
@@ -25,12 +134,12 @@ vi.mock('@/hooks/useTalentPortal', () => ({
     talent: { name: 'Maya Rivera', account_number: 'NZG-200101', uploaded_docs: {} },
     prospect,
     rosterTalent: maya,
-    invoices: INVOICES_SEED,
-    escrow: ESCROW_SEED,
-    expenseLogs: EXPENSE_LOGS_SEED,
-    disbursements: DISBURSEMENTS_SEED,
-    tickets: SUPPORT_TICKETS_SEED,
-    calendar: CALENDAR_EVENTS_SEED,
+    invoices,
+    escrow,
+    expenseLogs,
+    disbursements,
+    tickets,
+    calendar,
     appointments: [],
     addDisbursement,
     addTicket,
@@ -85,7 +194,7 @@ describe('talent portal money and messages', () => {
       </MemoryRouter>,
     )
     const link = screen.getByRole('link', { name: 'Email Sarah Chen' })
-    expect(link).toHaveAttribute('href', expect.stringContaining('mailto:sarah.chen@nzinga.co'))
+    expect(link).toHaveAttribute('href', expect.stringContaining('mailto:'))
     fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Need a call sheet' } })
     fireEvent.change(screen.getByLabelText('Details'), { target: { value: 'Please send tomorrow.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send request' }))

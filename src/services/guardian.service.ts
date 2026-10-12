@@ -1,9 +1,8 @@
 import type { Application, GuardianStatus } from '@/types'
 import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
-import { saveApplication } from '@/services/application.service'
+import { fetchApplicationById, saveApplication } from '@/services/application.service'
 import { friendlyAuthError } from '@/services/auth.service'
-import { demoStore } from '@/services/demo-store'
 
 export interface GuardianInvite {
   id: string
@@ -38,9 +37,6 @@ function makeToken(): string {
   return `g_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
 }
 
-const demoInvites: Record<string, GuardianInvite> = {}
-const demoProfiles: Record<string, GuardianProfilePayload & { application_id: string; auth_uid?: string }> = {}
-
 /** Invite parent/guardian via Supabase magic-link OTP email. */
 export async function inviteGuardian(
   app: Application,
@@ -48,6 +44,9 @@ export async function inviteGuardian(
 ): Promise<{ invite: GuardianInvite | null; error: string | null; emailWarning?: string | null }> {
   const email = guardianEmail.trim().toLowerCase()
   if (!email) return { invite: null, error: 'Guardian email is required.' }
+  if (!supabaseConfigured || !supabase) {
+    return { invite: null, error: 'Database is not configured.', emailWarning: null }
+  }
 
   const invite: GuardianInvite = {
     id: `gi_${Date.now()}`,
@@ -67,12 +66,6 @@ export async function inviteGuardian(
     data: { ...app.data, guardian_invite_email: email },
   }
   await saveApplication(updated)
-
-  if (!supabaseConfigured || !supabase) {
-    demoInvites[invite.token] = invite
-    demoInvites[invite.id] = invite
-    return { invite, error: null, emailWarning: null }
-  }
 
   const { error: insertErr } = await supabase.from('guardian_invites').upsert({
     id: invite.id,
@@ -116,10 +109,7 @@ export async function inviteGuardian(
 }
 
 export async function fetchGuardianInviteByToken(token: string): Promise<GuardianInvite | null> {
-  if (!token) return null
-  if (!supabaseConfigured || !supabase) {
-    return demoInvites[token] ?? null
-  }
+  if (!token || !supabaseConfigured || !supabase) return null
   const { data } = await supabase
     .from('guardian_invites')
     .select('*')
@@ -134,16 +124,11 @@ export async function completeGuardianVerification(
   payload: GuardianProfilePayload,
   authUid?: string,
 ): Promise<{ application: Application | null; error: string | null }> {
-  const app =
-    (!supabaseConfigured || !supabase
-      ? demoStore.getApplications()[applicationId]
-      : null) || (await import('@/services/application.service').then((m) => m.fetchApplicationById(applicationId)))
+  const app = await fetchApplicationById(applicationId)
 
   if (!app) return { application: null, error: 'Application not found.' }
 
-  const invite =
-    (await fetchGuardianInviteByToken(token)) ||
-    (demoInvites[token] ?? null)
+  const invite = await fetchGuardianInviteByToken(token)
 
   if (!invite || invite.application_id !== applicationId) {
     return { application: null, error: 'Invalid or expired guardian invitation.' }
@@ -173,21 +158,13 @@ export async function completeGuardianVerification(
   }
 
   if (!supabaseConfigured || !supabase) {
-    demoProfiles[applicationId] = { ...payload, application_id: applicationId, auth_uid: authUid }
-    if (demoInvites[token]) {
-      demoInvites[token] = {
-        ...demoInvites[token],
-        status: 'completed',
-        completed_at: profileRow.completed_at,
-      }
-    }
-  } else {
-    await supabase.from('guardian_profiles').upsert(profileRow, { onConflict: 'application_id' })
-    await supabase
-      .from('guardian_invites')
-      .update({ status: 'completed', completed_at: profileRow.completed_at })
-      .eq('token', token)
+    return { application: null, error: 'Database is not configured.' }
   }
+  await supabase.from('guardian_profiles').upsert(profileRow, { onConflict: 'application_id' })
+  await supabase
+    .from('guardian_invites')
+    .update({ status: 'completed', completed_at: profileRow.completed_at })
+    .eq('token', token)
 
   const submitted: Application = {
     ...app,
@@ -210,36 +187,5 @@ export async function completeGuardianVerification(
   }
   await saveApplication(submitted)
 
-  // Promote into New / Lead once guardian completes (outside staff AppDataContext).
-  try {
-    const { talentFromApp } = await import('@/constants/app-sections')
-    const { nextAccountNumber } = await import('@/lib/account-number')
-    if (!supabaseConfigured || !supabase) {
-      const talents = demoStore.getTalents()
-      const existing = talents.find((t) => t.application_id === applicationId)
-      const built = talentFromApp(
-        submitted,
-        existing?.account_number || nextAccountNumber(talents.map((t) => t.account_number)),
-      )
-      if (existing) {
-        demoStore.setTalents(
-          talents.map((t) =>
-            t.id === existing.id
-              ? { ...existing, ...built, id: existing.id, application_id: applicationId }
-              : t,
-          ),
-        )
-      } else {
-        demoStore.setTalents([...talents, built])
-      }
-    }
-  } catch (e) {
-    console.warn('[completeGuardianVerification] talent upgrade skipped', e)
-  }
-
   return { application: submitted, error: null }
-}
-
-export function getDemoGuardianInviteUrl(appId: string, token: string): string {
-  return `/guardian/verify?app=${encodeURIComponent(appId)}&token=${encodeURIComponent(token)}`
 }
