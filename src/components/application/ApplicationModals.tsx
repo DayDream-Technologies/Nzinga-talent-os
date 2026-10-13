@@ -128,7 +128,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
   return createPortal(
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"16px 0",overflowY:"auto" }}>
       {viewingDoc&&<DocViewer doc={viewingDoc} onClose={()=>setViewingDoc(null)}/>}
-      <div style={{ width:960,background:T.cardBg,borderRadius:12,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
+      <div style={{ width:"min(960px, 94vw)",background:T.cardBg,borderRadius:12,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
         {/* ── Header ── */}
         <div style={{ padding:"14px 20px",borderBottom:`2px solid ${T.blue}`,background:T.mutedBg,flexShrink:0 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}>
@@ -143,7 +143,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
               </div>
             </div>
             <div style={{ display:"flex",gap:8,alignItems:"center" }}>
-              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Importing…":"Import to Pipeline"}</Btn>}
+              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Importing…":"Import to Pipeline"}</Btn>}
               <button onClick={onClose} style={{ background:"transparent",border:`1px solid ${T.cardBorder}`,borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
             </div>
           </div>
@@ -205,13 +205,13 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
             {/* Bottom action */}
             <div style={{ padding:"12px 14px",borderTop:`1px solid ${T.cardBorder}` }}>
               {isComplete&&isSubmitted&&!isPendingGuardian
-                ?<Btn variant="success" sm full loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Importing…":"Import to Pipeline"}</Btn>
+                ?<Btn variant="success" full loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Importing…":"Import to Pipeline"}</Btn>
                 :<div style={{ fontSize:10,color:T.t4,textAlign:"center",lineHeight:1.5 }}>{totalMissing>0?`${totalMissing} field${totalMissing===1?"":"s"} still missing`:"Application not ready to import"}</div>}
             </div>
           </div>
 
           {/* ── Content ── */}
-          <div style={{ flex:1,overflowY:"auto",padding:20 }}>
+          <div style={{ flex:1,minWidth:0,overflowY:"auto",overflowX:"hidden",padding:20 }}>
             {/* Section heading */}
             <div style={{ marginBottom:16 }}>
               <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}>
@@ -224,7 +224,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
               })()}
             </div>
 
-            {tab==="overview"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
+            {tab==="overview"&&<div style={{ display:"flex",flexDirection:"column",gap:14,minWidth:0 }}>
               <Section title="Quick Profile" accent={T.blue}>
                 {[
                   ["Name",[d.legal_first,d.legal_last].filter(Boolean).join(" ")||app.talent_name],
@@ -237,18 +237,18 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
                   ["Available",d.currently_available||"—"],
                   ["Work markets",d.work_markets||"—"],
                 ].map(([k,v])=>(
-                  <div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${T.cardBorder}`,fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500,textAlign:"right",maxWidth:"60%" }}>{v}</span></div>
+                  <div key={k} style={{ display:"flex",justifyContent:"space-between",gap:12,padding:"5px 0",borderBottom:`1px solid ${T.cardBorder}`,fontSize:12,minWidth:0 }}><span style={{ color:T.t3,flexShrink:0 }}>{k}</span><span style={{ color:T.t1,fontWeight:500,textAlign:"right",overflowWrap:"anywhere" }}>{v}</span></div>
                 ))}
                 <div style={{ marginTop:10,display:"flex",flexWrap:"wrap",gap:6 }}>{interests.map(n=><NichePill key={n} n={n}/>)}</div>
               </Section>
               <Section title="Flags & Goals" accent={isPendingGuardian||d.currently_represented==="Yes"?T.amber:T.green}>
-                <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>Goals:</strong> {d.career_goals||d.goals_1_2_years||"—"}</div>
-                <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>About:</strong> {d.about_yourself||"—"}</div>
-                <div style={{ fontSize:12,marginBottom:4 }}>Guardian: <strong>{app.guardian_status||"not_required"}</strong>{app.guardian_email?` · ${app.guardian_email}`:""}</div>
-                <div style={{ fontSize:12,marginBottom:4 }}>Existing representation: <strong>{d.currently_represented||"—"}</strong></div>
-                <div style={{ fontSize:12,marginBottom:4 }}>Conflicts: <strong>{d.has_conflicting_obligations||"—"}</strong></div>
-                <div style={{ fontSize:12 }}>Socials: {[d.link_instagram,d.link_tiktok,d.influencer_handle].filter(Boolean).join(" · ")||"—"}</div>
-                <div style={{ marginTop:10,padding:"8px 10px",background:T.amberL,border:`1px solid ${T.amber}55`,borderRadius:6,fontSize:11,color:T.amber,lineHeight:1.45 }}>
+                <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8,overflowWrap:"anywhere" }}><strong>Goals:</strong> {d.career_goals||d.goals_1_2_years||"—"}</div>
+                <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8,overflowWrap:"anywhere" }}><strong>About:</strong> {d.about_yourself||"—"}</div>
+                <div style={{ fontSize:12,marginBottom:4,overflowWrap:"anywhere" }}>Guardian: <strong>{app.guardian_status||"not_required"}</strong>{app.guardian_email?` · ${app.guardian_email}`:""}</div>
+                <div style={{ fontSize:12,marginBottom:4,overflowWrap:"anywhere" }}>Existing representation: <strong>{d.currently_represented||"—"}</strong></div>
+                <div style={{ fontSize:12,marginBottom:4,overflowWrap:"anywhere" }}>Conflicts: <strong>{d.has_conflicting_obligations||"—"}</strong></div>
+                <div style={{ fontSize:12,overflowWrap:"anywhere" }}>Socials: {[d.link_instagram,d.link_tiktok,d.influencer_handle].filter(Boolean).join(" · ")||"—"}</div>
+                <div style={{ marginTop:10,padding:"8px 10px",background:T.amberL,border:`1px solid ${T.amber}55`,borderRadius:6,fontSize:11,color:T.amber,lineHeight:1.45,overflowWrap:"anywhere" }}>
                   Scout boundary (SOP): Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
                 </div>
               </Section>
