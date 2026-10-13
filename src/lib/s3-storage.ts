@@ -53,15 +53,35 @@ export async function requestUploadUrl(
   contentType: string,
   fileSize: number,
 ): Promise<PresignedUpload> {
+  console.debug('[S3 Upload] Requesting presigned URL', { path, contentType, fileSize })
   const result = await invokeEdgeFunction<PresignedUpload>('s3-upload-url', {
     path,
     contentType,
     fileSize,
   })
-  if (!result.ok) throw new Error(result.error || 'Could not start upload')
+  if (!result.ok) {
+    console.error('[S3 Upload] Presigned URL request failed', {
+      error: result.error,
+      path,
+      contentType,
+      fileSize,
+      sessionExpired: (result as { sessionExpired?: boolean }).sessionExpired,
+    })
+    throw new Error(result.error || 'Could not start upload')
+  }
   if (!result.data?.uploadUrl || !result.data.key) {
+    console.error('[S3 Upload] Presigned URL response missing fields', {
+      data: result.data,
+      hasUploadUrl: !!result.data?.uploadUrl,
+      hasKey: !!result.data?.key,
+    })
     throw new Error('Upload URL was not returned. Try again.')
   }
+  console.debug('[S3 Upload] Got presigned URL', {
+    key: result.data.key,
+    cdnUrl: result.data.cdnUrl,
+    uploadUrlHost: new URL(result.data.uploadUrl).host,
+  })
   return result.data
 }
 
@@ -71,6 +91,13 @@ export function uploadToS3(
   contentType: string,
   onProgress?: (pct: number) => void,
 ): Promise<void> {
+  const uploadId = `upload_${Date.now()}`
+  console.debug(`[S3 Upload][${uploadId}] PUT to S3`, {
+    size: file.size,
+    contentType,
+    urlHost: new URL(presignedUrl).host,
+    urlPath: new URL(presignedUrl).pathname,
+  })
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', presignedUrl)
@@ -80,14 +107,36 @@ export function uploadToS3(
     // adds an unsigned header → S3 returns 403 SignatureDoesNotMatch.
     if (onProgress && xhr.upload) {
       xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100)
+          onProgress(pct)
+        }
       }
     }
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve()
-      else reject(new Error(`Upload failed (${xhr.status})`))
+      if (xhr.status >= 200 && xhr.status < 300) {
+        console.debug(`[S3 Upload][${uploadId}] Success`, { status: xhr.status })
+        resolve()
+      } else {
+        const body = xhr.responseText?.slice(0, 500)
+        console.error(`[S3 Upload][${uploadId}] Failed`, {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          responseHeaders: xhr.getAllResponseHeaders(),
+          responseBody: body,
+          contentType,
+          fileSize: file.size,
+        })
+        reject(new Error(`Upload failed (${xhr.status}): ${body || xhr.statusText}`))
+      }
     }
-    xhr.onerror = () => reject(new Error('Network error during upload'))
+    xhr.onerror = () => {
+      console.error(`[S3 Upload][${uploadId}] Network error`, {
+        readyState: xhr.readyState,
+        status: xhr.status,
+      })
+      reject(new Error('Network error during upload'))
+    }
     xhr.send(file)
   })
 }
@@ -101,11 +150,26 @@ export async function uploadFile(
     opts?.contentType || (file instanceof File ? file.type : '') || 'application/octet-stream'
   const size = file.size
   const objectPath = path.replace(/\/+$/, '')
-  const signed = await requestUploadUrl(objectPath, contentType, size)
-  await uploadToS3(file, signed.uploadUrl, contentType, opts?.onProgress)
-  return {
-    key: signed.key,
-    cdnUrl: signed.cdnUrl,
-    thumbUrl: signed.thumbnailUrl,
+  const fileName = opts?.fileName || (file instanceof File ? file.name : 'upload')
+  console.debug('[S3 Upload] uploadFile start', { path: objectPath, fileName, contentType, size })
+  try {
+    const signed = await requestUploadUrl(objectPath, contentType, size)
+    await uploadToS3(file, signed.uploadUrl, contentType, opts?.onProgress)
+    console.debug('[S3 Upload] uploadFile complete', { key: signed.key, cdnUrl: signed.cdnUrl })
+    return {
+      key: signed.key,
+      cdnUrl: signed.cdnUrl,
+      thumbUrl: signed.thumbnailUrl,
+    }
+  } catch (err) {
+    console.error('[S3 Upload] uploadFile failed', {
+      path: objectPath,
+      fileName,
+      contentType,
+      size,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    })
+    throw err
   }
 }

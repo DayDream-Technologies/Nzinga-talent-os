@@ -79,15 +79,43 @@ export async function uploadApplicationFile(
   file: File,
   onProgress?: (pct: number) => void,
 ): Promise<{ url: string; storagePath: string; cdnUrl?: string; thumbnailUrl?: string }> {
-  const doc = await uploadOwnedFile(file, `applications/${applicationId}/${fieldId}`, {
-    docType: fieldId,
-    onProgress,
+  console.debug('[AppUpload] Starting', {
+    applicationId,
+    fieldId,
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+    supabaseConfigured,
   })
-  return {
-    url: doc.data,
-    storagePath: doc.storagePath || '',
-    cdnUrl: doc.cdnUrl,
-    thumbnailUrl: doc.thumbnailUrl,
+  try {
+    const doc = await uploadOwnedFile(file, `applications/${applicationId}/${fieldId}`, {
+      docType: fieldId,
+      onProgress,
+    })
+    console.debug('[AppUpload] Success', {
+      applicationId,
+      fieldId,
+      storagePath: doc.storagePath,
+      cdnUrl: doc.cdnUrl,
+      hasData: !!doc.data,
+    })
+    return {
+      url: doc.data,
+      storagePath: doc.storagePath || '',
+      cdnUrl: doc.cdnUrl,
+      thumbnailUrl: doc.thumbnailUrl,
+    }
+  } catch (err) {
+    console.error('[AppUpload] Failed', {
+      applicationId,
+      fieldId,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    })
+    throw err
   }
 }
 

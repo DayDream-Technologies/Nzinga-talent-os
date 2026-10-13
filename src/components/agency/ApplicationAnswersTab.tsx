@@ -112,7 +112,11 @@ export function ApplicationAnswersTab({ application }: { application: Applicatio
   const sections = useMemo(() => getVisibleSections(data), [data])
   const [doc, setDoc] = useState<UploadedDoc | null>(null)
   const complete = isAppComplete(application)
-  const uploads = storedUploadIds(data)
+  const sectionFieldIds = useMemo(
+    () => new Set(sections.flatMap((s) => s.fields.map((f) => f.id))),
+    [sections],
+  )
+  const uploads = storedUploadIds(data).filter((id) => !sectionFieldIds.has(id))
   const missing = sections.flatMap((section) =>
     validateSection(section.id, data).map((id) => {
       const field = section.fields.find((item) => item.id === id)

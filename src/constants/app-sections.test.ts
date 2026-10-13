@@ -51,15 +51,18 @@ describe('NZG short application', () => {
     expect(missing).toContain('guardian_invite_email')
   })
 
-  it('does not require file uploads and tells applicants to email photos', () => {
-    const uploadFields = APP_SECTIONS.flatMap((section) => section.fields).filter(
-      (field) => field.type === 'file_upload' || field.required,
-    )
-    expect(uploadFields.filter((field) => field.type === 'file_upload')).toEqual([])
-    const notes = APP_SECTIONS.flatMap((section) => section.fields).filter((field) => field.type === 'note')
+  it('has optional file uploads alongside email-photo notes', () => {
+    const allFields = APP_SECTIONS.flatMap((section) => section.fields)
+    const uploadFields = allFields.filter((field) => field.type === 'file_upload')
+    expect(uploadFields.length).toBeGreaterThan(0)
+    expect(uploadFields.every((field) => field.required === false)).toBe(true)
+
+    const notes = allFields.filter((field) => field.type === 'note')
     expect(notes.length).toBeGreaterThan(0)
     expect(notes.every((field) => field.label.includes(APPLICATION_PHOTO_EMAIL))).toBe(true)
+  })
 
+  it('does not require uploads in modeling section (all optional)', () => {
     expect(
       validateSection('modeling', {
         representation_interests: 'Modeling',
@@ -72,8 +75,54 @@ describe('NZG short application', () => {
         model_categories: 'Fashion',
       }),
     ).toEqual([])
+  })
+
+  it('does not require uploads in acting section (all optional)', () => {
+    expect(
+      validateSection('acting', {
+        representation_interests: 'Acting',
+        acting_experience_level: 'Beginner',
+        acting_categories: 'Commercial',
+      }),
+    ).toEqual([])
+  })
+
+  it('does not require uploads in sports section (all optional)', () => {
+    expect(
+      validateSection('sports', {
+        representation_interests: 'Sports & Athletics',
+        sport_primary: 'Soccer',
+        sport_position: 'Forward',
+        sport_level: 'College',
+        sport_years: '5',
+        sport_highlights: 'Conference champion 2024',
+      }),
+    ).toEqual([])
+  })
+
+  it('does not require gov ID upload in id_verification (optional)', () => {
     expect(validateSection('id_verification', { dob: '1990-01-01' })).toEqual([])
-    expect(validateSection('id_verification', { dob: '2012-01-01' })).toEqual([])
+  })
+
+  it('requires minor checkbox in id_verification for minors', () => {
+    const missing = validateSection('id_verification', { dob: '2012-01-01' })
+    expect(missing).toContain('id_note_minor')
+  })
+
+  it('validates modeling uploads when present without blocking when absent', () => {
+    const withUploads = validateSection('modeling', {
+      representation_interests: 'Modeling',
+      model_height: '5\'10"',
+      model_clothing_size: '8',
+      model_shoe_size: '9',
+      model_hair_color: 'Black',
+      model_eye_color: 'Brown',
+      model_experience: 'Runway',
+      model_categories: 'Fashion',
+      doc_model_headshot: 's3:applications/x/doc_model_headshot/1.jpg',
+      doc_model_fullbody: 's3:applications/x/doc_model_fullbody/1.jpg',
+    })
+    expect(withUploads).toEqual([])
   })
 
   it('does not require a profile photo in the personal section', () => {

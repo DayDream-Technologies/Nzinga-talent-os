@@ -745,20 +745,27 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                       <input id={"fu_"+field.id} type="file" accept="image/*,.pdf,video/*" onChange={async (e)=>{
                         const file=e.target.files?.[0];
                         if(!file)return;
+                        console.debug("[FileUpload] Selected",{fieldId:field.id,fileName:file.name,fileType:file.type,fileSize:file.size,appId:app.id});
                         setUploading(u=>({...u,[field.id]:true}));
                         setUploadErr(u=>({...u,[field.id]:""}));
                         try{
                           const aspect=cropAspectForField(field.id);
                           let toUpload=file;
                           if(file.type.startsWith("image/") && aspect){
+                            console.debug("[FileUpload] Opening cropper",{fieldId:field.id,aspect});
                             const cropped=await cropImage(file,{aspect,title:field.label||"Crop photo"});
-                            if(!cropped){ setUploading(u=>({...u,[field.id]:false})); e.target.value=""; return; }
+                            if(!cropped){ console.debug("[FileUpload] Crop cancelled",{fieldId:field.id}); setUploading(u=>({...u,[field.id]:false})); e.target.value=""; return; }
                             toUpload=cropped;
+                            console.debug("[FileUpload] Cropped",{fieldId:field.id,croppedSize:toUpload.size,croppedType:toUpload.type});
                           }
                           const {url}=await uploadApplicationFile(app.id,field.id,toUpload);
+                          console.debug("[FileUpload] Upload complete",{fieldId:field.id,url:url?.slice(0,60)});
                           updateField(field.id,url,toUpload.name,toUpload.type);
                         }catch(err){
-                          setUploadErr(u=>({...u,[field.id]:err?.message||"Upload failed. Log in and try again."}));
+                          const msg=err?.message||"Upload failed";
+                          console.error("[FileUpload] Upload error",{fieldId:field.id,appId:app.id,error:msg,stack:err?.stack,name:err?.name});
+                          const userMsg=msg.includes("403")?"Upload denied (403). Check S3 permissions — see console for details.":msg.includes("session")?"Session expired. Log out and log back in, then retry.":msg.includes("CORS")||msg.includes("NetworkError")?"Network/CORS error. Check that your domain is listed in S3 CORS — see console.":msg||"Upload failed. Log in and try again.";
+                          setUploadErr(u=>({...u,[field.id]:userMsg}));
                         }finally{
                           setUploading(u=>({...u,[field.id]:false}));
                           e.target.value="";
@@ -767,7 +774,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                       <div style={{ fontSize:12,color:isErr?"#fca5a5":"rgba(255,255,255,0.55)",fontWeight:500,marginBottom:4 }}>{field.label}{req&&<span style={{ color:"#ef4444" }}> *</span>}{!req&&<span style={{ color:"rgba(255,255,255,0.3)" }}> (optional)</span>}</div>
                       {field.note&&<div style={{ fontSize:11,color:"rgba(255,255,255,0.3)",marginBottom:6 }}>{field.note}</div>}
                       {uploading[field.id]?<div style={{ fontSize:13,color:"#fbbf24",fontWeight:600 }}>Uploading…</div>:val?<div style={{ display:"flex",alignItems:"center",gap:6,fontSize:13,color:"#4ade80",fontWeight:600 }}>Uploaded: {data[field.id+"_name"]||"File"}</div>:<div style={{ fontSize:12,color:"rgba(255,255,255,0.35)" }}>Tap to upload · PNG, JPG, PDF, video</div>}
-                      {uploadErr[field.id]&&<div style={{ fontSize:11,color:"#fca5a5",fontWeight:600,marginTop:6 }}>{uploadErr[field.id]}</div>}
+                      {uploadErr[field.id]&&<div style={{ fontSize:11,color:"#fca5a5",fontWeight:600,marginTop:6,lineHeight:1.5 }}>{uploadErr[field.id]}</div>}
                     </div>}
                   </div>
                 );
