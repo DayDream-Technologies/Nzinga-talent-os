@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { completedSectionsFromData, prefillApplicationData } from "@/lib/application-prefill";
@@ -37,8 +38,8 @@ function SendApplicationModal({ talent, prospect, onSend, onClose, companyCode =
     onSend(app);setSent(true);
   }
 
-  if(sent){return(
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400 }}>
+  if(sent){return createPortal(
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999 }}>
       <div style={{ background: T.cardBg,borderRadius:12,width:440,padding:28,textAlign:"center",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
         <div style={{ fontSize:40,marginBottom:10 }}>✅</div>
         <div style={{ fontSize:17,fontWeight:700,color:T.t1,marginBottom:6,fontFamily:"'Syne',sans-serif" }}>Application Ready!</div>
@@ -54,10 +55,10 @@ function SendApplicationModal({ talent, prospect, onSend, onClose, companyCode =
         <Btn variant="primary" onClick={onClose} full>Done</Btn>
       </div>
     </div>
-  );}
+  ,document.body);}
 
-  return(
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:400 }}>
+  return createPortal(
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999 }}>
       <div style={{ background: T.cardBg,borderRadius:12,width:460,overflow:"hidden",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
         <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.purple,background:T.mutedBg,display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <div><div style={{ fontSize:14,fontWeight:700,color:T.t1 }}>Send Application — {talent.name}</div><div style={{ fontSize:11,color:T.t3,marginTop:1 }}>Invite prospect to complete their own application</div></div>
@@ -73,7 +74,7 @@ function SendApplicationModal({ talent, prospect, onSend, onClose, companyCode =
         </div>
       </div>
     </div>
-  );
+  ,document.body);
 }
 
 // ─── APPLICATION REVIEW (staff side) ─────────────────────────────────────────
@@ -86,123 +87,244 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
   const isPendingGuardian=app.status==="pending_guardian"||app.guardian_status==="pending";
   const isComplete=isAppComplete(app);
   const visible=getVisibleSections(d);
-  const progress=Math.round((visible.filter(s=>(app.completed_sections||[]).includes(s.id)&&validateSection(s.id,d).length===0).length/Math.max(visible.length,1))*100);
+  const completedCount=visible.filter(s=>(app.completed_sections||[]).includes(s.id)&&validateSection(s.id,d).length===0).length;
+  const progress=Math.round((completedCount/Math.max(visible.length,1))*100);
   const missingMap={};visible.forEach(s=>{missingMap[s.id]=validateSection(s.id,d);});
+  const totalMissing=Object.values(missingMap).reduce((sum,arr)=>sum+arr.length,0);
   const age=ageFromDob(d.dob);
   const interests=String(d.representation_interests||"").split(",").filter(Boolean);
   const docFields=Object.keys(d).filter(k=>k.startsWith("doc_")&&!k.endsWith("_name")&&!k.endsWith("_type")&&d[k]);
   const tabIds=["overview",...visible.map(s=>s.id),"documents","incomplete"];
 
-  return(
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:350,padding:"16px 0",overflowY:"auto" }}>
+  function tabLabel(t){
+    if(t==="overview") return "Overview";
+    if(t==="documents") return "Documents";
+    if(t==="incomplete") return "Incomplete";
+    const sec=visible.find(s=>s.id===t);
+    return sec?sec.label:t.replace(/_/g," ");
+  }
+  function tabIcon(t){
+    if(t==="overview") return "📋";
+    if(t==="documents") return "📁";
+    if(t==="incomplete") return "⚠️";
+    const sec=visible.find(s=>s.id===t);
+    return sec?.icon||"";
+  }
+  function tabDone(t){
+    if(t==="overview"||t==="documents"||t==="incomplete") return false;
+    const sec=visible.find(s=>s.id===t);
+    if(!sec) return false;
+    return (app.completed_sections||[]).includes(sec.id)&&(missingMap[sec.id]||[]).length===0;
+  }
+  function tabHasMissing(t){
+    if(t==="overview"||t==="documents"||t==="incomplete") return false;
+    return (missingMap[t]||[]).length>0;
+  }
+  function tabIndex(t){
+    const secIdx=visible.findIndex(s=>s.id===t);
+    return secIdx>=0?secIdx+1:0;
+  }
+
+  return createPortal(
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"16px 0",overflowY:"auto" }}>
       {viewingDoc&&<DocViewer doc={viewingDoc} onClose={()=>setViewingDoc(null)}/>}
-      <div style={{ width:880,background: T.cardBg,borderRadius:10,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
-        <div style={{ padding:"12px 16px",borderBottom:"2px solid "+T.blue,background:T.mutedBg,flexShrink:0 }}>
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexWrap:"wrap" }}>
+      <div style={{ width:960,background:T.cardBg,borderRadius:12,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
+        {/* ── Header ── */}
+        <div style={{ padding:"14px 20px",borderBottom:`2px solid ${T.blue}`,background:T.mutedBg,flexShrink:0 }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}>
             <div>
-              <div style={{ fontSize:15,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>Application Review — {app.talent_name}</div>
-              <div style={{ display:"flex",gap:8,marginTop:3,alignItems:"center",flexWrap:"wrap" }}>
-                <span style={{ background:isPendingGuardian?T.amberL:isSubmitted?T.greenL:T.amberL,color:isPendingGuardian?T.amber:isSubmitted?T.green:T.amber,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>{isPendingGuardian?"PENDING PARENT APPROVAL":isSubmitted?"SUBMITTED":"IN PROGRESS"}</span>
-                {isMinor(d.dob)&&<span style={{ background:T.purpleL,color:T.purple,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>MINOR</span>}
-                {d.currently_represented==="Yes"&&<span style={{ background:T.redL,color:T.red,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>EXISTING REP</span>}
-                {isComplete&&isSubmitted&&!isPendingGuardian&&<span style={{ background:T.greenL,color:T.green,borderRadius:10,padding:"1px 8px",fontSize:11,fontWeight:700 }}>100% COMPLETE</span>}
-                <span style={{ fontSize:11,color:T.t4 }}>Code: <strong style={{ color:T.purple }}>{app.access_code}</strong> · {progress}%</span>
+              <div style={{ fontSize:16,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>Application Review — {app.talent_name}</div>
+              <div style={{ display:"flex",gap:8,marginTop:4,alignItems:"center",flexWrap:"wrap" }}>
+                <span style={{ background:isPendingGuardian?T.amberL:isSubmitted?T.greenL:T.amberL,color:isPendingGuardian?T.amber:isSubmitted?T.green:T.amber,borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700 }}>{isPendingGuardian?"PENDING PARENT APPROVAL":isSubmitted?"SUBMITTED":"IN PROGRESS"}</span>
+                {isMinor(d.dob)&&<span style={{ background:T.purpleL,color:T.purple,borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700 }}>MINOR</span>}
+                {d.currently_represented==="Yes"&&<span style={{ background:T.redL,color:T.red,borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700 }}>EXISTING REP</span>}
+                {isComplete&&isSubmitted&&!isPendingGuardian&&<span style={{ background:T.greenL,color:T.green,borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700 }}>100% COMPLETE</span>}
+                <span style={{ fontSize:11,color:T.t4 }}>Code: <strong style={{ color:T.purple }}>{app.access_code}</strong></span>
               </div>
             </div>
-            <div style={{ display:"flex",gap:8 }}>
-              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Reviewing…":"Review application"}</Btn>}
+            <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+              {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" sm loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Importing…":"Import to Pipeline"}</Btn>}
               <button onClick={onClose} style={{ background:"transparent",border:`1px solid ${T.cardBorder}`,borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
             </div>
           </div>
         </div>
 
-        <div style={{ display:"flex",borderBottom:`1px solid ${T.cardBorder}`,background: T.cardBg,flexShrink:0,overflowX:"auto" }}>
-          {tabIds.map(t=><div key={t} onClick={()=>setTab(t)} style={{ padding:"7px 14px",cursor:"pointer",fontSize:12,fontWeight:tab===t?600:400,color:tab===t?T.blue:T.t3,borderBottom:`2px solid ${tab===t?T.blue:"transparent"}`,textTransform:"capitalize",whiteSpace:"nowrap" }}>{t==="incomplete"?"Incomplete":t.replace(/_/g," ")}</div>)}
-        </div>
-
-        <div style={{ flex:1,overflowY:"auto",padding:16 }}>
-          {tab==="overview"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
-            <Section title="Quick Profile" accent={T.blue}>
-              {[
-                ["Name",[d.legal_first,d.legal_last].filter(Boolean).join(" ")||app.talent_name],
-                ["Preferred",d.preferred_name||"—"],
-                ["Age",age!==null?String(age):"—"],
-                ["Location",[d.city,d.state,d.country].filter(Boolean).join(", ")||"—"],
-                ["Market",d.current_market||"—"],
-                ["Experience",d.experience_level||"—"],
-                ["Travel",d.willing_to_travel||"—"],
-                ["Available",d.currently_available||"—"],
-                ["Work markets",d.work_markets||"—"],
-              ].map(([k,v])=>(
-                <div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500,textAlign:"right",maxWidth:"60%" }}>{v}</span></div>
-              ))}
-              <div style={{ marginTop:10,display:"flex",flexWrap:"wrap",gap:6 }}>{interests.map(n=><NichePill key={n} n={n}/>)}</div>
-            </Section>
-            <Section title="Flags & Goals" accent={isPendingGuardian||d.currently_represented==="Yes"?T.amber:T.green}>
-              <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>Goals:</strong> {d.career_goals||d.goals_1_2_years||"—"}</div>
-              <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>About:</strong> {d.about_yourself||"—"}</div>
-              <div style={{ fontSize:12,marginBottom:4 }}>Guardian: <strong>{app.guardian_status||"not_required"}</strong>{app.guardian_email?` · ${app.guardian_email}`:""}</div>
-              <div style={{ fontSize:12,marginBottom:4 }}>Existing representation: <strong>{d.currently_represented||"—"}</strong></div>
-              <div style={{ fontSize:12,marginBottom:4 }}>Conflicts: <strong>{d.has_conflicting_obligations||"—"}</strong></div>
-              <div style={{ fontSize:12 }}>Socials: {[d.link_instagram,d.link_tiktok,d.influencer_handle].filter(Boolean).join(" · ")||"—"}</div>
-              <div style={{ marginTop:10,padding:"8px 10px",background:T.amberL,border:`1px solid ${T.amber}55`,borderRadius:6,fontSize:11,color:T.amber,lineHeight:1.45 }}>
-                Scout boundary (SOP): Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
+        {/* ── Body: sidebar + content ── */}
+        <div style={{ display:"flex",flex:1,overflow:"hidden",minHeight:0 }}>
+          {/* ── Sidebar ── */}
+          <div style={{ width:210,flexShrink:0,background:T.mutedBg,borderRight:`1px solid ${T.cardBorder}`,display:"flex",flexDirection:"column",overflowY:"auto" }}>
+            {/* Progress */}
+            <div style={{ padding:"14px 14px 10px" }}>
+              <div style={{ fontSize:11,color:T.t3,marginBottom:5,display:"flex",justifyContent:"space-between" }}>
+                <span>Progress</span>
+                <span style={{ color:T.green,fontWeight:700 }}>{progress}%</span>
               </div>
-            </Section>
-            <Section title="Section Completion" accent={T.purple}>
+              <div style={{ height:5,background:T.cardBorder,borderRadius:3,overflow:"hidden" }}>
+                <div style={{ height:"100%",width:progress+"%",background:`linear-gradient(90deg,${T.purple},${T.blue})`,borderRadius:3,transition:"width 0.4s" }}/>
+              </div>
+              <div style={{ fontSize:10,color:T.t4,marginTop:4 }}>{completedCount} of {visible.length} sections complete</div>
+            </div>
+
+            {/* Tab buttons */}
+            <div style={{ flex:1 }}>
+              {tabIds.map((t,i)=>{
+                const active=tab===t;
+                const done=tabDone(t);
+                const hasMissing=tabHasMissing(t);
+                const idx=tabIndex(t);
+                const isSpecial=t==="overview"||t==="documents"||t==="incomplete";
+                const borderColor=active?T.blue:done?T.green:hasMissing?T.red:"transparent";
+                const circleBg=done?T.green:hasMissing?T.red:active?T.blue:T.cardBorder;
+                const circleContent=done?"✓":isSpecial?tabIcon(t):String(idx);
+                return <div key={t} onClick={()=>setTab(t)} style={{
+                  padding:"9px 14px",
+                  cursor:"pointer",
+                  background:active?T.blueL:"transparent",
+                  borderLeft:`3px solid ${borderColor}`,
+                  display:"flex",alignItems:"center",gap:8,
+                  marginBottom:1,
+                  transition:"background 0.15s",
+                }}>
+                  <div style={{
+                    width:22,height:22,borderRadius:"50%",
+                    background:circleBg,
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:isSpecial&&!done?12:10,fontWeight:700,
+                    color:done||active||hasMissing?"#fff":T.t3,
+                    flexShrink:0,lineHeight:1,
+                  }}>{circleContent}</div>
+                  <span style={{ fontSize:12,fontWeight:active?700:400,color:active?T.t1:T.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+                    {tabLabel(t)}
+                  </span>
+                  {t==="incomplete"&&totalMissing>0&&<span style={{ marginLeft:"auto",background:T.redL,color:T.red,borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{totalMissing}</span>}
+                  {t==="documents"&&<span style={{ marginLeft:"auto",background:T.blueL,color:T.blue,borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{docFields.length}</span>}
+                </div>;
+              })}
+            </div>
+
+            {/* Bottom action */}
+            <div style={{ padding:"12px 14px",borderTop:`1px solid ${T.cardBorder}` }}>
+              {isComplete&&isSubmitted&&!isPendingGuardian
+                ?<Btn variant="success" sm full loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Importing…":"Import to Pipeline"}</Btn>
+                :<div style={{ fontSize:10,color:T.t4,textAlign:"center",lineHeight:1.5 }}>{totalMissing>0?`${totalMissing} field${totalMissing===1?"":"s"} still missing`:"Application not ready to import"}</div>}
+            </div>
+          </div>
+
+          {/* ── Content ── */}
+          <div style={{ flex:1,overflowY:"auto",padding:20 }}>
+            {/* Section heading */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}>
+                <span style={{ fontSize:20 }}>{tabIcon(tab)}</span>
+                <div style={{ fontSize:18,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>{tabLabel(tab)}</div>
+              </div>
+              {tab!=="overview"&&tab!=="documents"&&tab!=="incomplete"&&(()=>{
+                const secIdx=visible.findIndex(s=>s.id===tab);
+                return <div style={{ fontSize:12,color:T.t3 }}>Section {secIdx+1} of {visible.length}{age!==null?` · Age ${age}`:""}</div>;
+              })()}
+            </div>
+
+            {tab==="overview"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:14 }}>
+              <Section title="Quick Profile" accent={T.blue}>
+                {[
+                  ["Name",[d.legal_first,d.legal_last].filter(Boolean).join(" ")||app.talent_name],
+                  ["Preferred",d.preferred_name||"—"],
+                  ["Age",age!==null?String(age):"—"],
+                  ["Location",[d.city,d.state,d.country].filter(Boolean).join(", ")||"—"],
+                  ["Market",d.current_market||"—"],
+                  ["Experience",d.experience_level||"—"],
+                  ["Travel",d.willing_to_travel||"—"],
+                  ["Available",d.currently_available||"—"],
+                  ["Work markets",d.work_markets||"—"],
+                ].map(([k,v])=>(
+                  <div key={k} style={{ display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${T.cardBorder}`,fontSize:12 }}><span style={{ color:T.t3 }}>{k}</span><span style={{ color:T.t1,fontWeight:500,textAlign:"right",maxWidth:"60%" }}>{v}</span></div>
+                ))}
+                <div style={{ marginTop:10,display:"flex",flexWrap:"wrap",gap:6 }}>{interests.map(n=><NichePill key={n} n={n}/>)}</div>
+              </Section>
+              <Section title="Flags & Goals" accent={isPendingGuardian||d.currently_represented==="Yes"?T.amber:T.green}>
+                <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>Goals:</strong> {d.career_goals||d.goals_1_2_years||"—"}</div>
+                <div style={{ fontSize:12,color:T.t2,lineHeight:1.55,marginBottom:8 }}><strong>About:</strong> {d.about_yourself||"—"}</div>
+                <div style={{ fontSize:12,marginBottom:4 }}>Guardian: <strong>{app.guardian_status||"not_required"}</strong>{app.guardian_email?` · ${app.guardian_email}`:""}</div>
+                <div style={{ fontSize:12,marginBottom:4 }}>Existing representation: <strong>{d.currently_represented||"—"}</strong></div>
+                <div style={{ fontSize:12,marginBottom:4 }}>Conflicts: <strong>{d.has_conflicting_obligations||"—"}</strong></div>
+                <div style={{ fontSize:12 }}>Socials: {[d.link_instagram,d.link_tiktok,d.influencer_handle].filter(Boolean).join(" · ")||"—"}</div>
+                <div style={{ marginTop:10,padding:"8px 10px",background:T.amberL,border:`1px solid ${T.amber}55`,borderRadius:6,fontSize:11,color:T.amber,lineHeight:1.45 }}>
+                  Scout boundary (SOP): Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
+                </div>
+              </Section>
+              <Section title="Section Completion" accent={T.purple}>
+                {visible.map(s=>{
+                  const done=(app.completed_sections||[]).includes(s.id);
+                  const missing=missingMap[s.id]||[];
+                  return <div key={s.id} style={{ display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:`1px solid ${T.cardBorder}`,fontSize:12 }}>
+                    <span style={{ color:T.t2 }}>{s.icon} {s.label}</span>
+                    <span style={{ color:done&&missing.length===0?T.green:missing.length>0?T.red:T.t4,fontWeight:600 }}>{done&&missing.length===0?"Done":missing.length>0?`${missing.length} missing`:"Incomplete"}</span>
+                  </div>;
+                })}
+              </Section>
+            </div>}
+
+            {tab==="incomplete"&&<div>
+              {totalMissing===0&&<div style={{ fontSize:13,color:T.green,fontWeight:600,padding:16,textAlign:"center" }}>All sections complete — no missing fields.</div>}
               {visible.map(s=>{
-                const done=(app.completed_sections||[]).includes(s.id);
                 const missing=missingMap[s.id]||[];
-                return <div key={s.id} style={{ display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #f5f5f5",fontSize:12 }}>
-                  <span style={{ color:T.t2 }}>{s.icon} {s.label}</span>
-                  <span style={{ color:done&&missing.length===0?T.green:missing.length>0?T.red:T.t4,fontWeight:600 }}>{done&&missing.length===0?"Done":missing.length>0?`${missing.length} missing`:"Incomplete"}</span>
+                if(missing.length===0)return null;
+                return <div key={s.id} style={{ background:T.cardBg,border:`1px solid ${T.red}44`,borderRadius:8,padding:14,marginBottom:10 }}>
+                  <div style={{ fontSize:13,fontWeight:700,color:T.red,marginBottom:8 }}>{s.icon} {s.label} — {missing.length} missing</div>
+                  {missing.map(fieldId=>{const field=s.fields.find(f=>f.id===fieldId);return <div key={fieldId} style={{ fontSize:12,padding:"4px 0",color:T.t2 }}>{field?.label||fieldId}</div>;})}
                 </div>;
               })}
-            </Section>
-          </div>}
+            </div>}
 
-          {tab==="incomplete"&&<div>
-            {visible.map(s=>{
-              const missing=missingMap[s.id]||[];
-              if(missing.length===0)return null;
-              return <div key={s.id} style={{ background: T.cardBg,border:"1px solid #fca5a5",borderRadius:8,padding:12,marginBottom:10 }}>
-                <div style={{ fontSize:12,fontWeight:700,color:T.red,marginBottom:8 }}>{s.label} — {missing.length} missing</div>
-                {missing.map(fieldId=>{const field=s.fields.find(f=>f.id===fieldId);return <div key={fieldId} style={{ fontSize:12,padding:"4px 0" }}>{field?.label||fieldId}</div>;})}
-              </div>;
-            })}
-          </div>}
-
-          {tab==="documents"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
-            {docFields.length===0&&<div style={{ gridColumn:"1/-1",fontSize:13,color:T.t3 }}>No documents uploaded yet.</div>}
-            {docFields.map(fieldKey=>{
-              const name=d[fieldKey+"_name"]||fieldKey;
-              const type=d[fieldKey+"_type"]||"application/octet-stream";
-              return <div key={fieldKey} style={{ border:"1px solid #86efac",borderRadius:8,padding:14,background:"#f0fdf4" }}>
-                <div style={{ fontSize:12,fontWeight:700,marginBottom:8 }}>{String(name)}</div>
-                <button onClick={()=>setViewingDoc({name:String(name),data:d[fieldKey],type:String(type),storagePath:typeof d[fieldKey]==="string"?(String(d[fieldKey]).startsWith("s3:")?String(d[fieldKey]).slice(3):String(d[fieldKey]).startsWith("storage:")?String(d[fieldKey]).replace(/^storage:application-docs\//,""):undefined):undefined,doc_type:fieldKey.replace(/^doc_/,""),uploaded_by:"applicant",status:"received"})} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>View</button>
-              </div>;
-            })}
-          </div>}
-
-          {visible.some(s=>s.id===tab)&&(()=>{
-            const secDef=APP_SECTIONS.find(s=>s.id===tab);if(!secDef)return null;
-            return <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
-              {secDef.fields.map(field=>{
-                const val=d[field.id];
-                const hasVal=val&&val.toString().trim();
-                return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"?"1/-1":"auto" }}>
-                  <Lbl>{field.label}</Lbl>
-                  <div style={{ padding:"7px 10px",background:T.mutedBg,border:`1px solid ${T.cardBorder}`,borderRadius:5,fontSize:12,color:hasVal?T.t1:T.t4,minHeight:30 }}>
-                    {field.type==="checkbox"?(val?"Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):field.type==="file_upload"?(val?String(d[field.id+"_name"]||"Uploaded"):"—"):val||"—"}
-                  </div>
+            {tab==="documents"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+              {docFields.length===0&&<div style={{ gridColumn:"1/-1",fontSize:13,color:T.t3 }}>No documents uploaded yet.</div>}
+              {docFields.map(fieldKey=>{
+                const name=d[fieldKey+"_name"]||fieldKey;
+                const type=d[fieldKey+"_type"]||"application/octet-stream";
+                return <div key={fieldKey} style={{ border:`1px solid ${T.green}44`,borderRadius:8,padding:14,background:T.greenL }}>
+                  <div style={{ fontSize:12,fontWeight:700,marginBottom:8,color:T.t1 }}>{String(name)}</div>
+                  <button onClick={()=>setViewingDoc({name:String(name),data:d[fieldKey],type:String(type),storagePath:typeof d[fieldKey]==="string"?(String(d[fieldKey]).startsWith("s3:")?String(d[fieldKey]).slice(3):String(d[fieldKey]).startsWith("storage:")?String(d[fieldKey]).replace(/^storage:application-docs\//,""):undefined):undefined,doc_type:fieldKey.replace(/^doc_/,""),uploaded_by:"applicant",status:"received"})} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>View</button>
                 </div>;
               })}
-            </div>;
-          })()}
+            </div>}
+
+            {visible.some(s=>s.id===tab)&&(()=>{
+              const secDef=APP_SECTIONS.find(s=>s.id===tab);if(!secDef)return null;
+              const missing=missingMap[tab]||[];
+              return <>
+                {missing.length>0&&<div style={{ background:T.redL,border:`1px solid ${T.red}44`,borderRadius:8,padding:"8px 12px",marginBottom:14,fontSize:12,color:T.red,fontWeight:600 }}>
+                  {missing.length} required field{missing.length>1?"s":""} missing in this section
+                </div>}
+                <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
+                  {secDef.fields.map(field=>{
+                    const val=d[field.id];
+                    const hasVal=val&&val.toString().trim();
+                    return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"?"1/-1":"auto" }}>
+                      <Lbl>{field.label}</Lbl>
+                      <div style={{ padding:"8px 12px",background:T.mutedBg,border:`1px solid ${T.cardBorder}`,borderRadius:6,fontSize:13,color:hasVal?T.t1:T.t4,minHeight:32,lineHeight:1.5 }}>
+                        {field.type==="checkbox"?(val?"Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):field.type==="file_upload"?(val?String(d[field.id+"_name"]||"Uploaded"):"—"):val||"—"}
+                      </div>
+                    </div>;
+                  })}
+                </div>
+              </>;
+            })()}
+
+            {/* Section navigation */}
+            {tab!=="overview"&&tab!=="documents"&&tab!=="incomplete"&&(()=>{
+              const secIdx=tabIds.indexOf(tab);
+              const prevTab=secIdx>0?tabIds[secIdx-1]:null;
+              const nextTab=secIdx<tabIds.length-1?tabIds[secIdx+1]:null;
+              return <div style={{ display:"flex",justifyContent:"space-between",marginTop:24,paddingTop:16,borderTop:`1px solid ${T.cardBorder}`,gap:10 }}>
+                <div>{prevTab&&<button onClick={()=>setTab(prevTab)} style={{ background:T.mutedBg,border:`1px solid ${T.cardBorder}`,color:T.t2,borderRadius:6,padding:"8px 14px",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>← {tabLabel(prevTab)}</button>}</div>
+                <div>{nextTab&&<button onClick={()=>setTab(nextTab)} style={{ background:T.blue,border:"none",color:"#fff",borderRadius:6,padding:"8px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>{tabLabel(nextTab)} →</button>}</div>
+              </div>;
+            })()}
+          </div>
         </div>
       </div>
     </div>
-  );
+  ,document.body);
 }
 // ─── TOP NAV ──────────────────────────────────────────────────────────────────
 

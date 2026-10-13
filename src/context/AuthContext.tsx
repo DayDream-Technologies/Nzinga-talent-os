@@ -57,7 +57,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [companyCode, setCompanyCodeState] = useState(() => {
-    // Subdomain takes priority — e.g. nzinga.talentmanagerx.com → NZG
+    // Subdomain takes priority — e.g. nzg.talentmanagerx.com → NZG
     const subCode = getSubdomainCompanyCode()
     if (subCode) return subCode
     return readStorage(STORAGE_COMPANY_CODE) || ''

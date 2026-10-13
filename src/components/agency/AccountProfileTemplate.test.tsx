@@ -44,6 +44,8 @@ vi.mock('@/context/AppDataContext', () => ({
     handleSendApp: vi.fn(),
     updateTalent: updatePipelineTalent,
     talents: [],
+    reviewingApp: null,
+    setReviewingApp: vi.fn(),
   }),
 }))
 

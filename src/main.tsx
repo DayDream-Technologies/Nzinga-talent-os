@@ -27,6 +27,8 @@ import {
 } from '@/pages/BrandPortalPages'
 import { TalentAppLayout } from '@/components/talent-portal/TalentPortalShell'
 import { GuardianVerifyPage } from '@/pages/GuardianVerifyPage'
+import { InvalidSubdomainPage } from '@/pages/InvalidSubdomainPage'
+import { hasUnrecognizedSubdomain } from '@/lib/subdomain'
 import { installChunkLoadRecovery, lazyWithReload } from '@/lib/lazy-with-reload'
 import { readStorage, STORAGE_THEME } from '@/lib/session-storage'
 import { applyTheme } from '@/lib/user-settings'
@@ -77,7 +79,10 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 })
 
+const invalidSubdomain = hasUnrecognizedSubdomain()
+
 function RootLayout() {
+  if (invalidSubdomain) return <InvalidSubdomainPage />
   return <Outlet />
 }
 

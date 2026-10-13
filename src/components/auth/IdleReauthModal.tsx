@@ -72,7 +72,7 @@ export function IdleReauthModal({ email, companyCode, onSuccess, onSignOut }: Id
           Session paused
         </h2>
         <p style={{ margin: '0 0 18px', fontSize: 13, color: T.t3, lineHeight: 1.5 }}>
-          You were inactive for more than 5 minutes. Your work has been kept. Re-enter your password to continue.
+          You were inactive for more than 20 minutes. Your work has been kept. Re-enter your password to continue.
         </p>
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: 'block', fontSize: 11, color: T.t3, marginBottom: 4 }}>Email</label>

@@ -16,7 +16,7 @@ const IGNORED_SUBDOMAINS = new Set(['www'])
  * Returns `null` for naked domains, `www`, localhost, and IP addresses.
  *
  * Examples:
- *   nzinga.talentmanagerx.com  → 'nzinga'
+ *   nzg.talentmanagerx.com     → 'nzg'
  *   www.talentmanagerx.com     → null
  *   talentmanagerx.com         → null
  *   localhost                  → null
@@ -57,4 +57,30 @@ export function isSubdomainLocked(
   hostname = typeof window !== 'undefined' ? window.location.hostname : '',
 ): boolean {
   return getSubdomainCompanyCode(hostname) !== null
+}
+
+/**
+ * True when a subdomain is present in the hostname but is NOT
+ * mapped to any company code. This indicates the visitor used
+ * a URL like `bogus.talentmanagerx.com` — the app should show
+ * an error page instead of falling through to the code-entry screen.
+ */
+export function hasUnrecognizedSubdomain(
+  hostname = typeof window !== 'undefined' ? window.location.hostname : '',
+): boolean {
+  const sub = extractSubdomain(hostname)
+  if (!sub) return false // no subdomain at all — naked domain, www, localhost, etc.
+  return !(sub in SUBDOMAIN_TO_COMPANY_CODE)
+}
+
+/**
+ * Returns the raw subdomain label (e.g. `"bogus"`) when an unrecognized
+ * subdomain is detected, or `null` otherwise. Useful for error messaging.
+ */
+export function getUnrecognizedSubdomain(
+  hostname = typeof window !== 'undefined' ? window.location.hostname : '',
+): string | null {
+  const sub = extractSubdomain(hostname)
+  if (!sub) return null
+  return sub in SUBDOMAIN_TO_COMPANY_CODE ? null : sub
 }

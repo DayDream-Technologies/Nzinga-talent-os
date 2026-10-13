@@ -17,7 +17,7 @@ import {
   inputStyle,
 } from '@/components/agency/AgencyUI'
 import { TicketDetailModal } from '@/components/agency/TicketDetailModal'
-import { SendApplicationModal } from '@/components/application/ApplicationModals'
+import { ApplicationReview, SendApplicationModal } from '@/components/application/ApplicationModals'
 import { BackToTopButton } from '@/components/ui/BackToTopButton'
 import { DocViewer } from '@/components/ui/DocViewer'
 import { AddNoteModal } from '@/components/agency/AddNoteModal'
@@ -160,7 +160,7 @@ export function AccountProfileTemplate({
   const { user, companyCode } = useAuth()
   const ticketAgents = staffTicketAgents(useStaffDirectory())
   const { cropImage, cropper } = useImageCropper()
-  const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent, talents, saveApp } = useAppData()
+  const { history, setHistory, importAppToPipeline, handleSendApp, updateTalent: updatePipelineTalent, talents, saveApp, reviewingApp, setReviewingApp } = useAppData()
   const {
     clients,
     invoices,
@@ -187,7 +187,6 @@ export function AccountProfileTemplate({
   const [udf, setUdf] = useState<TalentUdf>(() => resolvedUdf(prospect?.udf || rosterTalent?.udf, application, prospect))
   const [udfSaved, setUdfSaved] = useState(false)
   const [localPhoto, setLocalPhoto] = useState<UploadedDoc | null>(null)
-  const [importing, setImporting] = useState(false)
   const contactsRef = useRef<HTMLDivElement>(null)
   const notesRef = useRef<HTMLDivElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
@@ -472,21 +471,11 @@ export function AccountProfileTemplate({
           <Btn
             variant="success"
             disabled={!canImport}
-            loading={importing}
-            onClick={async () => {
-              if (!application || importing) return
-              setImporting(true)
-              try {
-                const imported = await importAppToPipeline(application)
-                const account = imported?.account_number || accountId
-                if (account) navigate(talentAccountPath(account))
-                else if (imported) navigate('/pipeline')
-              } finally {
-                setImporting(false)
-              }
+            onClick={() => {
+              if (application) setReviewingApp(application)
             }}
           >
-            {importing ? 'Reviewing…' : 'Review application'}
+            Review application
           </Btn>
         )}
         {extraActions}
@@ -757,6 +746,18 @@ export function AccountProfileTemplate({
     </div>
     <QuickActionBar onAction={onQuickAction} />
     </div>
+    {reviewingApp && (
+      <ApplicationReview
+        app={reviewingApp}
+        onClose={() => setReviewingApp(null)}
+        onImportToPipeline={async () => {
+          const imported = await importAppToPipeline(reviewingApp)
+          const account = imported?.account_number || accountId
+          if (account) navigate(talentAccountPath(account))
+          else if (imported) navigate('/pipeline')
+        }}
+      />
+    )}
     </>
   )
 }

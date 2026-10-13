@@ -92,7 +92,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 ### Auth and tenancy
 
 - Company code selects the tenant (NZG, NZINGA, TCG). Staff then sign in with email and password.
-- **Subdomain routing**: When served at `<org>.talentmanagerx.com` (e.g. `nzinga.talentmanagerx.com`), the company code is auto-detected from the subdomain and the code-entry screen is skipped. `www` and the naked domain show the manual code-entry screen. The mapping is in `SUBDOMAIN_TO_COMPANY_CODE` in `src/constants/company-branding.ts`.
+- **Subdomain routing**: When served at `<org>.talentmanagerx.com` (e.g. `nzg.talentmanagerx.com`), the company code is auto-detected from the subdomain and the code-entry screen is skipped. `www` and the naked domain show the manual code-entry screen. Unrecognized subdomains display an "Organization Not Found" error page with a link back to the main site. The mapping is in `SUBDOMAIN_TO_COMPANY_CODE` in `src/constants/company-branding.ts`.
 - Signup confirmation, password reset, and guardian links are sent by Supabase Auth (custom SMTP).
 - Per-user settings: display name/title, light/dark theme, sidebar preference, password reset request.
 - Command Launch in the top nav finds people, applications, and pages. Pages match by title or path substring, not by letter-sequence matches against names (searching “Rico” does not suggest Applicant Pool).
@@ -119,7 +119,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Final & Signature shows the Application Acknowledgment & Consent Agreement (Nzinga Management Agency LLC). Applicants scroll through it before the consent checkboxes and electronic signature. Signing the acknowledgment does not create a representation relationship.
 - Access-code lookup, autosave, file uploads to Amazon S3 (with a cropper for profile photos and headshots), duplicate-email protection, and guardian flow for minors.
 - Staff Applications list with progress, filters (in progress, pending parent, ready to import, incomplete), and applicant account profile.
-- **Import to Pipeline** only for complete submitted apps (not pending guardian). Opens the pipeline record as **Application Submitted / Under Vetting** and does not rewind a later SOP stage.
+- **Review application** on an applicant or talent account page opens a full-screen Application Review modal with a left sidebar matching the prospect-facing application form: numbered section circles (green ✓ for complete, red for missing), a purple→blue progress bar, section icons, document count and missing-field badges, and Previous / Next navigation between sections. The sidebar includes an Overview, each visible application section, Documents, and Incomplete tab. The header and sidebar both show an **Import to Pipeline** button for complete submitted apps (not pending guardian); importing lands the talent as **Application Submitted / Under Vetting** and does not rewind a later SOP stage.
 
 ### Pipeline and talent record
 
@@ -182,6 +182,7 @@ Directors only: `/admin/users` (Team Members) and `/admin/roles`.
 - **TMX University** at `/university` (workspace Academy link). Role learning paths plus training videos.
 - Team Members (`/admin/users`): search, invite, job title, active toggle, four-role badges.
 - Staff layouts use breakpoints at 1280px (desktop), 768–1279 (tablet), and under 768 (mobile): stacked launchers, horizontally scrolling tables. On phones the staff sidebar hides, TopNav collapses extras into search + menu + profile, the full menu stacks, and the profile quick-action rail becomes a bottom bar. Staff talent and applicant account pages fill the remaining viewport height and keep extra bottom padding so the last section can be scrolled into view. Talent and brand portals stack cards and keep 44px tap targets.
+- All modals and dialogs (Send Application, Application Review, Add Note, New Issue, Invoices, Documents, etc.) portal to `document.body` so they are always viewport-centered regardless of scroll position inside the page content area.
 
 ### Talent portal
 
@@ -203,7 +204,7 @@ Corporate reps use `/client/login` then the brand dashboard (`/client/dashboard`
 
 ## Operations updates
 
-- Staff sessions stay signed in for 15 minutes of inactivity.
+- Staff sessions stay signed in for 20 minutes of inactivity.
 - Create and edit dialogs use **Save and New** and **Save and Finish**.
 - Executed talent payouts show as **Paid**. Payment methods are ACH, Wire, and Check.
 - The workspace announcements line opens an announcements page. Directors can add, edit, and remove announcements.

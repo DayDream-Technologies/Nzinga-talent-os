@@ -105,7 +105,7 @@ Amplify should detect a static SPA; ensure **redirects** send unknown paths to `
 
 ## Subdomain routing (multi-org)
 
-Each onboarded organization can have its own subdomain (e.g. `nzinga.talentmanagerx.com`, `tcg.talentmanagerx.com`). The app auto-detects the subdomain, sets the company code, and skips the code-entry screen.
+Each onboarded organization can have its own subdomain (e.g. `nzg.talentmanagerx.com`, `tcg.talentmanagerx.com`). The app auto-detects the subdomain, sets the company code, and skips the code-entry screen.
 
 ### AWS Amplify configuration
 

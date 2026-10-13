@@ -58,7 +58,7 @@ export const APP_SECTIONS: AppSection[] = [
         required: true,
         inputMode: 'tel',
         placeholder: '(555) 000-0000',
-        pattern: '^[\\d\\s()+.\\-]{7,}$',
+        pattern: '^[\\d\\s\\(\\)\\+\\.\\-]{7,}$',
         validate: 'phone',
       },
       { id: 'city', label: 'City', type: 'text', required: true },

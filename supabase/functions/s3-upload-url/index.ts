@@ -58,77 +58,98 @@ serve(async (req) => {
     return errorResponse('Method not allowed', 405, origin)
   }
 
-  const user = await authenticateRequest(req)
-  if (!user) {
-    return errorResponse('Unauthorized', 401, origin)
-  }
-
-  const bucket = Deno.env.get('S3_BUCKET')
-  const region = Deno.env.get('AWS_REGION') || 'us-east-1'
-  const cdn = (Deno.env.get('CDN_URL') || '').replace(/\/$/, '')
-  const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID')
-  const secretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY')
-
-  if (!bucket || !accessKeyId || !secretAccessKey) {
-    return errorResponse('S3 is not configured', 500, origin)
-  }
-
-  let body: { path?: string; contentType?: string; fileSize?: number }
   try {
-    body = await req.json()
-  } catch {
-    return errorResponse('Invalid JSON body', 400, origin)
+    const user = await authenticateRequest(req)
+    if (!user) {
+      return errorResponse('Unauthorized', 401, origin)
+    }
+
+    const bucket = Deno.env.get('S3_BUCKET')
+    const region = Deno.env.get('AWS_REGION') || 'us-east-1'
+    const cdn = (Deno.env.get('CDN_URL') || '').replace(/\/$/, '')
+    const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID')
+    const secretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY')
+
+    if (!bucket || !accessKeyId || !secretAccessKey) {
+      const missing = [
+        !bucket && 'S3_BUCKET',
+        !accessKeyId && 'AWS_ACCESS_KEY_ID',
+        !secretAccessKey && 'AWS_SECRET_ACCESS_KEY',
+      ].filter(Boolean)
+      console.error(`[s3-upload-url] Missing secrets: ${missing.join(', ')}`)
+      return errorResponse('S3 is not configured — contact your administrator', 500, origin)
+    }
+
+    let body: { path?: string; contentType?: string; fileSize?: number }
+    try {
+      body = await req.json()
+    } catch {
+      return errorResponse('Invalid JSON body', 400, origin)
+    }
+
+    const contentType = String(body.contentType || '').toLowerCase()
+    const fileSize = Number(body.fileSize || 0)
+    const requested = normalizePath(String(body.path || ''))
+
+    if (!requested) return errorResponse('path is required', 400, origin)
+    if (!contentType || !ALLOWED_TYPES.has(contentType)) {
+      return errorResponse('File type is not allowed', 400, origin)
+    }
+
+    const rule = matchRule(requested)
+    if (!rule) {
+      console.error(`[s3-upload-url] No PATH_RULE matched: "${requested}"`)
+      return errorResponse('Invalid upload path', 400, origin)
+    }
+
+    const maxBytes = rule.maxBytes || DEFAULT_MAX_BYTES
+    if (!Number.isFinite(fileSize) || fileSize <= 0) {
+      return errorResponse('fileSize is required', 400, origin)
+    }
+    if (fileSize > maxBytes) {
+      return errorResponse(`File is too large (max ${Math.round(maxBytes / (1024 * 1024))} MB)`, 400, origin)
+    }
+
+    const slash = requested.lastIndexOf('/')
+    const dir = slash >= 0 ? requested.slice(0, slash) : 'uploads'
+    const fileName = sanitizeFileName(slash >= 0 ? requested.slice(slash + 1) : requested)
+    const key = `${dir}/${Date.now()}_${fileName}`
+
+    const s3 = new S3Client({
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+    })
+
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: contentType,
+      StorageClass: 'INTELLIGENT_TIERING',
+    })
+
+    let uploadUrl: string
+    try {
+      uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 })
+    } catch (s3Err) {
+      console.error('[s3-upload-url] S3 presign failed:', s3Err)
+      return errorResponse('Could not generate upload URL — check S3 credentials', 500, origin)
+    }
+
+    const cdnBase = cdn || `https://${bucket}.s3.${region}.amazonaws.com`
+    const thumbnailUrl = `${cdnBase}/thumbnails/${stemKey(key)}.webp`
+
+    return jsonResponse(
+      {
+        uploadUrl,
+        key,
+        cdnUrl: `${cdnBase}/${key}`,
+        thumbnailUrl,
+      },
+      200,
+      origin,
+    )
+  } catch (err) {
+    console.error('[s3-upload-url] Unhandled error:', err)
+    return errorResponse('Upload service error — please try again', 500, origin)
   }
-
-  const contentType = String(body.contentType || '').toLowerCase()
-  const fileSize = Number(body.fileSize || 0)
-  const requested = normalizePath(String(body.path || ''))
-
-  if (!requested) return errorResponse('path is required', 400, origin)
-  if (!contentType || !ALLOWED_TYPES.has(contentType)) {
-    return errorResponse('File type is not allowed', 400, origin)
-  }
-
-  const rule = matchRule(requested)
-  if (!rule) return errorResponse('Invalid upload path', 400, origin)
-
-  const maxBytes = rule.maxBytes || DEFAULT_MAX_BYTES
-  if (!Number.isFinite(fileSize) || fileSize <= 0) {
-    return errorResponse('fileSize is required', 400, origin)
-  }
-  if (fileSize > maxBytes) {
-    return errorResponse(`File is too large (max ${Math.round(maxBytes / (1024 * 1024))} MB)`, 400, origin)
-  }
-
-  const slash = requested.lastIndexOf('/')
-  const dir = slash >= 0 ? requested.slice(0, slash) : 'uploads'
-  const fileName = sanitizeFileName(slash >= 0 ? requested.slice(slash + 1) : requested)
-  const key = `${dir}/${Date.now()}_${fileName}`
-
-  const s3 = new S3Client({
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-  })
-
-  const command = new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    ContentType: contentType,
-    StorageClass: 'INTELLIGENT_TIERING',
-  })
-
-  const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 })
-  const cdnBase = cdn || `https://${bucket}.s3.${region}.amazonaws.com`
-  const thumbnailUrl = `${cdnBase}/thumbnails/${stemKey(key)}.webp`
-
-  return jsonResponse(
-    {
-      uploadUrl,
-      key,
-      cdnUrl: `${cdnBase}/${key}`,
-      thumbnailUrl,
-    },
-    200,
-    origin,
-  )
 })
