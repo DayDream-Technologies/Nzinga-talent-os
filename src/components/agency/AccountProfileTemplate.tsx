@@ -60,7 +60,6 @@ import type { HistoryEntry } from '@/types/history'
 import type { Talent } from '@/types/talent'
 import type { TalentUdf } from '@/types/udf'
 import type { UploadedDoc } from '@/types/talent'
-import { getVisibleSections, isFieldVisible } from '@/constants/app-sections'
 
 export type AccountKind = 'applicant' | 'client'
 type ProfileTab = 'general' | 'udf' | 'miscellaneous' | 'addresses' | 'application'
@@ -96,12 +95,10 @@ function applicationDocs(app: Application | null | undefined): UploadedDoc[] {
   if (!app?.data) return []
   const data = app.data
   const docs: UploadedDoc[] = []
-  for (const section of getVisibleSections(data)) {
-    for (const field of section.fields) {
-      if (field.type !== 'file_upload' || !isFieldVisible(field, data)) continue
-      const doc = fileFromApplication(data, field.id, field.label)
-      if (doc) docs.push(doc)
-    }
+  for (const key of Object.keys(data)) {
+    if (!key.startsWith('doc_') || key.endsWith('_name') || key.endsWith('_type') || !data[key]) continue
+    const doc = fileFromApplication(data, key, String(data[`${key}_name`] || key))
+    if (doc) docs.push(doc)
   }
   return docs
 }

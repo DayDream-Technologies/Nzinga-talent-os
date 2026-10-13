@@ -16,6 +16,7 @@ export type AppFieldType =
   | 'multicheck'
   | 'checkbox'
   | 'file_upload'
+  | 'note'
 
 export type AppFieldCondition =
   | { field: string; condition: 'minor' }

@@ -66,13 +66,8 @@ export interface RoleWriteInput {
 }
 
 export async function fetchRoleCatalog(): Promise<{ roles: RoleDefinition[]; error: string | null }> {
-  const edge = await invokeEdgeFunction<{ roles: RoleDefinition[] }>('admin-users', { action: 'list_roles' })
-  if (edge.ok && edge.data.roles?.length) {
-    const roles = edge.data.roles.map((r) => rowToDef(r as unknown as Record<string, unknown>))
-    setRoleCatalog(roles)
-    return { roles, error: null }
-  }
-
+  // Staff can read the roles table directly. admin-users is director-only, so
+  // calling it from the portal (or any non-director session) only produces a 403.
   if (supabaseConfigured && supabase) {
     const { data, error } = await supabase.from('roles').select('*').order('name')
     if (!error && data?.length) {
@@ -84,7 +79,7 @@ export async function fetchRoleCatalog(): Promise<{ roles: RoleDefinition[]; err
 
   const roles = readLocalCatalog()
   setRoleCatalog(roles)
-  return { roles, error: edge.ok ? null : edge.error }
+  return { roles, error: null }
 }
 
 export async function createRoleDef(

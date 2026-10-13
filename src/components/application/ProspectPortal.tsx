@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
-import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, isFieldVisible, fieldFailsLength, fieldLengthHint, fieldFailsValidation, fieldValidationMessage, resolveFieldBound, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
+import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, APPLICATION_PHOTO_EMAIL, validateSection, isAppComplete, talentFromApp, getVisibleSections, isFieldVisible, fieldFailsLength, fieldLengthHint, fieldFailsValidation, fieldValidationMessage, resolveFieldBound, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { supabaseConfigured, getSession } from "@/lib/supabase";
 import { prospectSignup, prospectLogin, sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
@@ -636,7 +636,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                 const lengthFail=fieldFailsLength(field,data);
                 const validationFail=fieldFailsValidation(field,data);
                 const isErr=touched[field.id]&&inMissing;
-                const isFull=field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload";
+                const isFull=field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"||field.type==="note";
                 const lengthHint=fieldLengthHint(field,data);
                 const validationMsg=fieldValidationMessage(field,data);
                 const errMsg=isErr
@@ -658,7 +658,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                 const dateMin=resolveFieldBound(field.min);
                 return (
                   <div key={field.id} style={{ gridColumn:isFull?"1/-1":"auto" }}>
-                    {field.type!=="checkbox"&&field.type!=="file_upload"&&<div style={{ fontSize:12,color:isErr?"#fca5a5":"rgba(255,255,255,0.55)",fontWeight:500,marginBottom:4 }}>{field.label}{req&&<span style={{ color:"#ef4444" }}> *</span>}{!req&&<span style={{ color:"rgba(255,255,255,0.3)",fontWeight:400 }}> (optional)</span>}</div>}
+                    {field.type!=="checkbox"&&field.type!=="file_upload"&&field.type!=="note"&&<div style={{ fontSize:12,color:isErr?"#fca5a5":"rgba(255,255,255,0.55)",fontWeight:500,marginBottom:4 }}>{field.label}{req&&<span style={{ color:"#ef4444" }}> *</span>}{!req&&<span style={{ color:"rgba(255,255,255,0.3)",fontWeight:400 }}> (optional)</span>}</div>}
                     {field.note&&field.type!=="file_upload"&&<div style={{ fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:6,lineHeight:1.4 }}>{field.note}</div>}
                     {errMsg&&<div style={{ fontSize:11,color:"#fca5a5",marginBottom:3,fontWeight:600 }}>{errMsg}</div>}
                     {field.type==="text"&&(
@@ -740,6 +740,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                         <span style={{ fontSize:13,color:"rgba(255,255,255,0.7)",lineHeight:1.5 }}>{field.label}</span>
                       </label>;
                     })()}
+                    {field.type==="note"&&<div style={{ padding:"12px 14px",borderRadius:8,background:"rgba(124,58,237,0.12)",border:"1px solid rgba(167,139,250,0.45)",fontSize:14,color:"rgba(255,255,255,0.88)",lineHeight:1.5 }}>Email photos to <a href={"mailto:"+APPLICATION_PHOTO_EMAIL} style={{ color:"#c4b5fd",fontWeight:700 }}>{APPLICATION_PHOTO_EMAIL}</a>.</div>}
                     {field.type==="file_upload"&&<div style={{ border:`2px dashed ${isErr?"#dc2626":val?"#4ade80":"rgba(255,255,255,0.2)"}`,borderRadius:8,padding:14,background:val?"rgba(22,163,74,0.08)":isErr?"rgba(220,38,38,0.08)":"rgba(255,255,255,0.03)",cursor:"pointer",position:"relative" }} onClick={()=>document.getElementById("fu_"+field.id)?.click()}>
                       <input id={"fu_"+field.id} type="file" accept="image/*,.pdf,video/*" onChange={async (e)=>{
                         const file=e.target.files?.[0];

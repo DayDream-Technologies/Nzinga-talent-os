@@ -115,9 +115,9 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 
 ### Applications
 
-- NZG short application: Basic Information, Representation Interest, About You, then conditional Modeling / Acting / Sports / Influencing sections, Representation & Conflicts, Availability, Social & Portfolio, ID Verification, Final & Signature.
+- NZG short application: Basic Information, Representation Interest, About You, then conditional Modeling / Acting / Sports / Influencing sections, Representation & Conflicts, Availability, Social & Portfolio, Photos, Final & Signature.
 - Final & Signature shows the Application Acknowledgment & Consent Agreement (Nzinga Management Agency LLC). Applicants scroll through it before the consent checkboxes and electronic signature. Signing the acknowledgment does not create a representation relationship.
-- Access-code lookup, autosave, file uploads to Amazon S3 (with a cropper for profile photos and headshots), duplicate-email protection, and guardian flow for minors. Opening an application without a sign-in locks the form behind a required popup: confirm the account email, then log in. Uploads stay unavailable until that sign-in.
+- Access-code lookup, autosave, duplicate-email protection, and guardian flow for minors. The application does not ask for file uploads. Where photos used to be required, applicants are told to email them to discovery@nzingamgmt.com. Opening an application without a sign-in locks the form behind a required popup: confirm the account email, then log in.
 - Staff Applications list with progress, filters (in progress, pending parent, ready to import, incomplete, archived), and applicant account profile.
 - Admins (Director, or a role with admin access) can archive an application from the Applications list or the applicant account. Archived applications leave the active list, stop accepting portal edits, and can be restored from the Archived filter. The linked talent stays in its current pipeline stage; that record's application status shows archived.
 - The account quick-action rail stays on that applicant or client. Settings opens their portal access, notifications, and payment details. Appointments, tasks, payouts, stage, team, and screening stay on their record. Email and text open already addressed to them. Invoices scroll to their charges. Profile, ledger, history, and contract exports download a Markdown file for that person.
@@ -131,7 +131,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Scout Client Packet gate: Jordan Score, Discovery Call notes, government ID, application review, safety screening status, and Scout recommendation.
 - History / Notes: categories General, Communication, Opportunity, Internal. Table of Type / Date / Note / Category / User. Mass email and SMS write a row onto every recipient.
 - Right-hand **quick action bar** on account profiles (add note, renew, issue, email, SMS, invoices).
-- Documents: government ID, tax, banking, proof of income, plus application uploads. Files are stored in Amazon S3.
+- Documents: government ID, tax, banking, and proof of income. Application photos are emailed to discovery@nzingamgmt.com rather than uploaded on the form. Staff document files are stored in Amazon S3.
 
 ### Contracts and onboarding
 

@@ -29,6 +29,14 @@ const interest = (label: string): AppFieldCondition => ({
 
 const equalsYes = (field: string): AppFieldCondition => ({ field, equals: 'Yes' })
 
+export const APPLICATION_PHOTO_EMAIL = 'discovery@nzingamgmt.com'
+
+export const APPLICATION_PHOTO_NOTE = `Email photos to ${APPLICATION_PHOTO_EMAIL}.`
+
+function photoNote(id: string): AppField {
+  return { id, label: APPLICATION_PHOTO_NOTE, type: 'note' }
+}
+
 export const APP_SECTIONS: AppSection[] = [
   {
     id: 'personal',
@@ -74,13 +82,7 @@ export const APP_SECTIONS: AppSection[] = [
         inputMode: 'url',
         placeholder: 'https://…',
       },
-      {
-        id: 'doc_profile_photo',
-        label: 'Profile Photo',
-        type: 'file_upload',
-        required: false,
-        note: 'Optional. Staff can add a photo later on the talent account.',
-      },
+      photoNote('photo_email_personal'),
       {
         id: 'guardian_invite_email',
         label: 'Parent / Legal Guardian Email',
@@ -186,10 +188,7 @@ export const APP_SECTIONS: AppSection[] = [
         options: [...MODELING_CATEGORIES],
         required: true,
       },
-      { id: 'doc_model_headshot', label: 'Headshot', type: 'file_upload', required: true },
-      { id: 'doc_model_fullbody', label: 'Full-body photo', type: 'file_upload', required: true },
-      { id: 'doc_model_portfolio', label: 'Portfolio', type: 'file_upload', required: false },
-      { id: 'doc_model_comp', label: 'Comp Card', type: 'file_upload', required: false },
+      photoNote('photo_email_modeling'),
       {
         id: 'model_website',
         label: 'Modeling Website',
@@ -223,9 +222,7 @@ export const APP_SECTIONS: AppSection[] = [
       },
       { id: 'acting_training', label: 'Acting Training / Experience', type: 'textarea', required: false, minLength: 200, note: 'Optional — if provided, at least 200 characters' },
       { id: 'acting_credits', label: 'Notable Credits', type: 'textarea', required: false },
-      { id: 'doc_acting_headshot', label: 'Headshot', type: 'file_upload', required: true },
-      { id: 'doc_acting_resume', label: 'Resume', type: 'file_upload', required: false },
-      { id: 'doc_acting_reel', label: 'Demo Reel', type: 'file_upload', required: false },
+      photoNote('photo_email_acting'),
     ],
   },
   {
@@ -249,12 +246,10 @@ export const APP_SECTIONS: AppSection[] = [
         placeholder: 'e.g. 5',
       },
       { id: 'sport_highlights', label: 'Career Highlights', type: 'textarea', required: true },
-      { id: 'doc_sport_photo', label: 'Athletic Photo', type: 'file_upload', required: true },
-      { id: 'doc_sport_reel', label: 'Highlight Reel', type: 'file_upload', required: false },
+      photoNote('photo_email_sports'),
       { id: 'sport_ranking', label: 'Ranking', type: 'text', required: false },
       { id: 'sport_stats', label: 'Statistics', type: 'textarea', required: false },
       { id: 'sport_coach', label: 'Coach', type: 'text', required: false },
-      { id: 'doc_sport_resume', label: 'Athletic Resume', type: 'file_upload', required: false },
     ],
   },
   {
@@ -368,13 +363,6 @@ export const APP_SECTIONS: AppSection[] = [
         requiredIf: equalsYes('has_conflicting_obligations'),
         showIf: equalsYes('has_conflicting_obligations'),
       },
-      {
-        id: 'doc_conflict',
-        label: 'Supporting documentation (optional)',
-        type: 'file_upload',
-        required: false,
-        showIf: equalsYes('has_conflicting_obligations'),
-      },
     ],
   },
   {
@@ -475,26 +463,9 @@ export const APP_SECTIONS: AppSection[] = [
   },
   {
     id: 'id_verification',
-    label: 'ID Verification',
+    label: 'Photos',
     icon: '',
-    fields: [
-      {
-        id: 'doc_gov_id',
-        label: 'Government-Issued Photo ID',
-        type: 'file_upload',
-        required: true,
-        note: 'Adults: passport, driver’s license, or state ID. Do not upload SSN.',
-        showIf: { field: 'dob', equals: '__adult__' },
-      },
-      {
-        id: 'id_note_minor',
-        label:
-          'As a minor applicant, your parent/guardian will upload government ID during their verification step.',
-        type: 'checkbox',
-        requiredIf: { field: 'dob', condition: 'minor' },
-        showIf: { field: 'dob', condition: 'minor' },
-      },
-    ],
+    fields: [photoNote('photo_email_id')],
   },
   {
     id: 'final',
@@ -771,6 +742,7 @@ export function validateSection(secId: string, data: ApplicationData): string[] 
   const missing = new Set<string>()
 
   for (const f of sec.fields) {
+    if (f.type === 'note') continue
     if (!isFieldVisible(f, data)) continue
     const v = data[f.id]
     const required = fieldIsRequired(f, data)

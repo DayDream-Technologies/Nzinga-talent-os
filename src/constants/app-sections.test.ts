@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   ageFromDob,
+  APP_SECTIONS,
+  APPLICATION_PHOTO_EMAIL,
   applyApplicationToTalent,
   getVisibleSections,
   isAppComplete,
@@ -47,6 +49,31 @@ describe('NZG short application', () => {
       doc_profile_photo: 'data:image/png;base64,xx',
     })
     expect(missing).toContain('guardian_invite_email')
+  })
+
+  it('does not require file uploads and tells applicants to email photos', () => {
+    const uploadFields = APP_SECTIONS.flatMap((section) => section.fields).filter(
+      (field) => field.type === 'file_upload' || field.required,
+    )
+    expect(uploadFields.filter((field) => field.type === 'file_upload')).toEqual([])
+    const notes = APP_SECTIONS.flatMap((section) => section.fields).filter((field) => field.type === 'note')
+    expect(notes.length).toBeGreaterThan(0)
+    expect(notes.every((field) => field.label.includes(APPLICATION_PHOTO_EMAIL))).toBe(true)
+
+    expect(
+      validateSection('modeling', {
+        representation_interests: 'Modeling',
+        model_height: '5\'10"',
+        model_clothing_size: '8',
+        model_shoe_size: '9',
+        model_hair_color: 'Black',
+        model_eye_color: 'Brown',
+        model_experience: 'Runway',
+        model_categories: 'Fashion',
+      }),
+    ).toEqual([])
+    expect(validateSection('id_verification', { dob: '1990-01-01' })).toEqual([])
+    expect(validateSection('id_verification', { dob: '2012-01-01' })).toEqual([])
   })
 
   it('does not require a profile photo in the personal section', () => {

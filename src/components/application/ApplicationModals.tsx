@@ -299,6 +299,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
                   {secDef.fields.map(field=>{
                     const val=d[field.id];
                     const hasVal=val&&val.toString().trim();
+                    if(field.type==="note")return <div key={field.id} style={{ gridColumn:"1/-1",padding:"10px 12px",borderRadius:8,background:T.blueL,border:`1px solid ${T.blue}33`,fontSize:13,color:T.t1,lineHeight:1.5 }}>{field.label}</div>;
                     return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"?"1/-1":"auto" }}>
                       <Lbl>{field.label}</Lbl>
                       <div style={{ padding:"8px 12px",background:T.mutedBg,border:`1px solid ${T.cardBorder}`,borderRadius:6,fontSize:13,color:hasVal?T.t1:T.t4,minHeight:32,lineHeight:1.5 }}>

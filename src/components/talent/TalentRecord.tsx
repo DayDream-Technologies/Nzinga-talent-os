@@ -996,6 +996,13 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                   <div key={sec.id} style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: T.t1, marginBottom: 6 }}>{sec.label}</div>
                     {sec.fields.map((field) => {
+                      if (field.type === "note") {
+                        return (
+                          <div key={field.id} style={{ fontSize: 12, color: T.t2, padding: "6px 0", lineHeight: 1.45 }}>
+                            {field.label}
+                          </div>
+                        );
+                      }
                       const raw = answers[field.id];
                       const empty = raw == null || String(raw).trim() === "" || raw === false;
                       const display =

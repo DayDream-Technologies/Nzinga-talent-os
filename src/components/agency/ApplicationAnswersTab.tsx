@@ -13,6 +13,12 @@ import { resolveS3Url, thumbnailUrl } from '@/lib/s3-storage'
 import type { AppField, Application, ApplicationData } from '@/types/application'
 import type { UploadedDoc } from '@/types/talent'
 
+function storedUploadIds(data: ApplicationData): string[] {
+  return Object.keys(data).filter(
+    (key) => key.startsWith('doc_') && !key.endsWith('_name') && !key.endsWith('_type') && data[key],
+  )
+}
+
 function asText(data: ApplicationData, id: string): string {
   const value = data[id]
   if (value === true) return 'Yes'
@@ -106,6 +112,7 @@ export function ApplicationAnswersTab({ application }: { application: Applicatio
   const sections = useMemo(() => getVisibleSections(data), [data])
   const [doc, setDoc] = useState<UploadedDoc | null>(null)
   const complete = isAppComplete(application)
+  const uploads = storedUploadIds(data)
   const missing = sections.flatMap((section) =>
     validateSection(section.id, data).map((id) => {
       const field = section.fields.find((item) => item.id === id)
@@ -135,7 +142,11 @@ export function ApplicationAnswersTab({ application }: { application: Applicatio
         return (
           <Card key={section.id} hover={false} style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>{section.label}</div>
-            {visibleFields.map((field) => (
+            {visibleFields.map((field) => field.type === 'note' ? (
+              <div key={field.id} style={{ fontSize: 13, color: T.t2, padding: '7px 0', lineHeight: 1.45 }}>
+                {field.label}
+              </div>
+            ) : (
               <div
                 key={field.id}
                 style={{
@@ -156,6 +167,35 @@ export function ApplicationAnswersTab({ application }: { application: Applicatio
           </Card>
         )
       })}
+      {uploads.length > 0 && (
+        <Card hover={false} style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Previously uploaded files</div>
+          {uploads.map((id) => {
+            const field = {
+              id,
+              label: String(data[`${id}_name`] || id),
+              type: 'file_upload' as const,
+            }
+            return (
+              <div
+                key={id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 16,
+                  padding: '7px 0',
+                  borderBottom: `1px solid ${T.cardBorder}`,
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ color: T.t1, fontWeight: 500 }}>
+                  <FieldAnswer field={field} data={data} onView={setDoc} />
+                </span>
+              </div>
+            )
+          })}
+        </Card>
+      )}
       <DocViewer doc={doc} onClose={() => setDoc(null)} />
     </div>
   )
