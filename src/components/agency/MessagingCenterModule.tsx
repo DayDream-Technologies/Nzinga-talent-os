@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Badge, Btn, Card, Field, ModalShell, Panel, Table, inputStyle } from '@/components/agency/AgencyUI'
 import { IntegrationNotice } from '@/components/agency/IntegrationNotice'
 import { useAgencyData } from '@/context/AgencyDataContext'
@@ -18,11 +18,13 @@ export function MessagingCenterModule() {
   const connected = isTwilioConnected()
   const band = useViewport()
   const sms = useMemo(() => messages.filter((m) => m.channel === 'sms'), [messages])
-  const [selectedTo, setSelectedTo] = useState(sms[0]?.to || '')
-  const [composeOpen, setComposeOpen] = useState(false)
+  const [searchParams] = useSearchParams()
+  const presetTo = searchParams.get('to') || ''
+  const [selectedTo, setSelectedTo] = useState(presetTo || sms[0]?.to || '')
+  const [composeOpen, setComposeOpen] = useState(Boolean(presetTo))
   const [body, setBody] = useState('')
-  const [to, setTo] = useState('')
-  const [filter, setFilter] = useState('')
+  const [to, setTo] = useState(presetTo)
+  const [filter, setFilter] = useState(presetTo)
 
   const threads = useMemo(() => {
     const latest = new Map<string, (typeof sms)[number]>()

@@ -11,11 +11,15 @@ import { useStaffDirectory } from '@/hooks/useStaffDirectory'
 export function AddTaskModal({
   onClose,
   defaultRelated,
+  historyTalentId = null,
+  historyAccountNumber = null,
 }: {
   onClose: () => void
   defaultRelated?: string
+  historyTalentId?: string | null
+  historyAccountNumber?: string | null
 }) {
-  const { addTask, talent } = useAgencyData()
+  const { addTask, talent = [] } = useAgencyData()
   const { setHistory } = useAppData()
   const { user } = useAuth()
   const staff = useStaffDirectory()
@@ -95,6 +99,8 @@ export function AddTaskModal({
                 category: 'internal',
                 staffName: user?.name,
                 userId: user?.id,
+                talentId: historyTalentId,
+                accountNumber: historyAccountNumber,
               }),
               ...prev,
             ])

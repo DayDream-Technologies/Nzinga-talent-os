@@ -180,6 +180,7 @@ function FullMenu({ onClose, onNav, userRole, companyCode }) {
           <CompanyLogo variant="company" companyCode={companyCode} size="sm" showWordmark />
           <span style={{ fontSize: 14, fontWeight: 700, color: T.t1 }}>Menu</span>
           <button onClick={() => { onNav("workspace"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "8px 10px", minHeight: 44, cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Workspace</button>
+          <button onClick={() => { onNav("client-management"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "8px 10px", minHeight: 44, cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Client Management Dashboard</button>
           <button onClick={() => { onNav("settings"); onClose(); }} className="transition-fast" style={{ background: "transparent", border: "none", padding: "8px 10px", minHeight: 44, cursor: "pointer", fontSize: 12, color: T.t2, borderRadius: 5, fontFamily: "inherit" }}>Settings</button>
           {hasPermission(userRole, 'admin_access') && (
             <>

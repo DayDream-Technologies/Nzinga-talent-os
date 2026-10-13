@@ -97,7 +97,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Per-user settings: display name/title, light/dark theme, sidebar preference, password reset request.
 - Command Launch in the top nav finds people, applications, and pages. Pages match by title or path substring, not by letter-sequence matches against names (searching “Rico” does not suggest Applicant Pool).
 - Header **SMS icon** with an unread-thread badge opens the Text Messaging Center (`/messaging`).
-- Staff **My Workspace** (`/workspace`) is the launcher: welcome, Favorites, and Reports. The **Client Management Dashboard** (`/client-management`) is a separate page of prospect, roster, fee, and payout counts.
+- Staff **My Workspace** (`/workspace`) is the launcher: welcome, Favorites, and Reports. The **Client Management Dashboard** (`/client-management`) is a separate page of prospect, roster, fee, and payout counts, opened from the full menu’s top row between Workspace and Settings.
 - Twilio (not RingCentral) will power click-to-call and SMS. Until the vendor is live, Settings, the Text Messaging Center, and talent-record Call/SMS show **Coming soon** and send stays disabled. Staff notices mention [EXTERNAL_ATTENTION.txt](EXTERNAL_ATTENTION.txt); talent and brand portals do not.
 - TOTP MFA is configured in Supabase Auth; demo mode shows it as coming soon.
 
@@ -119,6 +119,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 - Final & Signature shows the Application Acknowledgment & Consent Agreement (Nzinga Management Agency LLC). Applicants scroll through it before the consent checkboxes and electronic signature. Signing the acknowledgment does not create a representation relationship.
 - Access-code lookup, autosave, file uploads to Amazon S3 (with a cropper for profile photos and headshots), duplicate-email protection, and guardian flow for minors.
 - Staff Applications list with progress, filters (in progress, pending parent, ready to import, incomplete), and applicant account profile.
+- The account quick-action rail stays on that applicant or client. Settings opens their portal access, notifications, and payment details. Appointments, tasks, payouts, stage, team, and screening stay on their record. Email and text open already addressed to them. Invoices scroll to their charges. Profile, ledger, history, and contract exports download a Markdown file for that person.
 - **Review application** on an applicant or talent account page opens a full-screen Application Review modal with a left sidebar matching the prospect-facing application form: numbered section circles (green ✓ for complete, red for missing), a purple→blue progress bar, section icons, document count and missing-field badges, and Previous / Next navigation between sections. The sidebar includes an Overview, each visible application section, Documents, and Incomplete tab. Overview cards (Quick Profile, Flags & Goals, Section Completion) stack in one column so long answers wrap inside the window. The header and sidebar both show an **Import to Pipeline** button for complete submitted apps (not pending guardian); importing lands the talent as **Application Submitted / Under Vetting** and does not rewind a later SOP stage.
 
 ### Pipeline and talent record
@@ -213,7 +214,7 @@ Corporate reps use `/client/login` then the brand dashboard (`/client/dashboard`
 - Tracking-board cards show last contact, next contact, and agent. The name opens the profile.
 - Support tickets open on Unassigned. Ticket rows open the detail dialog. Client Services no longer lists a second New Ticket or TMX University item.
 - Reports can be downloaded as PDF, Excel, Markdown, text, or HTML. Markdown and text files keep headings, stat cards, and tables in a readable document. Roster openings show four divisions at a 50-person cap for the current semester.
-- System Settings includes agency catalogs, contract end-date shifts, and open-ended contracts.
+- System Settings includes agency catalogs, contract end-date shifts, and open-ended contracts. Directors add lead sources under Agency Catalogs. Those sources show up on Create Prospect and Discovery Source.
 - Staff can sign in with Google through Supabase after the company code. The Google account must already belong to a staff user for that company.
 
 ## Related docs

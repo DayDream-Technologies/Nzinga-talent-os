@@ -7,7 +7,7 @@ import type {
   TermLengthYears,
   WorkArea,
 } from '@/types/agency'
-import { catalogNames } from '@/lib/lookup-catalogs'
+import { catalogNames, leadSourceNames } from '@/lib/lookup-catalogs'
 import { COMPANY_CODES } from '@/constants/roles'
 import { Btn, Field, ModalShell, inputStyle } from './AgencyUI'
 import { T } from '@/lib/tokens'
@@ -18,8 +18,12 @@ export const PROSPECT_DIVISIONS: ProspectDivision[] = ['Modeling', 'Influencing'
 export const PROSPECT_LEAD_SOURCES = [
   'Referral',
   'Social Media',
+  'Instagram',
   'Showcase',
+  'Open Call',
+  'Agent Scout',
   'Direct Inquiry',
+  'Other',
 ] as const
 
 export function ageFromDateOfBirth(dob: string, asOf = new Date()): number | null {
@@ -61,6 +65,8 @@ export function CreateProspectModal({
   const [parentEmail, setParentEmail] = useState('')
   const [parentPhone, setParentPhone] = useState('')
   const [error, setError] = useState('')
+  const sources = leadSourceNames()
+  const [source, setSource] = useState(sources[0] || 'Direct Inquiry')
 
   const age = useMemo(() => ageFromDateOfBirth(dateOfBirth), [dateOfBirth])
   const isMinor = age != null && age < 18
@@ -118,7 +124,7 @@ export function CreateProspectModal({
         lastName: '',
         email: trimmedEmail,
         notes: '',
-        source: catalogNames('Acquisition Channels')[0] || 'Direct Inquiry',
+        source: source || sources[0] || 'Direct Inquiry',
         workArea: (['Modeling', 'Acting', 'Influencing', 'Sports', 'Music'] as WorkArea[]).find((area) =>
           catalogNames('Roster Groups').includes(area),
         ) || 'Modeling',
@@ -161,6 +167,15 @@ export function CreateProspectModal({
             {orgOptions.map((code) => (
               <option key={code} value={code}>
                 {code}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Lead source">
+          <select style={inputStyle} value={source} onChange={(e) => setSource(e.target.value)}>
+            {sources.map((option) => (
+              <option key={option} value={option}>
+                {option}
               </option>
             ))}
           </select>

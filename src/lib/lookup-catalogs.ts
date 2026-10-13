@@ -1,6 +1,20 @@
 const STORAGE_KEY = 'nto_lookup_catalogs'
 
+export const LEAD_SOURCE_CATEGORY = 'Lead Sources'
+
+export const LEAD_SOURCE_SEEDS = [
+  'Referral',
+  'Social Media',
+  'Instagram',
+  'Showcase',
+  'Open Call',
+  'Agent Scout',
+  'Direct Inquiry',
+  'Other',
+]
+
 export const LOOKUP_SEEDS: Record<string, string[]> = {
+  [LEAD_SOURCE_CATEGORY]: LEAD_SOURCE_SEEDS,
   'Acquisition Channels': ['Referral', 'Social Media', 'Showcase', 'Direct Inquiry'],
   'Industry Contact Roles': ['Talent', 'Casting Director', 'Publicist', 'Sponsor', 'Venue Manager'],
   'Roster Groups': ['Modeling', 'Acting', 'Influencing', 'Athletics'],
@@ -25,6 +39,10 @@ export const LOOKUP_SEEDS: Record<string, string[]> = {
 }
 
 type Item = { name: string; active: boolean; sort: number }
+
+export function leadSourceNames(): string[] {
+  return catalogNames(LEAD_SOURCE_CATEGORY, LEAD_SOURCE_SEEDS)
+}
 
 export function catalogNames(category: string, fallback?: string[]): string[] {
   const seed = fallback || LOOKUP_SEEDS[category] || []

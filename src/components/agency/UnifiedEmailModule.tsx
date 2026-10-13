@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Btn, Card, Field, Panel, Table, inputStyle } from '@/components/agency/AgencyUI'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
@@ -10,7 +11,8 @@ export function UnifiedEmailModule() {
   const { sendMessage, messages, clients, talent, prospects } = useAgencyData()
   const { setHistory } = useAppData()
   const { user } = useAuth()
-  const [to, setTo] = useState('')
+  const [searchParams] = useSearchParams()
+  const [to, setTo] = useState(() => searchParams.get('to') || '')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [replyTo, setReplyTo] = useState('')

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { Btn, Field, inputStyle } from '@/components/agency/AgencyUI'
-import { LOOKUP_SEEDS } from '@/lib/lookup-catalogs'
+import { LEAD_SOURCE_CATEGORY, LOOKUP_SEEDS } from '@/lib/lookup-catalogs'
 import { T } from '@/lib/tokens'
 
 const STORAGE_KEY = 'nto_lookup_catalogs'
@@ -9,26 +9,34 @@ const SEEDS = LOOKUP_SEEDS
 
 type Item = { name: string; active: boolean; sort: number }
 
+function seedItems(names: string[]): Item[] {
+  return names.map((name, sort) => ({ name, active: true, sort }))
+}
+
 function loadAll(): Record<string, Item[]> {
+  let stored: Record<string, Item[]> = {}
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw) as Record<string, Item[]>
+    if (raw) stored = JSON.parse(raw) as Record<string, Item[]>
   } catch {
-    /* ignore */
+    stored = {}
   }
-  return Object.fromEntries(
-    Object.entries(SEEDS).map(([category, names]) => [
-      category,
-      names.map((name, sort) => ({ name, active: true, sort })),
-    ]),
-  )
+  const next: Record<string, Item[]> = {}
+  for (const [category, names] of Object.entries(SEEDS)) {
+    next[category] = stored[category]?.length ? stored[category] : seedItems(names)
+  }
+  for (const [category, items] of Object.entries(stored)) {
+    if (!next[category]) next[category] = items
+  }
+  return next
 }
 
 export function LookupCatalogs() {
   const { prospects, updateProspect } = useAgencyData()
   const [catalogs, setCatalogs] = useState(loadAll)
-  const [category, setCategory] = useState(Object.keys(SEEDS)[0])
+  const [category, setCategory] = useState(LEAD_SOURCE_CATEGORY)
   const [name, setName] = useState('')
+  const [formError, setFormError] = useState('')
   const [shiftDays, setShiftDays] = useState('30')
   const items = catalogs[category] || []
 
@@ -46,7 +54,14 @@ export function LookupCatalogs() {
   return (
     <div>
       <Field label="Catalog">
-        <select style={inputStyle} value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select
+          style={inputStyle}
+          value={category}
+          onChange={(e) => {
+            setCategory(e.target.value)
+            setFormError('')
+          }}
+        >
           {Object.keys(SEEDS).map((key) => (
             <option key={key}>{key}</option>
           ))}
@@ -72,22 +87,42 @@ export function LookupCatalogs() {
           </Btn>
         </div>
       ))}
+      {category === LEAD_SOURCE_CATEGORY && (
+        <p style={{ fontSize: 12, color: T.t3, marginTop: 0 }}>
+          Lead sources appear when staff create a prospect or record a discovery source.
+        </p>
+      )}
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="New value" />
+        <input
+          style={inputStyle}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value)
+            setFormError('')
+          }}
+          placeholder={category === LEAD_SOURCE_CATEGORY ? 'New lead source' : 'New value'}
+          aria-label={category === LEAD_SOURCE_CATEGORY ? 'New lead source' : 'New catalog value'}
+        />
         <Btn
           onClick={() => {
             const trimmed = name.trim()
             if (!trimmed) return
+            if (items.some((row) => row.name.toLowerCase() === trimmed.toLowerCase())) {
+              setFormError('That value already exists.')
+              return
+            }
             persist({
               ...catalogs,
               [category]: [...items, { name: trimmed, active: true, sort: items.length }],
             })
             setName('')
+            setFormError('')
           }}
         >
           Add
         </Btn>
       </div>
+      {formError && <div style={{ color: T.red, fontSize: 12, marginTop: 6 }}>{formError}</div>}
       <div style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${T.cardBorder}` }}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Contract Term Adjustment</div>
         <Field label="Shift every contract end date by days">

@@ -7,7 +7,6 @@ import {
   SECONDARY_SPECIALIZATIONS,
   CONTRACT_DURATION_PREFS,
   APPLICANT_STAGE_STATUSES,
-  DISCOVERY_SOURCES,
   PREFERRED_OUTREACH_CHANNELS,
   UNION_AFFILIATIONS,
   REFERENCE_CHECK_STATUSES,
@@ -16,6 +15,7 @@ import {
   isMinor,
 } from '@/constants'
 import { T, Btn, Lbl, FInput, FTextarea, FSelect, FileUpload } from '@/components/ui-compat'
+import { leadSourceNames } from '@/lib/lookup-catalogs'
 import { PageContent } from '@/components/layout/PageContent'
 import { useStaffDirectory } from '@/hooks/useStaffDirectory'
 import { AUTO_STACK_GRID } from '@/lib/viewport'
@@ -529,7 +529,7 @@ function NewEntry({ currentUser, onSave, onCancel, onSendApp }) {
                 <FSelect
                   value={f.discovery_source}
                   onChange={(v) => p('discovery_source', v)}
-                  options={['', ...DISCOVERY_SOURCES]}
+                  options={['', ...leadSourceNames()]}
                 />
               </Field>
               <Field label="Next Action / Callback Date">

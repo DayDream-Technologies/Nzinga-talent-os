@@ -29,7 +29,6 @@ export const AGENCY_NAV: AgencyNavCategory[] = [
       {
         label: 'Talent Info',
         items: [
-          { id: 'client-management', label: 'Client Management Dashboard', path: 'client-management' },
           { id: 'prospects', label: 'Prospects', path: 'prospects' },
           { id: 'applications', label: 'Applications', path: 'applications' },
           { id: 'renewal-offers', label: 'Create Renewal Offers', path: 'renewal-offers' },

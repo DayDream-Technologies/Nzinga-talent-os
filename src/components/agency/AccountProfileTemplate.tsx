@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ApplicationAnswersTab, fileFromApplication } from '@/components/agency/ApplicationAnswersTab'
 import { PersonApplicationPanel } from '@/components/agency/PersonApplicationPanel'
 import { UdfPanel } from '@/components/agency/UdfPanel'
-import { InvoiceFormModal, RetainerFormModal } from '@/components/agency/FinanceFormModals'
+import { ExpenseFormModal, InvoiceFormModal, RetainerFormModal } from '@/components/agency/FinanceFormModals'
 import {
   Badge,
   Btn,
@@ -25,6 +25,9 @@ import { HistoryLedger } from '@/components/agency/HistoryLedger'
 import { QuickActionBar, type QuickActionId } from '@/components/agency/QuickActionBar'
 import { NewIssueModal } from '@/components/agency/IssuesDashboard'
 import { AddTaskModal } from '@/components/agency/AgencyTasksBoard'
+import { AppointmentForm } from '@/components/agency/InteractiveCalendar'
+import { PersonFocusModal, type PersonFocus } from '@/components/agency/PersonFocusModal'
+import { downloadReport } from '@/lib/report-export'
 import { RenewalOfferModal } from '@/components/agency/RenewalOffersHub'
 import { createHistoryEntry } from '@/lib/history-ledger'
 import { staffTicketAgents, useStaffDirectory } from '@/hooks/useStaffDirectory'
@@ -61,7 +64,7 @@ import { getVisibleSections, isFieldVisible } from '@/constants/app-sections'
 
 export type AccountKind = 'applicant' | 'client'
 type ProfileTab = 'general' | 'udf' | 'miscellaneous' | 'addresses' | 'application'
-type ModalKind = 'note' | 'contact' | 'charge' | 'payment' | 'retainer' | 'issue' | 'docs' | 'renew' | null
+type ModalKind = 'note' | 'contact' | 'charge' | 'payment' | 'retainer' | 'issue' | 'docs' | 'renew' | 'appointment' | 'task' | 'payout' | null
 
 function today(): string {
   return new Date().toISOString().slice(0, 10)
@@ -172,9 +175,11 @@ export function AccountProfileTemplate({
     updateProspect,
     updateTalent: updateRosterTalent,
     updateTicket,
+    addExpenseLog,
   } = useAgencyData()
   const [tab, setTab] = useState<ProfileTab>(application ? 'application' : 'general')
   const [modal, setModal] = useState<ModalKind>(null)
+  const [focus, setFocus] = useState<PersonFocus | null>(null)
   const [noteText, setNoteText] = useState('')
   const [contactPhone, setContactPhone] = useState(phone || prospect?.phone || '')
   const [contactEmail, setContactEmail] = useState(email || prospect?.email || '')
@@ -188,6 +193,7 @@ export function AccountProfileTemplate({
   const [udfSaved, setUdfSaved] = useState(false)
   const [localPhoto, setLocalPhoto] = useState<UploadedDoc | null>(null)
   const contactsRef = useRef<HTMLDivElement>(null)
+  const chargesRef = useRef<HTMLDivElement>(null)
   const notesRef = useRef<HTMLDivElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
 
@@ -322,19 +328,69 @@ export function AccountProfileTemplate({
     setHistory((prev) => [entry, ...prev])
   }
 
+  function historyLink() {
+    return {
+      talentId: resolvePipelineTalentId(talents, {
+        id: pipelineTalent?.id,
+        email: email || prospect?.email || pipelineTalent?.email,
+        applicationId: application?.id || pipelineTalent?.application_id,
+        accountId: accountId || prospect?.accountId || pipelineTalent?.account_number,
+      }),
+      accountNumber: accountId || prospect?.accountId || pipelineTalent?.account_number || null,
+    }
+  }
+
+  function exportPerson(kind: 'profile' | 'ledger' | 'history' | 'contract') {
+    const lines =
+      kind === 'ledger'
+        ? relatedInvoices.map((inv) => `${inv.project} · ${inv.clientName} · $${inv.amount} · ${inv.status}`)
+        : kind === 'history'
+          ? relatedHistory.map((entry) => `${new Date(entry.ts).toLocaleString()} · ${entry.text}`)
+          : kind === 'contract'
+            ? [
+                `Representation: ${prospect?.representationType || '—'}`,
+                ...(prospect?.contracts || []).map((contract) => `${contract.title} · ${contract.status}`),
+                application?.access_code ? `Access code: ${application.access_code}` : '',
+              ].filter(Boolean)
+            : [
+                `Account: ${formatAccountDisplay(accountId)}`,
+                `Email: ${email || prospect?.email || '—'}`,
+                `Phone: ${phone || prospect?.phone || '—'}`,
+                `Status: ${statusLabel}`,
+                `Work area: ${prospect?.workArea || rosterTalent?.workArea || '—'}`,
+                `Pipeline: ${pipelineTalent ? STAGE_LABELS[pipelineTalent.stage] || pipelineTalent.stage : '—'}`,
+              ]
+    const label = { profile: 'Profile', ledger: 'Ledger', history: 'History', contract: 'Contracts' }[kind]
+    downloadReport(`${displayName} ${label}`, lines.length ? lines : ['No records on file.'], 'markdown')
+  }
+
   function onQuickAction(id: QuickActionId) {
+    const personEmail = email || prospect?.email || ''
+    const personPhone = phone || prospect?.phone || ''
     if (id === 'add-note' || id === 'add-call' || id === 'add-meeting' || id === 'log-email') setModal('note')
     else if (id === 'add-issue') setModal('issue')
     else if (id === 'add-charge') setModal('charge')
     else if (id === 'add-payment') setModal('payment')
+    else if (id === 'add-payout') setModal('payout')
     else if (id === 'send-renewal' || id === 'add-agreement') setModal('renew')
-    else if (id === 'add-task' || id === 'add-appointment') navigate('/calendar')
-    else if (id === 'send-email') navigate('/send-email')
-    else if (id === 'send-sms') navigate('/messaging')
-    else if (id === 'related-invoices') navigate('/client-invoices')
+    else if (id === 'add-appointment') setModal('appointment')
+    else if (id === 'add-task') setModal('task')
+    else if (id === 'send-email') {
+      if (personEmail) navigate(`/send-email?to=${encodeURIComponent(personEmail)}`)
+      else setModal('contact')
+    }
+    else if (id === 'send-sms') navigate(`/messaging?to=${encodeURIComponent(personPhone || displayName)}`)
+    else if (id === 'related-invoices') chargesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     else if (id === 'related-contracts' || id === 'send-dochub') setModal('docs')
     else if (id === 'view-profile') window.scrollTo({ top: 0, behavior: 'smooth' })
-    else if (id === 'portal-access' || id === 'payment-settings') navigate('/settings')
+    else if (id === 'stage-status') setFocus('stage-status')
+    else if (id === 'assigned-team') setFocus('assigned-team')
+    else if (id === 'screening-status' || id === 'related-screenings' || id === 'initiate-screening') setFocus('screening')
+    else if (id === 'portal-access' || id === 'notifications' || id === 'payment-settings') setFocus(id)
+    else if (id === 'export-profile') exportPerson('profile')
+    else if (id === 'export-ledger') exportPerson('ledger')
+    else if (id === 'export-history') exportPerson('history')
+    else if (id === 'export-contract') exportPerson('contract')
   }
 
   function saveInvoice(values: Omit<ClientInvoice, 'id'>, action?: 'new' | 'finish') {
@@ -506,7 +562,7 @@ export function AccountProfileTemplate({
         </Card>
         <div>
           <Card hover={false} style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: T.t3, marginBottom: 8 }}>CHARGES / TRANSACTIONS</div>
+            <div ref={chargesRef} style={{ fontSize: 12, fontWeight: 700, color: T.t3, marginBottom: 8 }}>CHARGES / TRANSACTIONS</div>
             <Table
               headers={['Project', 'Client', 'Amount', 'Status']}
               rows={relatedInvoices.map((inv) => [
@@ -711,6 +767,69 @@ export function AccountProfileTemplate({
             </label>
           )}
         </ModalShell>
+      )}
+      {modal === 'appointment' && (
+        <AppointmentForm
+          defaultTalent={displayName}
+          historyTalentId={historyLink().talentId}
+          historyAccountNumber={historyLink().accountNumber}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'task' && (
+        <AddTaskModal
+          defaultRelated={displayName}
+          historyTalentId={historyLink().talentId}
+          historyAccountNumber={historyLink().accountNumber}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'payout' && (
+        <ExpenseFormModal
+          clientNames={invoiceClients.map((client) => client.name)}
+          talentNames={[displayName]}
+          onClose={() => setModal(null)}
+          onSave={(values, action) => {
+            addExpenseLog({ ...values, talentName: displayName })
+            if (action !== 'new') setModal(null)
+          }}
+        />
+      )}
+      {focus && (
+        <PersonFocusModal
+          focus={focus}
+          displayName={displayName}
+          email={email || prospect?.email}
+          phone={phone || prospect?.phone}
+          accessCode={application?.access_code}
+          applicationStatus={application?.status}
+          prospectStage={prospect?.stage}
+          pipelineStage={pipelineTalent ? STAGE_LABELS[pipelineTalent.stage] || pipelineTalent.stage : ''}
+          assignedAgent={prospect?.assignedAgentName || udf.assignedAgent}
+          screeningStatus={pipelineTalent?.screening_status}
+          screeningUpdatedAt={pipelineTalent?.screening_updated_at}
+          bankReady={rosterTalent?.bankReady}
+          taxFormsReady={rosterTalent?.taxFormsReady}
+          hasRoster={Boolean(rosterTalent)}
+          onClose={() => setFocus(null)}
+          onSaveContact={(nextEmail, nextPhone) => {
+            const person = prospect || ensureProspect()
+            if (person) {
+              updateProspect(person.id, {
+                email: nextEmail || person.email,
+                phone: nextPhone || person.phone,
+                messageEmails: nextEmail ? [nextEmail] : person.messageEmails,
+              })
+            }
+            setContactEmail(nextEmail)
+            setContactPhone(nextPhone)
+            setFocus(null)
+          }}
+          onSavePayment={(bankReady, taxFormsReady) => {
+            if (rosterTalent) updateRosterTalent(rosterTalent.id, { bankReady, taxFormsReady })
+            setFocus(null)
+          }}
+        />
       )}
       {modal === 'renew' && application && (
         <SendApplicationModal

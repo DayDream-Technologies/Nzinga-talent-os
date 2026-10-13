@@ -1,9 +1,36 @@
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
 import { PlatformBrandHeader } from '@/components/branding'
+import { verifyEmailLink } from '@/services/auth.service'
+
+const CONFIRM_TYPES = new Set(['signup', 'invite', 'email', 'email_change'])
 
 export function EmailConfirmedPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const tokenHash = params.get('token_hash') || ''
+  const linkType = params.get('type') || 'signup'
+  const needsConfirm = Boolean(tokenHash) && CONFIRM_TYPES.has(linkType)
+  const [confirmed, setConfirmed] = useState(!needsConfirm)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function confirmEmail() {
+    setError('')
+    setLoading(true)
+    const { error: linkError } = await verifyEmailLink(tokenHash, linkType)
+    setLoading(false)
+    if (linkError) {
+      setError('This confirmation link is invalid or has already been used. Request a new email and open it on this device.')
+      return
+    }
+    const url = new URL(window.location.href)
+    url.searchParams.delete('token_hash')
+    url.searchParams.delete('type')
+    window.history.replaceState(window.history.state, '', url.pathname + url.search)
+    setConfirmed(true)
+  }
 
   return (
     <div
@@ -83,7 +110,7 @@ export function EmailConfirmedPage() {
             }}
             aria-hidden
           >
-            ✓
+            {confirmed ? '✓' : '✉'}
           </div>
           <h1
             style={{
@@ -94,11 +121,17 @@ export function EmailConfirmedPage() {
               marginBottom: 8,
             }}
           >
-            Email confirmed
+            {confirmed ? 'Email confirmed' : 'Confirm your email'}
           </h1>
           <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.55, marginBottom: 28 }}>
-            Thank you. Your email is confirmed. Sign in to continue your talent application or access your Nzinga Management Agency account.
+            {confirmed
+              ? 'Thank you. Your email is confirmed. Sign in to continue your talent application or access your Nzinga Management Agency account.'
+              : 'Continue to confirm this email address. The link is not used until you click the button below.'}
           </p>
+          {error && (
+            <p style={{ fontSize: 13, color: '#dc2626', lineHeight: 1.5, marginBottom: 16 }}>{error}</p>
+          )}
+          {confirmed ? (
           <button
             type="button"
             onClick={() => navigate('/tmx')}
@@ -118,6 +151,29 @@ export function EmailConfirmedPage() {
           >
             Continue to login →
           </button>
+          ) : (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void confirmEmail()}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              borderRadius: 8,
+              border: 'none',
+              background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: loading ? 'wait' : 'pointer',
+              fontFamily: 'inherit',
+              opacity: loading ? 0.7 : 1,
+              boxShadow: '0 2px 8px rgba(124,58,237,0.25)',
+            }}
+          >
+            {loading ? 'Confirming…' : 'Confirm email'}
+          </button>
+          )}
         </div>
       </div>
 

@@ -17,16 +17,22 @@ function toIso(date: string, time: string) {
 export function AppointmentForm({
   onClose,
   presetStart,
+  defaultTalent = '',
+  historyTalentId = null,
+  historyAccountNumber = null,
 }: {
   onClose: () => void
   presetStart?: string
+  defaultTalent?: string
+  historyTalentId?: string | null
+  historyAccountNumber?: string | null
 }) {
-  const { addAppointment, addCalendarEvent, appointments } = useAgencyData()
+  const { addAppointment, addCalendarEvent, appointments = [] } = useAgencyData()
   const { setHistory } = useAppData()
   const { user } = useAuth()
   const start = presetStart ? new Date(presetStart) : new Date()
   const [title, setTitle] = useState('')
-  const [talent, setTalent] = useState('')
+  const [talent, setTalent] = useState(defaultTalent)
   const [date, setDate] = useState(start.toISOString().slice(0, 10))
   const [startTime, setStartTime] = useState(presetStart ? start.toISOString().slice(11, 16) : '09:00')
   const [endTime, setEndTime] = useState('10:00')
@@ -104,6 +110,8 @@ export function AppointmentForm({
                 category: 'communication',
                 staffName: user?.name,
                 userId: user?.id,
+                talentId: historyTalentId,
+                accountNumber: historyAccountNumber,
               }),
               ...prev,
             ])
