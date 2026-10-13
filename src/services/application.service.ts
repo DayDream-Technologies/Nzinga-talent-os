@@ -273,7 +273,7 @@ export async function fetchApplicationByCode(
 
 export async function fetchApplicationById(id: string): Promise<Application | null> {
   const db = requireSupabase()
-  const { data, error } = await db.from('applications').select('*').eq('id', id).single()
+  const { data, error } = await db.from('applications').select('*').eq('id', id).maybeSingle()
   if (error || !data) return null
   return data as Application
 }
