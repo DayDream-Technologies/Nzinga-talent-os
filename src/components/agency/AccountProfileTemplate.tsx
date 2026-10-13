@@ -32,7 +32,10 @@ import { RenewalOfferModal } from '@/components/agency/RenewalOffersHub'
 import { createHistoryEntry } from '@/lib/history-ledger'
 import { staffTicketAgents, useStaffDirectory } from '@/hooks/useStaffDirectory'
 import { isApplicationReadyToImport } from '@/lib/application-prefill'
+import { splitPersonName } from '@/lib/guardian-email'
+import { inviteGuardian } from '@/services/guardian.service'
 import { STAGE_LABELS } from '@/constants/stages'
+import { isMinor } from '@/constants/app-sections'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -189,6 +192,11 @@ export function AccountProfileTemplate({
   const [udf, setUdf] = useState<TalentUdf>(() => resolvedUdf(prospect?.udf || rosterTalent?.udf, application, prospect))
   const [udfSaved, setUdfSaved] = useState(false)
   const [localPhoto, setLocalPhoto] = useState<UploadedDoc | null>(null)
+  const [parentNotice, setParentNotice] = useState('')
+  const [parentSaving, setParentSaving] = useState(false)
+  const [parentFirst, setParentFirst] = useState('')
+  const [parentLast, setParentLast] = useState('')
+  const [parentEmailInput, setParentEmailInput] = useState('')
   const contactsRef = useRef<HTMLDivElement>(null)
   const chargesRef = useRef<HTMLDivElement>(null)
   const notesRef = useRef<HTMLDivElement>(null)
@@ -199,6 +207,22 @@ export function AccountProfileTemplate({
     setContactPhone(phone || prospect?.phone || '')
     setContactEmail(email || prospect?.email || '')
   }, [prospect, rosterTalent, application, email, phone])
+
+  useEffect(() => {
+    const stored = splitPersonName(prospect?.parentName || pipelineTalent?.parent_name || '')
+    setParentFirst(String(application?.data?.guardian_legal_first || stored.first))
+    setParentLast(String(application?.data?.guardian_legal_last || stored.last))
+    setParentEmailInput(
+      String(
+        application?.data?.guardian_invite_email ||
+          application?.guardian_email ||
+          prospect?.parentEmail ||
+          pipelineTalent?.parent_email ||
+          '',
+      ),
+    )
+    setParentNotice('')
+  }, [prospect?.id, application?.id, pipelineTalent?.id])
 
   const relatedInvoices = invoices.filter((inv) => inv.talentName === displayName)
   const relatedTickets = tickets.filter((ticket) => ticket.talentName === displayName)
@@ -551,9 +575,86 @@ export function AccountProfileTemplate({
           <FieldRow label="Date of birth" value={String(application?.data?.dob || prospect?.dateOfBirth || '')} />
           <FieldRow label="Assigned agent" value={prospect?.assignedAgentName || udf.assignedAgent} />
           <FieldRow label="Work area" value={prospect?.workArea || rosterTalent?.workArea} />
-          <FieldRow label="Minor" value={prospect?.isMinor ? 'Yes' : application?.data?.dob ? 'No' : ''} />
-          <FieldRow label="Parent / guardian" value={prospect?.parentName || udf.emergencyName} />
+          <FieldRow label="Minor" value={prospect?.isMinor || isMinor(String(application?.data?.dob || prospect?.dateOfBirth || pipelineTalent?.dob || '')) ? 'Yes' : application?.data?.dob || prospect?.dateOfBirth ? 'No' : ''} />
+          <FieldRow label="Parent / guardian" value={[parentFirst, parentLast].filter(Boolean).join(' ') || prospect?.parentName || udf.emergencyName} />
+          <FieldRow label="Parent email" value={parentEmailInput || prospect?.parentEmail} />
           <FieldRow label="Emergency phone" value={prospect?.parentPhone || udf.emergencyPhone} />
+          {(prospect?.isMinor || isMinor(String(application?.data?.dob || prospect?.dateOfBirth || pipelineTalent?.dob || ''))) && (
+            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+              <Field label="Parent first name">
+                <input style={inputStyle} value={parentFirst} onChange={(e) => setParentFirst(e.target.value)} />
+              </Field>
+              <Field label="Parent last name">
+                <input style={inputStyle} value={parentLast} onChange={(e) => setParentLast(e.target.value)} />
+              </Field>
+              <Field label="Parent email">
+                <input style={inputStyle} type="email" value={parentEmailInput} onChange={(e) => setParentEmailInput(e.target.value)} />
+              </Field>
+              <Btn
+                variant="primary"
+                disabled={parentSaving}
+                onClick={() => {
+                  void (async () => {
+                    const first = parentFirst.trim()
+                    const last = parentLast.trim()
+                    const emailValue = parentEmailInput.trim()
+                    if (!first || !last || !emailValue.includes('@')) {
+                      setParentNotice('Parent first name, last name, and a valid email are required.')
+                      return
+                    }
+                    setParentSaving(true)
+                    setParentNotice('')
+                    const fullName = `${first} ${last}`
+                    const person = prospect || ensureProspect()
+                    if (person) updateProspect(person.id, { parentName: fullName, parentEmail: emailValue, isMinor: true })
+                    if (pipelineTalent) {
+                      try {
+                        await updatePipelineTalent({
+                          ...pipelineTalent,
+                          parent_name: fullName,
+                          parent_email: emailValue,
+                          parent_guardian_required: 'Yes',
+                          legal_minor_status: 'Yes',
+                        })
+                      } catch {
+                        setParentSaving(false)
+                        setParentNotice('Parent contact could not be saved.')
+                        return
+                      }
+                    }
+                    if (!application) {
+                      setParentSaving(false)
+                      setParentNotice('Parent saved. The access email sends when this minor has an application.')
+                      return
+                    }
+                    const next = {
+                      ...application,
+                      guardian_email: emailValue,
+                      data: {
+                        ...(application.data || {}),
+                        guardian_legal_first: first,
+                        guardian_legal_last: last,
+                        guardian_invite_email: emailValue,
+                      },
+                    }
+                    saveApp(next)
+                    const result = await inviteGuardian(next, emailValue, { force: false, markPending: false })
+                    setParentSaving(false)
+                    if (result.error || result.emailWarning) {
+                      setParentNotice(result.error || result.emailWarning || 'Could not send the parent access email.')
+                      return
+                    }
+                    setParentNotice(result.skipped
+                      ? 'This parent already received an access email. Change the email to send a new one.'
+                      : 'Parent access email sent.')
+                  })()
+                }}
+              >
+                {parentSaving ? 'Sending…' : application ? 'Save parent and send access email' : 'Save parent'}
+              </Btn>
+              {parentNotice && <div style={{ fontSize: 12, color: T.t2, lineHeight: 1.45 }}>{parentNotice}</div>}
+            </div>
+          )}
           <FieldRow label="Source" value={prospect?.source} />
           <FieldRow label="Pipeline" value={pipelineTalent ? STAGE_LABELS[pipelineTalent.stage] || pipelineTalent.stage : ''} />
         </Card>

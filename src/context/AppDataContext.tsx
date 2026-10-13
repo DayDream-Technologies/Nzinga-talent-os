@@ -17,6 +17,7 @@ import {
   isApplicationReadyToImport,
 } from '@/lib/application-prefill'
 import { assignAccountNumber, nextAccountNumber } from '@/lib/account-number'
+import { ensureGuardianInvite } from '@/services/guardian.service'
 import { fetchTalents, updateTalents, upsertTalent } from '@/services/talent.service'
 import {
   archiveApplicationRecord,
@@ -248,6 +249,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           queryClient.setQueryData(['applications'], {
             ...applicationsRef.current,
             [saved.id]: saved,
+          })
+          void ensureGuardianInvite(saved).catch((err) => {
+            console.warn('[guardian] could not send parent access email', err)
           })
           const existing = findLinkedTalent(talentsRef.current, saved)
           if (existing) {

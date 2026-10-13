@@ -48,6 +48,8 @@ describe('NZG short application', () => {
       doc_profile_photo: 'data:image/png;base64,xx',
     })
     expect(missing).toContain('guardian_invite_email')
+    expect(missing).toContain('guardian_legal_first')
+    expect(missing).toContain('guardian_legal_last')
   })
 
   it('requires category photos and does not ask applicants to email them', () => {

@@ -6,9 +6,9 @@ import { fetchApplicationById } from '@/services/application.service'
 import {
   completeGuardianVerification,
   fetchGuardianInviteByToken,
+  inviteGuardian,
   type GuardianProfilePayload,
 } from '@/services/guardian.service'
-import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { uploadOwnedFile } from '@/services/storage.service'
 import type { Application } from '@/types'
@@ -115,30 +115,23 @@ export function GuardianVerifyPage() {
   }, [app])
 
   async function requestMagicLink() {
-    if (!supabaseConfigured || !supabase) {
-      setAuthReady(true)
-      return
-    }
+    if (!app) return
     const email = form.email.trim()
     if (!email) {
       setError('Enter your email to receive a secure login link.')
       return
     }
     setError('')
-    const redirectTo = getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.guardianVerify, {
-      app: appId,
-      token,
-    })
-    const { error: otpErr } = await supabase.auth.signInWithOtp({
+    const { error: inviteError, emailWarning } = await inviteGuardian(
+      { ...app, data: { ...app.data, guardian_invite_email: email, guardian_legal_first: form.legal_first, guardian_legal_last: form.legal_last } },
       email,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: { account_type: 'guardian', application_id: appId, invite_token: token },
-      },
-    })
-    if (otpErr) setError(otpErr.message)
-    else setError('')
-    alert('A verification message was sent. Check your inbox and follow the Verify Account button, then return here. If you did not request this, you can ignore the email.')
+      { force: true, markPending: app.status !== 'submitted' && app.guardian_status !== 'completed' },
+    )
+    if (inviteError || emailWarning) {
+      setError(inviteError || emailWarning || 'Could not send the parent access email.')
+      return
+    }
+    alert('We sent a parent access email. Open it and use Verify Email & Set Up Parent Access. If you did not request this, you can ignore the email.')
   }
 
   function setField<K extends keyof GuardianProfilePayload>(key: K, value: GuardianProfilePayload[K]) {

@@ -19,7 +19,7 @@ Redirect URLs must include your app origin, e.g.:
 ## Guardian flow
 1. Minor completes NZG portal application and provides guardian email
 2. App status becomes `pending_guardian`
-3. Guardian receives Supabase magic link email
+3. Guardian receives one email from Nzinga Management Agency. It explains that their child listed them and includes a link to verify their email, set up parent access, and open `/guardian/verify`.
 4. Guardian completes `/guardian/verify` (ID, optional guardianship docs, e-consent)
 5. App becomes `submitted` / `guardian_status=completed` and enters **New / Lead**
 

@@ -431,6 +431,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
+[functions.guardian-invite]
+verify_jwt = true
+
 [functions.dochub-webhook]
 verify_jwt = false
 

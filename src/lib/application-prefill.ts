@@ -1,5 +1,6 @@
 import { getVisibleSections, isAppComplete, validateSection } from '@/constants/app-sections'
 import { REPRESENTATION_INTERESTS } from '@/constants/applicant-fields'
+import { splitPersonName } from '@/lib/guardian-email'
 import type { AgencyProspect } from '@/types/agency'
 import type { Application, ApplicationData } from '@/types/application'
 import type { Talent } from '@/types/talent'
@@ -123,6 +124,10 @@ export function prefillApplicationData(input: {
       udf.talentTypes,
     ),
   )
+  const parentFull = text(prospect?.parentName) || text(talent.parent_name)
+  const parent = splitPersonName(parentFull)
+  setIfEmpty(data, 'guardian_legal_first', parent.first)
+  setIfEmpty(data, 'guardian_legal_last', parent.last)
   setIfEmpty(data, 'guardian_invite_email', text(prospect?.parentEmail) || text(talent.parent_email) || text(udf.emergencyEmail))
   setIfEmpty(data, 'model_height', text(talent.height) || text(udf.height))
   setIfEmpty(data, 'model_shoe_size', text(talent.shoe_size) || text(udf.shoeSize))

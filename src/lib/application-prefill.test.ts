@@ -66,6 +66,7 @@ describe('application prefill', () => {
       prospect: prospect({
         dateOfBirth: '2012-01-01',
         isMinor: true,
+        parentName: 'Pat Rivera',
         parentEmail: 'parent@example.com',
       }),
       existing: { legal_first: 'Already', email: 'kept@example.com' },
@@ -73,6 +74,8 @@ describe('application prefill', () => {
     expect(data.legal_first).toBe('Already')
     expect(data.email).toBe('kept@example.com')
     expect(data.guardian_invite_email).toBe('parent@example.com')
+    expect(data.guardian_legal_first).toBe('Pat')
+    expect(data.guardian_legal_last).toBe('Rivera')
     expect(data.legal_last).toBe('Johnson')
   })
 
@@ -104,10 +107,13 @@ describe('application prefill', () => {
         name: 'Alex Rivera',
         email: 'alex@example.com',
         dob: '2012-06-01',
+        parent_name: 'Pat Lee',
         parent_email: 'pat@example.com',
       },
     })
     expect(data.guardian_invite_email).toBe('pat@example.com')
+    expect(data.guardian_legal_first).toBe('Pat')
+    expect(data.guardian_legal_last).toBe('Lee')
   })
 
   it('marks complete sections when required personal fields are present', () => {

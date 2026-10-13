@@ -1,8 +1,14 @@
 import type { Application, GuardianStatus } from '@/types'
+import { isMinor } from '@/constants/app-sections'
 import { AUTH_EMAIL_PATHS, getAuthEmailRedirectUrl } from '@/lib/auth-redirect'
+import { invokeEdgeFunction } from '@/lib/edge-functions'
+import {
+  guardianGreetingName,
+  shouldSendGuardianInvite,
+  splitPersonName,
+} from '@/lib/guardian-email'
 import { supabase, supabaseConfigured } from '@/lib/supabase'
 import { fetchApplicationById, saveApplication } from '@/services/application.service'
-import { friendlyAuthError } from '@/services/auth.service'
 
 export interface GuardianInvite {
   id: string
@@ -37,15 +43,74 @@ function makeToken(): string {
   return `g_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
 }
 
-/** Invite parent/guardian via Supabase magic-link OTP email. */
+function parentNames(app: Application): { first: string; last: string } {
+  const data = app.data || {}
+  const first = String(data.guardian_legal_first || '').trim()
+  const last = String(data.guardian_legal_last || '').trim()
+  if (first || last) return { first, last }
+  return splitPersonName(String(data.guardian_name || ''))
+}
+
+async function latestInvite(applicationId: string): Promise<GuardianInvite | null> {
+  if (!supabase) return null
+  const { data } = await supabase
+    .from('guardian_invites')
+    .select('*')
+    .eq('application_id', applicationId)
+    .order('invited_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data as GuardianInvite) ?? null
+}
+
+async function deliverGuardianEmail(
+  app: Application,
+  email: string,
+  invite: GuardianInvite,
+): Promise<string | null> {
+  const names = parentNames(app)
+  const redirectTo = getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.guardianVerify, {
+    app: app.id,
+    token: invite.token,
+  })
+  if (!redirectTo) return 'Could not build the parent access link.'
+  const result = await invokeEdgeFunction<{ sent: boolean }>('guardian-invite', {
+    applicationId: app.id,
+    guardianEmail: email,
+    parentFirst: names.first,
+    parentLast: names.last,
+    token: invite.token,
+    inviteId: invite.id,
+    redirectTo,
+    expiresAt: invite.expires_at,
+  })
+  if (!result.ok) {
+    console.error('[inviteGuardian] parent access email failed', result.error)
+    return result.error || 'Could not send the parent access email.'
+  }
+  return null
+}
+
+/**
+ * Send the parent/guardian access email.
+ * `markPending` is for the minor's submit, which moves the application to pending parent approval.
+ * Staff saves leave the application status alone so the minor can keep editing.
+ */
 export async function inviteGuardian(
   app: Application,
   guardianEmail: string,
-): Promise<{ invite: GuardianInvite | null; error: string | null; emailWarning?: string | null }> {
+  opts?: { force?: boolean; markPending?: boolean },
+): Promise<{ invite: GuardianInvite | null; error: string | null; emailWarning?: string | null; skipped?: boolean }> {
   const email = guardianEmail.trim().toLowerCase()
   if (!email) return { invite: null, error: 'Guardian email is required.' }
   if (!supabaseConfigured || !supabase) {
     return { invite: null, error: 'Database is not configured.', emailWarning: null }
+  }
+
+  const force = opts?.force ?? true
+  const previous = force ? null : await latestInvite(app.id)
+  if (!shouldSendGuardianInvite(previous, email, force)) {
+    return { invite: previous, error: null, skipped: true }
   }
 
   const invite: GuardianInvite = {
@@ -57,55 +122,47 @@ export async function inviteGuardian(
     invited_at: new Date().toISOString(),
     expires_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
   }
-
+  const names = parentNames(app)
+  const markPending = opts?.markPending ?? true
+  const alreadyDone = app.guardian_status === 'completed' || app.status === 'archived'
   const updated: Application = {
     ...app,
-    status: 'pending_guardian',
-    guardian_status: 'pending' as GuardianStatus,
+    status: markPending && !alreadyDone ? 'pending_guardian' : app.status,
+    guardian_status: markPending && !alreadyDone ? ('pending' as GuardianStatus) : app.guardian_status,
     guardian_email: email,
-    data: { ...app.data, guardian_invite_email: email },
+    data: {
+      ...app.data,
+      guardian_invite_email: email,
+      guardian_legal_first: names.first || app.data?.guardian_legal_first,
+      guardian_legal_last: names.last || app.data?.guardian_legal_last,
+    },
   }
   await saveApplication(updated)
 
-  const { error: insertErr } = await supabase.from('guardian_invites').upsert({
-    id: invite.id,
-    application_id: invite.application_id,
-    guardian_email: invite.guardian_email,
-    token: invite.token,
-    status: invite.status,
-    invited_at: invite.invited_at,
-    expires_at: invite.expires_at,
-  })
-  if (insertErr) {
-    console.warn('[inviteGuardian] insert failed, continuing with OTP:', insertErr.message)
-  }
-
-  const redirectTo = getAuthEmailRedirectUrl(AUTH_EMAIL_PATHS.guardianVerify, {
-    app: app.id,
-    token: invite.token,
-  })
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: redirectTo,
-      data: {
-        account_type: 'guardian',
-        application_id: app.id,
-        invite_token: invite.token,
-      },
-    },
-  })
-  // Application is already pending_guardian — do not block minor submit if OTP email fails.
-  if (error) {
-    console.warn('[inviteGuardian] OTP email failed:', error.message)
-    return {
-      invite,
-      error: null,
-      emailWarning: friendlyAuthError(error.message || 'Could not send the parent verification email automatically.'),
-    }
+  const emailWarning = await deliverGuardianEmail(updated, email, invite)
+  if (emailWarning) {
+    return { invite, error: null, emailWarning }
   }
   return { invite, error: null }
+}
+
+/** Send when a parent email is saved and this minor already has an application. */
+export async function ensureGuardianInvite(
+  app: Application | null | undefined,
+): Promise<{ skipped: boolean; emailWarning?: string | null }> {
+  if (!app?.id) return { skipped: true }
+  const email = String(app.guardian_email || app.data?.guardian_invite_email || '').trim()
+  const dob = String(app.data?.dob || '')
+  if (!email || !isMinor(dob) || app.guardian_status === 'completed' || app.status === 'archived') {
+    return { skipped: true }
+  }
+  const result = await inviteGuardian(app, email, { force: false, markPending: false })
+  return { skipped: Boolean(result.skipped), emailWarning: result.emailWarning }
+}
+
+export function guardianNameFromContact(fullName: string | undefined): { first: string; last: string; greeting: string } {
+  const names = splitPersonName(fullName)
+  return { ...names, greeting: guardianGreetingName(names.first, names.last) }
 }
 
 export async function fetchGuardianInviteByToken(token: string): Promise<GuardianInvite | null> {
