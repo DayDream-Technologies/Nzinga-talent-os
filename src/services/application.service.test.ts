@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { mergeApplicationData, sanitizeApplicationData } from '@/services/application.service'
+import {
+  archiveApplicationRecord,
+  mergeApplicationData,
+  restoreApplicationRecord,
+  sanitizeApplicationData,
+} from '@/services/application.service'
+import type { Application } from '@/types'
 
 describe('application data persistence', () => {
   it('does not drop specialty fields when merging a later save', () => {
@@ -52,5 +58,37 @@ describe('application data persistence', () => {
     expect(cleaned.doc_acting_headshot).toBeUndefined()
     expect(cleaned.doc_acting_resume).toBe('s3:applications/x/doc_acting_resume/resume.pdf')
     expect(cleaned.doc_old).toBeUndefined()
+  })
+})
+
+describe('application archive', () => {
+  const app: Application = {
+    id: 'app1',
+    talent_id: null,
+    access_code: 'CODE',
+    company_code: 'NZG',
+    talent_name: 'Ava Stone',
+    talent_email: 'ava@example.com',
+    status: 'submitted',
+    created_at: '2026-08-01T00:00:00.000Z',
+    data: { legal_first: 'Ava' },
+  }
+
+  it('keeps the previous status so an admin can restore it', () => {
+    const archived = archiveApplicationRecord(app, '2026-10-12T12:00:00.000Z')
+    expect(archived.status).toBe('archived')
+    expect(archived.archived_from).toBe('submitted')
+    expect(archived.archived_at).toBe('2026-10-12T12:00:00.000Z')
+    expect(archiveApplicationRecord(archived)).toBe(archived)
+
+    const restored = restoreApplicationRecord(archived, '2026-10-12T13:00:00.000Z')
+    expect(restored.status).toBe('submitted')
+    expect(restored.archived_from).toBeNull()
+    expect(restored.archived_at).toBeNull()
+  })
+
+  it('restores a legacy archived row to in progress when the prior status is missing', () => {
+    const restored = restoreApplicationRecord({ ...app, status: 'archived' })
+    expect(restored.status).toBe('in_progress')
   })
 })

@@ -1,13 +1,18 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AccountProfileTemplate } from '@/components/agency/AccountProfileTemplate'
-import { Card, Panel } from '@/components/agency/AgencyUI'
+import { Btn, Card, Panel } from '@/components/agency/AgencyUI'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { isAppComplete } from '@/constants/app-sections'
+import { hasPermission } from '@/constants/roles'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
+import { useAuth } from '@/hooks/useAuth'
 import { T } from '@/lib/tokens'
 import type { Application } from '@/types/application'
 
 function statusMeta(app: Application): { label: string; color: string } {
+  if (app.status === 'archived') return { label: 'Archived', color: '#6b7280' }
   if (app.status === 'pending_guardian' || app.guardian_status === 'pending') {
     return { label: 'Pending Parent Approval', color: T.amber }
   }
@@ -23,8 +28,11 @@ function statusMeta(app: Application): { label: string; color: string } {
 
 export function ApplicantAccountPage() {
   const { appId } = useParams<{ appId: string }>()
-  const { applications, talents } = useAppData()
+  const { applications, talents, archiveApplications, restoreApplications } = useAppData()
   const { prospects, talent } = useAgencyData()
+  const { user } = useAuth()
+  const canArchive = Boolean(user && hasPermission(user.role, 'admin_access'))
+  const [confirmArchive, setConfirmArchive] = useState(false)
   const application = (appId && applications[appId]) || Object.values(applications).find((app) => app.id === appId)
 
   if (!application) {
@@ -56,8 +64,10 @@ export function ApplicantAccountPage() {
       (email && item.email?.toLowerCase() === email),
   )
   const status = statusMeta(application)
+  const archived = application.status === 'archived'
 
   return (
+    <>
     <AccountProfileTemplate
       kind="applicant"
       displayName={application.talent_name || 'Applicant'}
@@ -71,6 +81,31 @@ export function ApplicantAccountPage() {
       rosterTalent={rosterTalent}
       pipelineTalent={pipelineTalent}
       backTo={{ label: 'Back to Applications', to: '/applications' }}
+      extraActions={
+        canArchive ? (
+          <Btn variant={archived ? 'secondary' : 'danger'} onClick={() => setConfirmArchive(true)}>
+            {archived ? 'Restore application' : 'Archive application'}
+          </Btn>
+        ) : null
+      }
     />
+    <ConfirmDialog
+      open={confirmArchive}
+      title={archived ? 'Restore application?' : 'Archive application?'}
+      message={
+        archived
+          ? 'Restore this application to the status it had before archive? It returns to the active list.'
+          : 'Archive this application? It leaves the active list, and the applicant can no longer edit it. You can restore it from the Archived filter. The talent record stays in its current pipeline stage.'
+      }
+      confirmLabel={archived ? 'Restore' : 'Archive'}
+      danger={!archived}
+      onCancel={() => setConfirmArchive(false)}
+      onConfirm={() => {
+        setConfirmArchive(false)
+        const action = archived ? restoreApplications : archiveApplications
+        void action([application.id]).catch(() => {})
+      }}
+    />
+    </>
   )
 }

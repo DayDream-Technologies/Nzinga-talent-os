@@ -183,7 +183,7 @@ export async function prospectSignup(
   email: string,
   password: string,
   name: string,
-): Promise<{ profile: ProspectProfile | null; error: string | null }> {
+): Promise<{ profile: ProspectProfile | null; error: string | null; needsEmailConfirmation?: boolean }> {
   if (!supabaseConfigured || !supabase) {
     return { profile: null, error: 'Database not configured (demo mode).' }
   }
@@ -223,10 +223,12 @@ export async function prospectSignup(
         created_at: new Date().toISOString(),
       },
       error: null,
+      needsEmailConfirmation: true,
     }
   }
 
-  return ensureProspectProfile(authData.user.id, email, name)
+  const created = await ensureProspectProfile(authData.user.id, email, name)
+  return { ...created, needsEmailConfirmation: false }
 }
 
 export async function prospectLogin(

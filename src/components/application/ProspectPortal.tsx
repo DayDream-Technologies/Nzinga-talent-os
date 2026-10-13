@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, isFieldVisible, fieldFailsLength, fieldLengthHint, fieldFailsValidation, fieldValidationMessage, resolveFieldBound, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
-import { supabaseConfigured } from "@/lib/supabase";
+import { supabaseConfigured, getSession } from "@/lib/supabase";
 import { prospectSignup, prospectLogin, sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
 import { checkDuplicateEmail, checkDuplicateApplicant, fetchApplicationByCode, fetchApplicationByEmail, fetchApplicationById } from "@/services/application.service";
 import { inviteGuardian } from "@/services/guardian.service";
@@ -20,9 +20,33 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
   const [newData,setNewData]=useState({talent_name:"",talent_email:"",talent_password:""});
   const [authLoading,setAuthLoading]=useState(false);
   const [apps,setApps]=useState(applications||{});
+  const [blocked,setBlocked]=useState(supabaseConfigured?null:false);
+  const [needsPersist,setNeedsPersist]=useState(false);
+  const [gateStep,setGateStep]=useState("confirm");
+  const gateDecidedRef=useRef(false);
   const tenantCode=String(companyCode||"NZG").trim().toUpperCase();
 
   useEffect(()=>{ setApps(applications||{}); },[applications]);
+
+  useEffect(()=>{
+    if(!supabaseConfigured){ setBlocked(false); return; }
+    let cancelled=false;
+    getSession().then(session=>{
+      if(cancelled||gateDecidedRef.current) return;
+      setBlocked(!session);
+    });
+    return ()=>{ cancelled=true; };
+  },[]);
+
+  function openLockedForm(app,persist){
+    setApps(prev=>({...prev,[app.id]:app}));
+    setFoundApp(app);
+    setNeedsPersist(persist);
+    setGateStep("confirm");
+    setLookupErr("");
+    setNewData(p=>({...p,talent_email:p.talent_email||app.talent_email||""}));
+    setMode("form");
+  }
 
   function belongsToCompany(app){
     if(!app) return false;
@@ -40,7 +64,7 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
       if(app&&belongsToCompany(app)) setApps(prev=>({...prev,[app.id]:app}));
       else app=null;
     }
-    if(app){setFoundApp(app);setMode("form");}
+    if(app) openLockedForm(app,false);
     else setLookupErr("Access code not found. Check your invitation email.");
   }
 
@@ -56,6 +80,12 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
       }
     }catch{ /* fall through — duplicate check is best-effort */ }
 
+    if(supabaseConfigured&&!newData.talent_password){
+      setLookupErr("Create a password so you can sign in and continue.");
+      setAuthLoading(false);
+      return;
+    }
+
     if(supabaseConfigured&&newData.talent_password){
       const {error}=await prospectSignup(newData.talent_email.trim(),newData.talent_password,newData.talent_name);
       if(error){setLookupErr(friendlyAuthError(error));setAuthLoading(false);return;}
@@ -64,16 +94,47 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
     const id="app_"+Date.now();
     const code=newData.talent_name.toUpperCase().replace(/\s+/g,"").slice(0,4)+Math.floor(1000+Math.random()*8999);
     const app={id,talent_id:null,access_code:code,company_code:tenantCode,talent_name:newData.talent_name,talent_email:newData.talent_email.trim(),status:"in_progress",created_at:new Date().toISOString(),last_saved:new Date().toISOString(),completed_sections:[],data:{}};
+    const session=supabaseConfigured?await getSession():null;
+    if(supabaseConfigured&&!session){
+      gateDecidedRef.current=true;
+      openLockedForm(app,true);
+      setBlocked(true);
+      setAuthLoading(false);
+      return;
+    }
     try{
-      await onSaveApp(app);
-      setApps(prev=>({...prev,[app.id]:app}));
-      setFoundApp(app);
-      setMode("form");
+      const saved=await onSaveApp(app);
+      gateDecidedRef.current=true;
+      setBlocked(false);
+      openLockedForm(saved||app,false);
     }catch{
       setLookupErr("Could not create your application. Check your connection and try again.");
     }finally{
       setAuthLoading(false);
     }
+  }
+
+  async function loginFromGate(){
+    if(!newData.talent_email||!newData.talent_password){setLookupErr("Email and password required.");return;}
+    setLookupErr("");setResetSent(false);setAuthLoading(true);
+    const {profile,error}=await prospectLogin(newData.talent_email.trim(),newData.talent_password);
+    if(error||!profile){setLookupErr(friendlyAuthError(error||"Login failed."));setAuthLoading(false);return;}
+    if(needsPersist&&foundApp){
+      try{
+        const saved=await onSaveApp(foundApp);
+        const next=saved||foundApp;
+        setApps(prev=>({...prev,[next.id]:next}));
+        setFoundApp(next);
+        setNeedsPersist(false);
+      }catch{
+        setLookupErr("You are signed in, but the application could not be saved. Try again.");
+        setAuthLoading(false);
+        return;
+      }
+    }
+    gateDecidedRef.current=true;
+    setBlocked(false);
+    setAuthLoading(false);
   }
 
   const [resetSent,setResetSent]=useState(false);
@@ -101,12 +162,72 @@ function ProspectPortal({ applications, onSaveApp, onBack, companyCode = "NZG" }
         if(app) setApps(prev=>({...prev,[app.id]:app}));
       }catch{ /* ignore */ }
     }
-    if(app){setFoundApp(app);setMode("form");}
+    if(app){gateDecidedRef.current=true;setBlocked(false);setNeedsPersist(false);setFoundApp(app);setMode("form");}
     else setLookupErr("No application found for this account.");
     setAuthLoading(false);
   }
 
-  if(mode==="form"&&foundApp) return <ApplicationForm applications={apps} app={foundApp} onSave={async updated=>{await onSaveApp(updated);setApps(prev=>({...prev,[updated.id]:updated}));setFoundApp(updated);}} onExit={()=>setMode("landing")}/>;
+  if(mode==="form"&&foundApp){
+    const locked=supabaseConfigured&&blocked!==false;
+    const gateEmail=(newData.talent_email||foundApp.talent_email||"").trim();
+    return (
+      <div style={{ position:"relative" }}>
+        <div ref={node=>{ if(node) node.toggleAttribute("inert",locked); }} style={locked?{pointerEvents:"none",userSelect:"none"}:undefined} aria-hidden={locked?true:undefined}>
+          <ApplicationForm applications={apps} app={foundApp} onSave={async updated=>{await onSaveApp(updated);setApps(prev=>({...prev,[updated.id]:updated}));setFoundApp(updated);}} onExit={()=>setMode("landing")}/>
+        </div>
+        {locked&&(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="prospect-signin-title"
+            style={{ position:"fixed",inset:0,zIndex:90,background:"rgba(8,12,22,0.72)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,fontFamily:"'Outfit','Segoe UI',sans-serif" }}
+          >
+            <div style={{ width:"100%",maxWidth:440,background:"linear-gradient(160deg,#152238,#1a2d44)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:14,padding:"28px 24px",boxShadow:"0 20px 50px rgba(0,0,0,0.45)" }}>
+              {blocked===null?(
+                <>
+                  <div id="prospect-signin-title" style={{ fontSize:20,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif",marginBottom:8 }}>Checking your sign-in</div>
+                  <p style={{ fontSize:14,color:"rgba(255,255,255,0.65)",lineHeight:1.55,margin:0 }}>The application stays locked until we know you are signed in.</p>
+                </>
+              ):gateStep==="confirm"?(
+                <>
+                  <div id="prospect-signin-title" style={{ fontSize:20,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif",marginBottom:8 }}>Confirm your email</div>
+                  <p style={{ fontSize:14,color:"rgba(255,255,255,0.65)",lineHeight:1.55,marginBottom:22 }}>
+                    {gateEmail
+                      ? <>Open the confirmation message sent to <strong style={{ color:"rgba(255,255,255,0.9)" }}>{gateEmail}</strong>. After you confirm the account, continue to sign in. This application stays locked until you are signed in.</>
+                      : "Open the confirmation message we sent. After you confirm the account, continue to sign in. This application stays locked until you are signed in."}
+                  </p>
+                  <button type="button" onClick={()=>{setLookupErr("");setGateStep("login");}} style={{ width:"100%",padding:"12px 16px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>
+                    Continue to log in
+                  </button>
+                </>
+              ):(
+                <>
+                  <div id="prospect-signin-title" style={{ fontSize:20,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif",marginBottom:8 }}>Log in</div>
+                  <p style={{ fontSize:14,color:"rgba(255,255,255,0.65)",lineHeight:1.55,marginBottom:18 }}>Sign in with the email and password for this application.</p>
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:4 }}>Email Address *</div>
+                    <input type="email" value={newData.talent_email} onChange={e=>setNewData(p=>({...p,talent_email:e.target.value}))} placeholder="your@email.com" style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
+                  </div>
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ fontSize:11,color:"rgba(255,255,255,0.5)",fontWeight:500,marginBottom:4 }}>Password *</div>
+                    <input type="password" value={newData.talent_password||""} onChange={e=>setNewData(p=>({...p,talent_password:e.target.value}))} placeholder="Your password" style={{ background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:6,color:"#fff",padding:"8px 12px",fontSize:13,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit" }}/>
+                  </div>
+                  {lookupErr&&<div style={{ color:"#fca5a5",fontSize:12,marginBottom:8,lineHeight:1.5 }}>{lookupErr}</div>}
+                  {resetSent&&<div style={{ color:"#4ade80",fontSize:12,marginBottom:8,lineHeight:1.5 }}>If an account exists for that email, we sent a password reset message. Check your inbox and follow the Reset Password button.</div>}
+                  <button type="button" onClick={loginFromGate} disabled={authLoading} style={{ width:"100%",padding:"12px 16px",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:authLoading?0.6:1 }}>
+                    {authLoading?"Logging in…":"Log In"}
+                  </button>
+                  <div style={{ marginTop:12,textAlign:"right" }}>
+                    <button type="button" onClick={handleResetPassword} disabled={authLoading} style={{ background:"transparent",border:"none",color:"#60a5fa",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>Forgot password?</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44,#162038)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",position:"relative",overflow:"hidden",padding:16 }}>
@@ -206,6 +327,7 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
   const [completedSections,setCompletedSections]=useState(new Set(app.completed_sections||[]));
   const [saveStatus,setSaveStatus]=useState("saved");
   const [submitted,setSubmitted]=useState(app.status==="submitted"||app.status==="pending_guardian");
+  const archived=app.status==="archived";
   const [pendingGuardian,setPendingGuardian]=useState(app.status==="pending_guardian"||app.guardian_status==="pending");
   const [touched,setTouched]=useState({});
   const [jumpTarget,setJumpTarget]=useState(null);
@@ -403,6 +525,18 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
 
   const sec=visibleSections[currentSection];
   const progress=total?Math.round((visibleSections.filter(s=>completedSections.has(s.id)&&!(missingMap[s.id]||[]).length).length/total)*100):0;
+
+  if(archived){return(
+    <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",padding:20 }}>
+      <div style={{ textAlign:"center",maxWidth:440,padding:36 }}>
+        <div style={{ fontSize:26,fontWeight:800,color:"#fff",fontFamily:"'Syne',sans-serif",marginBottom:8 }}>Application archived</div>
+        <div style={{ fontSize:14,color:"rgba(255,255,255,0.55)",lineHeight:1.7,marginBottom:20 }}>
+          This application is closed and can no longer be edited. Contact the agency if you still need to continue.
+        </div>
+        <button onClick={onExit} style={{ background:T.orange,color:"#fff",border:"none",borderRadius:8,padding:"12px 24px",fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>Return to Portal</button>
+      </div>
+    </div>
+  );}
 
   if(submitted){return(
     <div style={{ minHeight:"100vh",background:"linear-gradient(135deg,#0f1c2e,#1a2d44)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Outfit','Segoe UI',sans-serif",padding:20 }}>

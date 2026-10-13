@@ -1,4 +1,7 @@
-export type ApplicationStatus = 'sent' | 'in_progress' | 'submitted' | 'pending_guardian'
+export type ApplicationStatus = 'sent' | 'in_progress' | 'submitted' | 'pending_guardian' | 'archived'
+
+/** Status an application can return to after it is restored from the archive. */
+export type LiveApplicationStatus = Exclude<ApplicationStatus, 'archived'>
 
 export type GuardianStatus = 'not_required' | 'pending' | 'completed'
 
@@ -73,6 +76,9 @@ export interface Application {
   talent_name: string
   talent_email: string
   status: ApplicationStatus
+  /** Status before archive. Cleared when the application is restored. */
+  archived_from?: LiveApplicationStatus | null
+  archived_at?: string | null
   created_at: string
   last_saved?: string
   completed_sections?: string[]

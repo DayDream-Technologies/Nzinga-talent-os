@@ -45,12 +45,13 @@ export async function invokeEdgeFunction<T = unknown>(
   // Ensure a valid auth session exists before calling the edge function.
   // Without this, the Supabase client silently falls back to the anon key
   // which the edge function rejects as unauthorized.
+  // A missing session is not an expired one: a new applicant has no session
+  // until they confirm their email and sign in. No request is sent in that case.
   const hasSession = await ensureSession()
   if (!hasSession) {
     return {
       ok: false,
-      error: 'Your session has expired. Please log in again.',
-      sessionExpired: true,
+      error: 'Sign in to continue. If you just created an account, confirm the email we sent, then log in.',
     }
   }
 

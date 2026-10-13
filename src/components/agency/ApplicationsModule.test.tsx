@@ -1,10 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApplicationsModule } from '@/components/agency/ApplicationsModule'
 import type { Application } from '@/types'
 
-const { sampleApp, importAppToPipeline, navigate } = vi.hoisted(() => {
+const { sampleApp, importAppToPipeline, archiveApplications, restoreApplications, navigate, authState } = vi.hoisted(() => {
   const sampleApp: Application = {
     id: 'app_kai',
     talent_id: 't4',
@@ -26,7 +26,10 @@ const { sampleApp, importAppToPipeline, navigate } = vi.hoisted(() => {
   return {
     sampleApp,
     importAppToPipeline: vi.fn(),
+    archiveApplications: vi.fn().mockResolvedValue(undefined),
+    restoreApplications: vi.fn().mockResolvedValue(undefined),
     navigate: vi.fn(),
+    authState: { role: 'scout' as string },
   }
 })
 
@@ -40,6 +43,15 @@ vi.mock('@/context/AppDataContext', () => ({
     applications: { app_kai: sampleApp },
     talents: [],
     importAppToPipeline,
+    archiveApplications,
+    restoreApplications,
+  }),
+}))
+
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'u1', name: 'Jordan Hayes', role: authState.role },
+    companyCode: 'NZG',
   }),
 }))
 
@@ -50,6 +62,15 @@ vi.mock('@/context/AgencyDataContext', () => ({
 }))
 
 describe('ApplicationsModule', () => {
+  beforeEach(() => {
+    authState.role = 'scout'
+    sampleApp.status = 'in_progress'
+    sampleApp.archived_from = null
+    sampleApp.archived_at = null
+    archiveApplications.mockClear()
+    restoreApplications.mockClear()
+  })
+
   it('renders the prospects-style panel, table columns, and navigates on row click', () => {
     render(
       <MemoryRouter>
@@ -87,5 +108,36 @@ describe('ApplicationsModule', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Row actions' }))
     expect(screen.getByRole('menuitem', { name: 'Review application' })).toBeDisabled()
+    expect(screen.queryByRole('menuitem', { name: 'Archive application' })).not.toBeInTheDocument()
+  })
+
+  it('lets an admin archive an application after confirm', async () => {
+    authState.role = 'director'
+    render(
+      <MemoryRouter>
+        <ApplicationsModule />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Row actions' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Archive application' }))
+    expect(archiveApplications).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /^Archive$/ }))
+    await waitFor(() => expect(archiveApplications).toHaveBeenCalledWith(['app_kai']))
+  })
+
+  it('hides archived applications until the Archived filter is selected', () => {
+    sampleApp.status = 'archived'
+    sampleApp.archived_from = 'in_progress'
+    render(
+      <MemoryRouter>
+        <ApplicationsModule />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText('Kai')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Filter applications'), { target: { value: 'archived' } })
+    expect(screen.getByText('Kai')).toBeInTheDocument()
+    expect(screen.getAllByText('Archived').length).toBeGreaterThan(1)
   })
 })

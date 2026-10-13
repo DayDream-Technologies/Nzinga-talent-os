@@ -2,16 +2,19 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
-import { BulkActionsMenu, RowActionsMenu, stubGroups } from '@/components/agency/RowActionsMenu'
+import { BulkActionsMenu, RowActionsMenu, stubGroups, type ActionItem } from '@/components/agency/RowActionsMenu'
 import { Badge, Btn, Panel, SelectAllCheckbox, Table, inputStyle } from '@/components/agency/AgencyUI'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { getVisibleSections, isAppComplete, validateSection } from '@/constants/app-sections'
+import { hasPermission } from '@/constants/roles'
+import { useAuth } from '@/hooks/useAuth'
 import { isApplicationReadyToImport } from '@/lib/application-prefill'
 import { AGENCY_PROPERTY, formatAccountDisplay } from '@/lib/session-storage'
 import { talentAccountPath } from '@/lib/talent-account'
 import { T } from '@/lib/tokens'
 import type { Application } from '@/types'
 
-type StatusFilter = 'all' | 'pending' | 'pending_parent' | 'submitted_complete' | 'submitted_incomplete'
+type StatusFilter = 'all' | 'pending' | 'pending_parent' | 'submitted_complete' | 'submitted_incomplete' | 'archived'
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All statuses' },
@@ -19,6 +22,7 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'pending_parent', label: 'Pending Parent Approval' },
   { value: 'submitted_complete', label: 'Ready to Import' },
   { value: 'submitted_incomplete', label: 'Incomplete' },
+  { value: 'archived', label: 'Archived' },
 ]
 
 function splitName(app: Application): { first: string; last: string } {
@@ -39,6 +43,8 @@ function isReadyToImport(app: Application): boolean {
 }
 
 function matchesFilter(app: Application, filter: StatusFilter): boolean {
+  if (filter === 'archived') return app.status === 'archived'
+  if (app.status === 'archived') return false
   if (filter === 'pending') return app.status === 'sent' || app.status === 'in_progress'
   if (filter === 'pending_parent') return isPendingParent(app)
   if (filter === 'submitted_complete') return isReadyToImport(app)
@@ -47,6 +53,7 @@ function matchesFilter(app: Application, filter: StatusFilter): boolean {
 }
 
 function statusMeta(app: Application): { label: string; color: string } {
+  if (app.status === 'archived') return { label: 'Archived', color: '#6b7280' }
   if (isPendingParent(app)) return { label: 'Pending Parent Approval', color: T.amber }
   if (app.status === 'sent') return { label: 'Sent', color: T.amber }
   if (app.status === 'in_progress') return { label: 'In Progress', color: T.blue }
@@ -90,14 +97,17 @@ function ProgressCell({ pct, complete }: { pct: number; complete: boolean }) {
 }
 
 export function ApplicationsModule() {
-  const { applications, talents, importAppToPipeline } = useAppData()
+  const { applications, talents, importAppToPipeline, archiveApplications, restoreApplications } = useAppData()
   const { prospects } = useAgencyData()
+  const { user } = useAuth()
   const navigate = useNavigate()
+  const canArchive = Boolean(user && hasPermission(user.role, 'admin_access'))
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [importingId, setImportingId] = useState<string | null>(null)
   const [bulkImporting, setBulkImporting] = useState(false)
+  const [pending, setPending] = useState<{ mode: 'archive' | 'restore'; ids: string[] } | null>(null)
 
   const apps = useMemo(
     () =>
@@ -147,11 +157,13 @@ export function ApplicationsModule() {
   const selectedList = useMemo(() => apps.filter((app) => selected.has(app.id)), [apps, selected])
   const readySelected = selectedList.filter(isReadyToImport)
 
+  const archiveAction = statusFilter === 'archived' ? 'Restore Selected' : 'Archive Selected'
   const bulkGroups = stubGroups(
     [
       { label: 'Review', actions: ['Review Selected'] },
       { label: 'Pipeline', actions: ['Import to Pipeline'] },
       { label: 'Communication', actions: ['Send Email'] },
+      ...(canArchive ? [{ label: 'Status', actions: [archiveAction] }] : []),
     ],
     {
       'Review Selected': {
@@ -191,8 +203,85 @@ export function ApplicationsModule() {
         label: 'Send Email',
         onClick: () => navigate('/send-email'),
       },
+      'Archive Selected': {
+        id: 'Archive Selected',
+        label: 'Archive Selected',
+        danger: true,
+        disabled: selectedList.every((app) => app.status === 'archived'),
+        onClick: () =>
+          setPending({
+            mode: 'archive',
+            ids: selectedList.filter((app) => app.status !== 'archived').map((app) => app.id),
+          }),
+      },
+      'Restore Selected': {
+        id: 'Restore Selected',
+        label: 'Restore Selected',
+        disabled: selectedList.every((app) => app.status !== 'archived'),
+        onClick: () =>
+          setPending({
+            mode: 'restore',
+            ids: selectedList.filter((app) => app.status === 'archived').map((app) => app.id),
+          }),
+      },
     },
   )
+
+  function rowActions(app: Application): ActionItem[] {
+    const items: ActionItem[] = [
+      {
+        id: 'review',
+        label: 'Review',
+        onClick: () => navigate(`/applications/${app.id}`),
+      },
+      {
+        id: 'import',
+        label: importingId === app.id ? 'Reviewing…' : 'Review application',
+        disabled: !isReadyToImport(app) || Boolean(importingId),
+        onClick: async () => {
+          if (importingId) return
+          setImportingId(app.id)
+          try {
+            const imported = await importAppToPipeline(app)
+            if (imported?.account_number) navigate(talentAccountPath(imported.account_number))
+            else if (imported) navigate('/pipeline')
+          } finally {
+            setImportingId(null)
+          }
+        },
+      },
+      {
+        id: 'email',
+        label: 'Send Email',
+        onClick: () => navigate('/send-email'),
+      },
+      {
+        id: 'tracking',
+        label: 'Open on Tracking Board',
+        onClick: () => navigate('/prospect-tracking'),
+      },
+    ]
+    if (canArchive) {
+      items.push(
+        app.status === 'archived'
+          ? {
+              id: 'restore',
+              label: 'Restore application',
+              onClick: () => setPending({ mode: 'restore', ids: [app.id] }),
+            }
+          : {
+              id: 'archive',
+              label: 'Archive application',
+              danger: true,
+              onClick: () => setPending({ mode: 'archive', ids: [app.id] }),
+            },
+      )
+    }
+    return items
+  }
+
+  const pendingCount = pending?.ids.length ?? 0
+  const pendingNoun = pendingCount === 1 ? 'application' : 'applications'
 
   return (
     <Panel
@@ -313,44 +402,33 @@ export function ApplicationsModule() {
                 : '—',
               <RowActionsMenu
                 key={`menu-${app.id}`}
-                items={[
-                  {
-                    id: 'review',
-                    label: 'Review',
-                    onClick: () => navigate(`/applications/${app.id}`),
-                  },
-                  {
-                    id: 'import',
-                    label: importingId === app.id ? 'Reviewing…' : 'Review application',
-                    disabled: !isReadyToImport(app) || Boolean(importingId),
-                    onClick: async () => {
-                      if (importingId) return
-                      setImportingId(app.id)
-                      try {
-                        const imported = await importAppToPipeline(app)
-                        if (imported?.account_number) navigate(talentAccountPath(imported.account_number))
-                        else if (imported) navigate('/pipeline')
-                      } finally {
-                        setImportingId(null)
-                      }
-                    },
-                  },
-                  {
-                    id: 'email',
-                    label: 'Send Email',
-                    onClick: () => navigate('/send-email'),
-                  },
-                  {
-                    id: 'tracking',
-                    label: 'Open on Tracking Board',
-                    onClick: () => navigate('/prospect-tracking'),
-                  },
-                ]}
+                items={rowActions(app)}
               />,
             ]
           })}
         />
       </div>
+      <ConfirmDialog
+        open={!!pending}
+        title={pending?.mode === 'restore' ? 'Restore application?' : 'Archive application?'}
+        message={
+          pending?.mode === 'restore'
+            ? `Restore ${pendingCount} ${pendingNoun} to the status they had before archive? They return to the active list.`
+            : `Archive ${pendingCount} ${pendingNoun}? They leave the active list, and the applicant can no longer edit them. You can restore them from the Archived filter. The talent record stays in its current pipeline stage.`
+        }
+        confirmLabel={pending?.mode === 'restore' ? 'Restore' : 'Archive'}
+        danger={pending?.mode === 'archive'}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          if (!pending) return
+          const action = pending.mode === 'restore' ? restoreApplications : archiveApplications
+          const ids = pending.ids
+          setPending(null)
+          void action(ids)
+            .then(() => setSelected(new Set()))
+            .catch(() => {})
+        }}
+      />
     </Panel>
   )
 }

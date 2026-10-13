@@ -1,4 +1,4 @@
-import type { Application, ApplicationData, ApplicationsMap } from '@/types'
+import type { Application, ApplicationData, ApplicationsMap, LiveApplicationStatus } from '@/types'
 import { isApplicationStorageRef, isEmbeddedDataUrl, isS3Ref } from '@/lib/application-files'
 import { requireSupabase, supabase } from '@/lib/supabase'
 
@@ -27,7 +27,41 @@ export function mergeApplicationData(
   return incomingIsStale ? { ...next, ...current } : { ...current, ...next }
 }
 
+const LIVE_APPLICATION_STATUSES = new Set<LiveApplicationStatus>([
+  'sent',
+  'in_progress',
+  'submitted',
+  'pending_guardian',
+])
+
+export function archiveApplicationRecord(app: Application, at = new Date().toISOString()): Application {
+  if (app.status === 'archived') return app
+  return {
+    ...app,
+    status: 'archived',
+    archived_from: app.status,
+    archived_at: at,
+    last_saved: at,
+  }
+}
+
+export function restoreApplicationRecord(app: Application, at = new Date().toISOString()): Application {
+  if (app.status !== 'archived') return app
+  const previous =
+    app.archived_from && LIVE_APPLICATION_STATUSES.has(app.archived_from)
+      ? app.archived_from
+      : 'in_progress'
+  return {
+    ...app,
+    status: previous,
+    archived_from: null,
+    archived_at: null,
+    last_saved: at,
+  }
+}
+
 function toApplicationRow(app: Application, data: ApplicationData) {
+  const archived = app.status === 'archived'
   return {
     id: app.id,
     talent_id: app.talent_id ?? null,
@@ -43,6 +77,8 @@ function toApplicationRow(app: Application, data: ApplicationData) {
     guardian_status: app.guardian_status ?? null,
     guardian_email: app.guardian_email ?? null,
     submitted_at: app.submitted_at ?? null,
+    archived_from: archived ? app.archived_from ?? null : null,
+    archived_at: archived ? app.archived_at ?? null : null,
   }
 }
 

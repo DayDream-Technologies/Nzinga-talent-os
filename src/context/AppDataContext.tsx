@@ -18,7 +18,12 @@ import {
 } from '@/lib/application-prefill'
 import { assignAccountNumber, nextAccountNumber } from '@/lib/account-number'
 import { fetchTalents, updateTalents, upsertTalent } from '@/services/talent.service'
-import { fetchApplications, saveApplication } from '@/services/application.service'
+import {
+  archiveApplicationRecord,
+  fetchApplications,
+  restoreApplicationRecord,
+  saveApplication,
+} from '@/services/application.service'
 import { fetchTasks, saveTasks } from '@/services/task.service'
 import { fetchHistory, saveHistory } from '@/services/history.service'
 import { useAuthContext } from './AuthContext'
@@ -42,6 +47,8 @@ interface AppDataContextValue {
   saveApp: (app: Application) => void
   handleSendApp: (app: Application, opts?: { accountNumber?: string }) => void
   importAppToPipeline: (app: Application) => Promise<Talent | null>
+  archiveApplications: (ids: string[]) => Promise<void>
+  restoreApplications: (ids: string[]) => Promise<void>
   handleNewTalent: (t: Talent) => void
   refreshAll: () => void
 }
@@ -359,6 +366,69 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [persistTalents, queryClient, history, showToast],
   )
 
+  const setApplicationArchive = useCallback(
+    async (ids: string[], mode: 'archive' | 'restore') => {
+      const now = new Date().toISOString()
+      const nextMap = { ...applicationsRef.current }
+      const talentStatus = new Map<string, string>()
+      let changed = 0
+      try {
+        for (const id of ids) {
+          const app = applicationsRef.current[id]
+          if (!app) continue
+          const next =
+            mode === 'archive' ? archiveApplicationRecord(app, now) : restoreApplicationRecord(app, now)
+          if (next.status === app.status && next.archived_at === app.archived_at) continue
+          const saved = await saveApplication(next)
+          nextMap[saved.id] = saved
+          changed += 1
+          const linked = findLinkedTalent(talentsRef.current, saved)
+          if (linked) talentStatus.set(linked.id, saved.status)
+        }
+        queryClient.setQueryData(['applications'], nextMap)
+        if (talentStatus.size) {
+          const nextTalents = talentsRef.current.map((t) =>
+            talentStatus.has(t.id) ? { ...t, application_status: talentStatus.get(t.id) ?? t.application_status } : t,
+          )
+          try {
+            await persistTalents(nextTalents)
+            if (selectedTalent && talentStatus.has(selectedTalent.id)) {
+              setSelectedTalent({
+                ...selectedTalent,
+                application_status: talentStatus.get(selectedTalent.id) ?? selectedTalent.application_status,
+              })
+            }
+          } catch (e) {
+            showToast(persistErrorMessage(e), 'error')
+          }
+        }
+        if (changed === 0) return
+        const noun = changed === 1 ? 'application' : 'applications'
+        showToast(
+          mode === 'archive'
+            ? `Archived ${changed} ${noun}. Applicants can no longer edit them.`
+            : `Restored ${changed} ${noun}.`,
+          'success',
+        )
+      } catch (e) {
+        queryClient.setQueryData(['applications'], nextMap)
+        showToast(persistErrorMessage(e), 'error')
+        throw e
+      }
+    },
+    [persistTalents, queryClient, selectedTalent, showToast],
+  )
+
+  const archiveApplications = useCallback(
+    (ids: string[]) => setApplicationArchive(ids, 'archive'),
+    [setApplicationArchive],
+  )
+
+  const restoreApplications = useCallback(
+    (ids: string[]) => setApplicationArchive(ids, 'restore'),
+    [setApplicationArchive],
+  )
+
   const handleNewTalent = useCallback(
     (t: Talent) => {
       void persistTalents([...talentsRef.current, withAccountNumber(t, talentsRef.current)]).catch(
@@ -425,6 +495,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       saveApp,
       handleSendApp,
       importAppToPipeline,
+      archiveApplications,
+      restoreApplications,
       handleNewTalent,
       refreshAll,
     }),
@@ -445,6 +517,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       saveApp,
       handleSendApp,
       importAppToPipeline,
+      archiveApplications,
+      restoreApplications,
       handleNewTalent,
       refreshAll,
     ],

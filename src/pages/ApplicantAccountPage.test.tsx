@@ -1,8 +1,14 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApplicantAccountPage } from '@/pages/ApplicantAccountPage'
 import type { Application } from '@/types/application'
+
+const { archiveApplications, restoreApplications, authState } = vi.hoisted(() => ({
+  archiveApplications: vi.fn().mockResolvedValue(undefined),
+  restoreApplications: vi.fn().mockResolvedValue(undefined),
+  authState: { role: 'scout' as string },
+}))
 
 const sampleApp: Application = {
   id: 'app_sofia',
@@ -32,6 +38,8 @@ vi.mock('@/context/AppDataContext', () => ({
     setHistory: vi.fn(),
     importAppToPipeline: vi.fn(),
     handleSendApp: vi.fn(),
+    archiveApplications,
+    restoreApplications,
   }),
 }))
 
@@ -53,10 +61,16 @@ vi.mock('@/context/AgencyDataContext', () => ({
 }))
 
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { id: 'u1', name: 'Jordan Hayes', role: 'scout' }, companyCode: 'NZG' }),
+  useAuth: () => ({ user: { id: 'u1', name: 'Jordan Hayes', role: authState.role }, companyCode: 'NZG' }),
 }))
 
 describe('ApplicantAccountPage', () => {
+  beforeEach(() => {
+    authState.role = 'scout'
+    sampleApp.status = 'submitted'
+    archiveApplications.mockClear()
+  })
+
   it('renders visible application sections for the applicant', () => {
     render(
       <MemoryRouter initialEntries={['/applications/app_sofia']}>
@@ -70,5 +84,21 @@ describe('ApplicantAccountPage', () => {
     expect(screen.getByText('Basic Information')).toBeInTheDocument()
     expect(screen.getByText('Representation Interest')).toBeInTheDocument()
     expect(screen.getByText('Sofia')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Archive application' })).not.toBeInTheDocument()
+  })
+
+  it('lets an admin archive from the applicant account', () => {
+    authState.role = 'director'
+    render(
+      <MemoryRouter initialEntries={['/applications/app_sofia']}>
+        <Routes>
+          <Route path="/applications/:appId" element={<ApplicantAccountPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Archive application' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Archive$/ }))
+    expect(archiveApplications).toHaveBeenCalledWith(['app_sofia'])
   })
 })
