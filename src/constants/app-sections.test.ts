@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   ageFromDob,
   APP_SECTIONS,
-  APPLICATION_PHOTO_EMAIL,
   applyApplicationToTalent,
   getVisibleSections,
   isAppComplete,
@@ -51,18 +50,25 @@ describe('NZG short application', () => {
     expect(missing).toContain('guardian_invite_email')
   })
 
-  it('has optional file uploads alongside email-photo notes', () => {
+  it('requires category photos and does not ask applicants to email them', () => {
     const allFields = APP_SECTIONS.flatMap((section) => section.fields)
-    const uploadFields = allFields.filter((field) => field.type === 'file_upload')
-    expect(uploadFields.length).toBeGreaterThan(0)
-    expect(uploadFields.every((field) => field.required === false)).toBe(true)
-
-    const notes = allFields.filter((field) => field.type === 'note')
-    expect(notes.length).toBeGreaterThan(0)
-    expect(notes.every((field) => field.label.includes(APPLICATION_PHOTO_EMAIL))).toBe(true)
+    const requiredUploads = allFields
+      .filter((field) => field.type === 'file_upload' && field.required)
+      .map((field) => field.id)
+    expect(requiredUploads).toEqual(
+      expect.arrayContaining([
+        'doc_model_headshot',
+        'doc_model_fullbody',
+        'doc_acting_headshot',
+        'doc_sport_photo',
+        'doc_gov_id',
+      ]),
+    )
+    expect(allFields.some((field) => field.type === 'note')).toBe(false)
+    expect(JSON.stringify(allFields)).not.toContain('discovery@nzingamgmt.com')
   })
 
-  it('does not require uploads in modeling section (all optional)', () => {
+  it('requires headshot and full-body in modeling', () => {
     expect(
       validateSection('modeling', {
         representation_interests: 'Modeling',
@@ -74,20 +80,20 @@ describe('NZG short application', () => {
         model_experience: 'Runway',
         model_categories: 'Fashion',
       }),
-    ).toEqual([])
+    ).toEqual(expect.arrayContaining(['doc_model_headshot', 'doc_model_fullbody']))
   })
 
-  it('does not require uploads in acting section (all optional)', () => {
+  it('requires a headshot in acting', () => {
     expect(
       validateSection('acting', {
         representation_interests: 'Acting',
         acting_experience_level: 'Beginner',
         acting_categories: 'Commercial',
       }),
-    ).toEqual([])
+    ).toEqual(['doc_acting_headshot'])
   })
 
-  it('does not require uploads in sports section (all optional)', () => {
+  it('requires an athletic photo in sports', () => {
     expect(
       validateSection('sports', {
         representation_interests: 'Sports & Athletics',
@@ -97,11 +103,11 @@ describe('NZG short application', () => {
         sport_years: '5',
         sport_highlights: 'Conference champion 2024',
       }),
-    ).toEqual([])
+    ).toEqual(['doc_sport_photo'])
   })
 
-  it('does not require gov ID upload in id_verification (optional)', () => {
-    expect(validateSection('id_verification', { dob: '1990-01-01' })).toEqual([])
+  it('requires government photo ID for adults', () => {
+    expect(validateSection('id_verification', { dob: '1990-01-01' })).toEqual(['doc_gov_id'])
   })
 
   it('requires minor checkbox in id_verification for minors', () => {
@@ -109,7 +115,7 @@ describe('NZG short application', () => {
     expect(missing).toContain('id_note_minor')
   })
 
-  it('validates modeling uploads when present without blocking when absent', () => {
+  it('accepts modeling when required photos are uploaded', () => {
     const withUploads = validateSection('modeling', {
       representation_interests: 'Modeling',
       model_height: '5\'10"',
