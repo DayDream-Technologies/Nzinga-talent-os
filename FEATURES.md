@@ -93,7 +93,7 @@ Each role only sees the pipeline stages they are allowed to act on. Scouts who s
 
 - Company code selects the tenant (NZG, NZINGA, TCG). Staff then sign in with email and password.
 - **Subdomain routing**: When served at `<org>.talentmanagerx.com` (e.g. `nzg.talentmanagerx.com`), the company code is auto-detected from the subdomain and the code-entry screen is skipped. `www` and the naked domain show the manual code-entry screen. Unrecognized subdomains display an "Organization Not Found" error page with a link back to the main site. The mapping is in `SUBDOMAIN_TO_COMPANY_CODE` in `src/constants/company-branding.ts`.
-- Signup confirmation, password reset, and guardian links are sent by Supabase Auth (custom SMTP).
+- Signup confirmation, password reset, and guardian links are sent by Supabase Auth (custom SMTP). Reset and confirmation links open in the app and are verified only after the person clicks Continue, so mail security scanners cannot use the link first.
 - Per-user settings: display name/title, light/dark theme, sidebar preference, password reset request.
 - Command Launch in the top nav finds people, applications, and pages. Pages match by title or path substring, not by letter-sequence matches against names (searching “Rico” does not suggest Applicant Pool).
 - Header **SMS icon** with an unread-thread badge opens the Text Messaging Center (`/messaging`).
@@ -212,7 +212,7 @@ Corporate reps use `/client/login` then the brand dashboard (`/client/dashboard`
 - Prospect email from the row menu opens in place. Renewal offers are 1 year. If there is no existing representation, commission and division can change.
 - Tracking-board cards show last contact, next contact, and agent. The name opens the profile.
 - Support tickets open on Unassigned. Ticket rows open the detail dialog. Client Services no longer lists a second New Ticket or TMX University item.
-- Reports can be downloaded as PDF, Excel, CSV, text, or HTML. Roster openings show four divisions at a 50-person cap for the current semester.
+- Reports can be downloaded as PDF, Excel, Markdown, text, or HTML. Markdown and text files keep headings, stat cards, and tables in a readable document. Roster openings show four divisions at a 50-person cap for the current semester.
 - System Settings includes agency catalogs, contract end-date shifts, and open-ended contracts.
 - Staff can sign in with Google through Supabase after the company code. The Google account must already belong to a staff user for that company.
 

@@ -63,37 +63,19 @@ export async function getSession(): Promise<Session | null> {
 }
 
 /**
- * Validate the current session is alive and has a non-expired access token.
- * If the access token is expired, attempts a refresh.
- * Returns `true` when a valid session exists afterward.
+ * True when the Supabase client has a session.
+ * getSession() already refreshes an access token that is near expiry.
+ * A second refreshSession() here rotates the refresh token twice and Supabase
+ * then rejects the login as expired.
  */
 export async function ensureSession(): Promise<boolean> {
   if (!supabase) return false
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return false
-
-    // Check if the access token is expired or about to expire (30s buffer)
-    const jwt = parseJwtExp(session.access_token)
-    if (jwt !== null && jwt * 1000 < Date.now() + 30_000) {
-      const { data, error } = await supabase.auth.refreshSession()
-      return !error && !!data.session
-    }
+    const { data, error } = await supabase.auth.getSession()
+    if (error || !data.session) return false
     return true
   } catch {
     return false
-  }
-}
-
-/** Extract `exp` from a JWT payload without verifying. Returns epoch seconds or null. */
-function parseJwtExp(token: string): number | null {
-  try {
-    const payload = token.split('.')[1]
-    if (!payload) return null
-    const decoded = JSON.parse(atob(payload))
-    return typeof decoded.exp === 'number' ? decoded.exp : null
-  } catch {
-    return null
   }
 }
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PLATFORM_BRAND } from '@/constants/company-branding'
 import { TMXLogo, TMXMark } from '@/components/branding'
-import { updatePassword } from '@/services/auth.service'
+import { updatePassword, verifyEmailLink } from '@/services/auth.service'
 import { supabase, supabaseConfigured, onAuthStateChange } from '@/lib/supabase'
 
 const pageShell: React.CSSProperties = {
@@ -32,15 +32,19 @@ const inputStyle: React.CSSProperties = {
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const tokenHash = params.get('token_hash') || ''
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [recoveryReady, setRecoveryReady] = useState(false)
-  const [checking, setChecking] = useState(true)
+  const [checking, setChecking] = useState(!tokenHash)
+  const [linkFailed, setLinkFailed] = useState(false)
 
   useEffect(() => {
+    if (tokenHash) return
     if (!supabaseConfigured || !supabase) {
       setChecking(false)
       setError('Password reset is not available in demo mode.')
@@ -57,16 +61,16 @@ export function ResetPasswordPage() {
       }
     })
 
-    // Supabase auto-detects the recovery token from the URL hash on page load.
-    // Give it a moment to fire the PASSWORD_RECOVERY event.
+    // Older reset emails put the session in the URL. The client may finish that
+    // exchange before this page subscribes, so also accept an existing session.
     const timeout = setTimeout(() => {
       if (!resolved) {
-        // Check if there's already a session (token already consumed on a previous render)
         supabase!.auth.getSession().then(({ data: sessionData }) => {
           if (sessionData.session) {
             setRecoveryReady(true)
           } else {
             setError('This password reset link is invalid or has expired. Please request a new one.')
+            setLinkFailed(true)
           }
           setChecking(false)
         })
@@ -77,7 +81,24 @@ export function ResetPasswordPage() {
       clearTimeout(timeout)
       data.subscription.unsubscribe()
     }
-  }, [])
+  }, [tokenHash])
+
+  async function openResetLink() {
+    setError('')
+    setLoading(true)
+    const { error: linkError } = await verifyEmailLink(tokenHash, 'recovery')
+    setLoading(false)
+    if (linkError) {
+      setError('This password reset link is invalid or has already been used. Request a new one from the login page, then open it on this device.')
+      setLinkFailed(true)
+      return
+    }
+    const url = new URL(window.location.href)
+    url.searchParams.delete('token_hash')
+    url.searchParams.delete('type')
+    window.history.replaceState(window.history.state, '', url.pathname + url.search)
+    setRecoveryReady(true)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -239,7 +260,51 @@ export function ResetPasswordPage() {
             </div>
           )}
 
-          {!checking && !recoveryReady && !success && (
+          {!checking && !recoveryReady && !success && tokenHash && !linkFailed && (
+            <div style={{ textAlign: 'center' }}>
+              <h2
+                style={{
+                  fontFamily: "'Syne', 'Outfit', sans-serif",
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: '#e8eef4',
+                  marginBottom: 8,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Reset your password
+              </h2>
+              <p style={{ fontSize: 13, color: '#8fa3b5', lineHeight: 1.6, marginBottom: 20 }}>
+                Continue to choose a new password. This step stays on your device so the link is not used up before you open it.
+              </p>
+              {error && (
+                <p style={{ color: '#f87171', fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{error}</p>
+              )}
+              <button
+                type="button"
+                className="mh-cta"
+                disabled={loading}
+                onClick={() => void openResetLink()}
+                style={{
+                  width: '100%',
+                  padding: '13px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#3d9fd4',
+                  color: '#061018',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: loading ? 'wait' : 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                {loading ? 'Checking link…' : 'Continue'}
+              </button>
+            </div>
+          )}
+
+          {!checking && !recoveryReady && !success && (!tokenHash || linkFailed) && (
             <div style={{ textAlign: 'center' }}>
               <div
                 style={{

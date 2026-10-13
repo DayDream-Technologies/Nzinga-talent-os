@@ -381,6 +381,37 @@ export async function getProspectProfileByEmail(
   return (data as ProspectProfile) ?? null
 }
 
+const EMAIL_OTP_TYPES = new Set([
+  'signup',
+  'invite',
+  'magiclink',
+  'recovery',
+  'email_change',
+  'email',
+])
+
+/**
+ * Exchange a token_hash from an auth email. Called only after the person clicks
+ * Continue, so mail scanners that merely open the link cannot burn the token.
+ */
+export async function verifyEmailLink(
+  tokenHash: string,
+  type: string,
+): Promise<{ error: string | null }> {
+  if (!supabaseConfigured || !supabase) {
+    return { error: 'This link is not available until the database is configured.' }
+  }
+  if (!EMAIL_OTP_TYPES.has(type)) {
+    return { error: 'This link is invalid. Request a new email and try again.' }
+  }
+  const { error } = await supabase.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: type as 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email',
+  })
+  if (error) return { error: friendlyAuthError(error.message) }
+  return { error: null }
+}
+
 export async function updatePassword(newPassword: string): Promise<{ error: string | null }> {
   if (!supabaseConfigured || !supabase) {
     return { error: 'Not available in demo mode.' }

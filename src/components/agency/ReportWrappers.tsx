@@ -1,25 +1,21 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { Btn, Card, Field, inputStyle } from '@/components/agency/AgencyUI'
 import { useViewport } from '@/hooks/useViewport'
-import { downloadReport, type ExportFormat } from '@/lib/report-export'
+import { downloadReport, reportLinesFromElement, type ExportFormat } from '@/lib/report-export'
 import { staffGridColumns } from '@/lib/viewport'
 
-export function wrapReport(inner: ReactNode, _title: string, _subtitle: string) {
-  return <LaunchedReport>{inner}</LaunchedReport>
+export function wrapReport(inner: ReactNode, title: string, _subtitle: string) {
+  return <LaunchedReport title={title}>{inner}</LaunchedReport>
 }
 
-function LaunchedReport({ children }: { children: ReactNode }) {
+function LaunchedReport({ title, children }: { title: string; children: ReactNode }) {
   const [params, setParams] = useState({ division: 'All', from: '', to: '' })
   const [collapsed, setCollapsed] = useState(false)
   const band = useViewport()
   const reportRef = useRef<HTMLDivElement>(null)
 
   function exportReport(format: ExportFormat) {
-    const lines = (reportRef.current?.innerText || 'Report')
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-    downloadReport('Report', lines, format)
+    downloadReport(title, reportLinesFromElement(reportRef.current), format, reportRef.current)
   }
   return (
     <>
@@ -48,8 +44,8 @@ function LaunchedReport({ children }: { children: ReactNode }) {
             <Btn variant="secondary" onClick={() => exportReport('excel')}>
               Excel
             </Btn>
-            <Btn variant="secondary" onClick={() => exportReport('csv')}>
-              CSV
+            <Btn variant="secondary" onClick={() => exportReport('markdown')}>
+              Markdown
             </Btn>
           </div>
         </Card>

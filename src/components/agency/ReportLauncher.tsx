@@ -5,6 +5,14 @@ import { useViewport } from '@/hooks/useViewport'
 import { staffGridColumns } from '@/lib/viewport'
 import { T } from '@/lib/tokens'
 
+const FORMAT_LABELS: Record<ExportFormat, string> = {
+  pdf: 'PDF',
+  excel: 'Excel',
+  markdown: 'Markdown',
+  text: 'Text',
+  html: 'HTML',
+}
+
 export interface ReportParam {
   id: string
   label: string
@@ -39,7 +47,7 @@ export function ReportLauncher({
   const band = useViewport()
 
   function exportAs(format: ExportFormat) {
-    downloadReport(title, reportLinesFromElement(reportRef.current), format)
+    downloadReport(title, reportLinesFromElement(reportRef.current), format, reportRef.current)
   }
 
   return (
@@ -118,7 +126,7 @@ export function ReportLauncher({
       )}
       {otherOpen && (
         <ModalShell title="Report Formats" onClose={() => setOtherOpen(false)} width={360}>
-          {(['pdf', 'excel', 'csv', 'text', 'html'] as ExportFormat[]).map((format) => (
+          {(['pdf', 'excel', 'markdown', 'text', 'html'] as ExportFormat[]).map((format) => (
             <label key={format} style={{ display: 'flex', gap: 8, fontSize: 13, marginBottom: 8 }}>
               <input
                 type="checkbox"
@@ -127,7 +135,7 @@ export function ReportLauncher({
                   setPicked((prev) => (e.target.checked ? [...prev, format] : prev.filter((f) => f !== format)))
                 }
               />
-              {format.toUpperCase()}
+              {FORMAT_LABELS[format]}
             </label>
           ))}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
