@@ -4,17 +4,13 @@ CREATE TYPE talent_stage AS ENUM (
   'holding_entry', 'scout_complete', 'team1_review', 'ops_processing',
   'team2_audit', 'executive_review', 'signed_onboarding', 'archived', 'not_viable'
 );
-
 CREATE TYPE user_role AS ENUM (
   'scout', 'team1_lead', 'ops_specialist', 'team2_lead', 'director', 'success_manager'
 );
-
 CREATE TYPE application_status AS ENUM ('sent', 'in_progress', 'submitted');
-
 CREATE TYPE task_priority AS ENUM ('urgent', 'high', 'medium', 'low');
 CREATE TYPE task_status AS ENUM ('open', 'done', 'cancelled');
 CREATE TYPE history_type AS ENUM ('note', 'call', 'email', 'task', 'document', 'system');
-
 CREATE TABLE users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -25,7 +21,6 @@ CREATE TABLE users (
   color TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 CREATE TABLE talents (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -64,7 +59,6 @@ CREATE TABLE talents (
   uploaded_docs JSONB DEFAULT '{}',
   audit_log JSONB DEFAULT '[]'
 );
-
 CREATE TABLE applications (
   id TEXT PRIMARY KEY,
   talent_id TEXT REFERENCES talents(id),
@@ -77,7 +71,6 @@ CREATE TABLE applications (
   completed_sections JSONB DEFAULT '[]',
   data JSONB DEFAULT '{}'
 );
-
 CREATE TABLE tasks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
@@ -90,7 +83,6 @@ CREATE TABLE tasks (
   created_at TIMESTAMPTZ NOT NULL,
   notes TEXT DEFAULT ''
 );
-
 CREATE TABLE history (
   id TEXT PRIMARY KEY,
   talent_id TEXT REFERENCES talents(id),
@@ -104,7 +96,6 @@ CREATE TABLE history (
   doc_type TEXT,
   doc_data TEXT
 );
-
 CREATE TABLE uploaded_docs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   talent_id TEXT NOT NULL REFERENCES talents(id) ON DELETE CASCADE,
@@ -114,7 +105,6 @@ CREATE TABLE uploaded_docs (
   mime_type TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 -- RLS
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE talents ENABLE ROW LEVEL SECURITY;
@@ -122,21 +112,16 @@ ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uploaded_docs ENABLE ROW LEVEL SECURITY;
-
 -- Directors see all talents; others filtered by stage in app layer + policies
 CREATE POLICY talents_director_all ON talents FOR ALL
   USING (
     EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid()::text AND u.role = 'director')
   );
-
 CREATE POLICY applications_public_read ON applications FOR SELECT
   USING (true);
-
 CREATE POLICY applications_public_write ON applications FOR INSERT
   WITH CHECK (true);
-
 CREATE POLICY applications_public_update ON applications FOR UPDATE
   USING (true);
-
 -- Storage bucket (run in Supabase dashboard or via API)
--- INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);
+-- INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);;

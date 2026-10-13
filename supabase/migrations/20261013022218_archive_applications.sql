@@ -47,7 +47,6 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Backend jobs using the service role are not staff sessions.
   IF auth.role() = 'service_role' THEN
     RETURN NEW;
   END IF;
@@ -76,3 +75,4 @@ CREATE TRIGGER applications_archive_guard
   BEFORE INSERT OR UPDATE ON public.applications
   FOR EACH ROW
   EXECUTE FUNCTION public.guard_application_archive();
+;

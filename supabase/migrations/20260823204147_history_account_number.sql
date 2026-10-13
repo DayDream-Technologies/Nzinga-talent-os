@@ -9,4 +9,4 @@ CREATE INDEX IF NOT EXISTS idx_history_account_number
   WHERE account_number IS NOT NULL;
 
 COMMENT ON COLUMN public.history.account_number IS
-  'NZG account number for CRM notes when talent_id is not a pipeline talents.id.';
+  'NZG account number for CRM notes when talent_id is not a pipeline talents.id.';;

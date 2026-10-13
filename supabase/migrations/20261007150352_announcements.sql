@@ -30,4 +30,4 @@ CREATE POLICY announcements_director_update ON announcements
 DROP POLICY IF EXISTS announcements_director_delete ON announcements;
 CREATE POLICY announcements_director_delete ON announcements
   FOR DELETE TO authenticated
-  USING (EXISTS (SELECT 1 FROM users u WHERE u.auth_uid = auth.uid() AND u.role = 'director'));
+  USING (EXISTS (SELECT 1 FROM users u WHERE u.auth_uid = auth.uid() AND u.role = 'director'));;

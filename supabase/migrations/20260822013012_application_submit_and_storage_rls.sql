@@ -1,4 +1,4 @@
--- Staff and application owners can write application-docs.
+-- Allow staff and the application owner (by profile or JWT email) to write application docs.
 -- SECURITY DEFINER so storage policies are not blocked by applications RLS.
 CREATE OR REPLACE FUNCTION public.can_write_application_doc(object_name text)
 RETURNS boolean
@@ -61,7 +61,7 @@ CREATE POLICY "Users can view their own application docs"
     AND public.can_write_application_doc(name)
   );
 
--- Prospects can save/submit when JWT email matches, even if application_id is stale.
+-- Prospects can save/submit when JWT email matches, even if prospect_profiles.application_id is stale.
 DROP POLICY IF EXISTS applications_prospect_own ON public.applications;
 CREATE POLICY applications_prospect_own ON public.applications
   FOR ALL TO authenticated
@@ -87,3 +87,4 @@ CREATE POLICY applications_prospect_own ON public.applications
     )
     OR lower(applications.talent_email) = lower(COALESCE((SELECT auth.jwt()) ->> 'email', ''))
   );
+;

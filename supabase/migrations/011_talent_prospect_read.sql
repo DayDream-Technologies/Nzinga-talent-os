@@ -1,6 +1,5 @@
 -- Allow approved talent (prospect auth) to read their own pipeline talent row
 CREATE INDEX IF NOT EXISTS idx_talents_email_lower ON talents (lower(email));
-
 DROP POLICY IF EXISTS talents_prospect_own ON talents;
 CREATE POLICY talents_prospect_own ON talents
   FOR SELECT

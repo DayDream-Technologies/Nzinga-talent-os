@@ -23,14 +23,11 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 DROP TRIGGER IF EXISTS on_auth_user_created_prospect ON auth.users;
-
 CREATE TRIGGER on_auth_user_created_prospect
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_prospect_user();
-
 -- Allow authenticated prospects to insert their own row (fallback if trigger missed).
 DROP POLICY IF EXISTS prospect_profiles_insert_own ON prospect_profiles;
 CREATE POLICY prospect_profiles_insert_own ON prospect_profiles

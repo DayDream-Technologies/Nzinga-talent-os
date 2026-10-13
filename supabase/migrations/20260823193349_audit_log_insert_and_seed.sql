@@ -1,5 +1,4 @@
 -- Authenticated staff can record their own audit events (login, invite, etc.).
--- Directors may attribute a row to another user (admin actions performed on someone).
 DROP POLICY IF EXISTS audit_log_authenticated_insert ON audit_log;
 CREATE POLICY audit_log_authenticated_insert ON audit_log
   FOR INSERT
@@ -18,9 +17,6 @@ CREATE POLICY audit_log_authenticated_insert ON audit_log
 
 GRANT INSERT ON TABLE audit_log TO authenticated;
 
--- Representative events so the global audit log is not empty on first visit.
--- Action names must match src/components/admin/AuditLogPanel.tsx EVENT_TYPES
--- and the admin-users / admin-settings edge functions.
 INSERT INTO audit_log (user_id, action, entity_type, entity_id, details, created_at)
 SELECT
   actor.id,
@@ -94,3 +90,4 @@ CROSS JOIN LATERAL (
 WHERE NOT EXISTS (
   SELECT 1 FROM audit_log a WHERE a.details->>'seed' = 'true'
 );
+;

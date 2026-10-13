@@ -37,7 +37,6 @@ CREATE POLICY dochub_envelopes_read ON dochub_envelopes
 
 GRANT SELECT ON dochub_envelopes TO authenticated;
 
--- Inbound event ids. No client policies: service role writes, everyone else is denied.
 CREATE TABLE IF NOT EXISTS dochub_webhook_events (
   event_id TEXT PRIMARY KEY,
   event_type TEXT NOT NULL,
@@ -47,3 +46,4 @@ CREATE TABLE IF NOT EXISTS dochub_webhook_events (
 ALTER TABLE dochub_webhook_events ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON dochub_webhook_events FROM anon, authenticated;
+;

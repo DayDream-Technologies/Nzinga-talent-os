@@ -30,4 +30,4 @@ CREATE POLICY users_director_update ON users
 DROP POLICY IF EXISTS users_director_insert ON users;
 CREATE POLICY users_director_insert ON users
   FOR INSERT TO authenticated
-  WITH CHECK (public.staff_is_company_director(company_code));
+  WITH CHECK (public.staff_is_company_director(company_code));;

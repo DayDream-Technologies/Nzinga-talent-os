@@ -34,4 +34,4 @@ DROP POLICY IF EXISTS users_own_update ON users;
 CREATE POLICY users_own_update ON users
   FOR UPDATE TO authenticated
   USING (auth_uid = auth.uid())
-  WITH CHECK (auth_uid = auth.uid());
+  WITH CHECK (auth_uid = auth.uid());;

@@ -75,7 +75,9 @@ export function uploadToS3(
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', presignedUrl)
     xhr.setRequestHeader('Content-Type', contentType)
-    xhr.setRequestHeader('x-amz-storage-class', 'INTELLIGENT_TIERING')
+    // StorageClass is already encoded in the presigned URL query string
+    // (the SDK hoists x-amz-* params). Sending it again as a header
+    // adds an unsigned header → S3 returns 403 SignatureDoesNotMatch.
     if (onProgress && xhr.upload) {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
