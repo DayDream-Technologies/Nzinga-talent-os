@@ -37,7 +37,7 @@ Lifecycle moves objects into Intelligent-Tiering (Frequent / Infrequent Access o
 aws s3api put-bucket-cors --bucket nzinga-talent-os-media --cors-configuration file://aws/s3-cors.json
 ```
 
-Add extra Amplify preview origins to `[aws/s3-cors.json](aws/s3-cors.json)` if needed, then re-apply.
+Add extra Amplify preview origins to `[aws/s3-cors.json](aws/s3-cors.json)` if needed, then re-apply. Company sites such as `https://nzg.talentmanagerx.com` are a different browser origin from `https://talentmanagerx.com`. Each one must be listed (the `https://*.talentmanagerx.com` entry covers new subdomains). Re-apply this file after adding an origin, or uploads from that site fail the browser preflight.
 
 ## Step 3 — CloudFront + Origin Access Control
 

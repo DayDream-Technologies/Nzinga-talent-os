@@ -4,6 +4,9 @@
       "AllowedOrigins": [
         "https://talentmanagerx.com",
         "https://www.talentmanagerx.com",
+        "https://nzg.talentmanagerx.com",
+        "https://nzinga.talentmanagerx.com",
+        "https://tcg.talentmanagerx.com",
         "https://*.talentmanagerx.com",
         "https://main.dnejwdjkvsrtg.amplifyapp.com",
         "http://localhost:3000",
