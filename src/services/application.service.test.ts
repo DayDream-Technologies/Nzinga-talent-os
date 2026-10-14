@@ -59,6 +59,19 @@ describe('application data persistence', () => {
     expect(cleaned.doc_acting_resume).toBe('s3:applications/x/doc_acting_resume/resume.pdf')
     expect(cleaned.doc_old).toBeUndefined()
   })
+
+  it('stores bucket links as private s3 refs and keeps only a real CDN url', () => {
+    const cleaned = sanitizeApplicationData({
+      doc_gov_id: 'https://nzinga.s3.us-east-1.amazonaws.com/applications/app1/doc_gov_id/id.jpg',
+      doc_gov_id_cdn: 'https://nzinga.s3.us-east-1.amazonaws.com/applications/app1/doc_gov_id/id.jpg',
+      doc_model_headshot_cdn: 'https://cdn.example.com/applications/app1/doc_model_headshot/1.jpg',
+      link_instagram: 'https://instagram.com/kai',
+    })
+    expect(cleaned.doc_gov_id).toBe('s3:applications/app1/doc_gov_id/id.jpg')
+    expect(cleaned.doc_gov_id_cdn).toBeUndefined()
+    expect(cleaned.doc_model_headshot_cdn).toBe('https://cdn.example.com/applications/app1/doc_model_headshot/1.jpg')
+    expect(cleaned.link_instagram).toBe('https://instagram.com/kai')
+  })
 })
 
 describe('application archive', () => {

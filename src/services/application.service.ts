@@ -1,5 +1,6 @@
 import type { Application, ApplicationData, ApplicationsMap, LiveApplicationStatus } from '@/types'
-import { isApplicationStorageRef, isEmbeddedDataUrl, isS3Ref } from '@/lib/application-files'
+import { isApplicationStorageRef, isEmbeddedDataUrl, isS3Ref, toS3Ref } from '@/lib/application-files'
+import { isDurableCdnUrl, isS3BucketHttpUrl, s3KeyFromBucketUrl } from '@/lib/file-access'
 import { requireSupabase, supabase } from '@/lib/supabase'
 
 export function sanitizeApplicationData(data: ApplicationData | undefined): ApplicationData {
@@ -7,6 +8,16 @@ export function sanitizeApplicationData(data: ApplicationData | undefined): Appl
   for (const [key, value] of Object.entries(data || {})) {
     if (isEmbeddedDataUrl(value)) continue
     if (typeof value === 'string' && isApplicationStorageRef(value) && !isS3Ref(value)) continue
+    if (typeof value === 'string' && isS3BucketHttpUrl(value)) {
+      const objectKey = s3KeyFromBucketUrl(value)
+      if (!objectKey || key.endsWith('_cdn')) continue
+      next[key] = toS3Ref(objectKey)
+      continue
+    }
+    if (key.endsWith('_cdn')) {
+      if (isDurableCdnUrl(value)) next[key] = value
+      continue
+    }
     next[key] = value
   }
   return next

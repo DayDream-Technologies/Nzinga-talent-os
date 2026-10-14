@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { UploadedDoc } from '@/types'
+import { immediateFileUrl } from '@/lib/file-access'
 import { downloadUploadedDoc } from '@/lib/representation-agreement'
 import { resolveUploadedDocUrl } from '@/services/storage.service'
-import { isS3Ref } from '@/lib/application-files'
-import { resolveS3Url } from '@/lib/s3-storage'
 
 interface DocViewerProps {
   doc: UploadedDoc | null
@@ -12,10 +11,7 @@ interface DocViewerProps {
 }
 
 function initialSrc(doc: UploadedDoc | null): string {
-  if (!doc) return ''
-  if (doc.cdnUrl) return doc.cdnUrl
-  if (isS3Ref(doc.data)) return resolveS3Url(doc.data)
-  return doc.data || ''
+  return immediateFileUrl(doc)
 }
 
 export function DocViewer({ doc, onClose }: DocViewerProps) {
@@ -57,7 +53,7 @@ export function DocViewer({ doc, onClose }: DocViewerProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[600] flex items-center justify-center bg-black/70"
+      className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/70"
       role="dialog"
       aria-modal="true"
       aria-label={doc.name}

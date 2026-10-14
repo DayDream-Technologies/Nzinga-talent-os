@@ -6,6 +6,7 @@ import { supabaseConfigured, getSession } from "@/lib/supabase";
 import { prospectSignup, prospectLogin, sendPasswordResetEmail, friendlyAuthError } from "@/services/auth.service";
 import { checkDuplicateEmail, checkDuplicateApplicant, fetchApplicationByCode, fetchApplicationByEmail, fetchApplicationById } from "@/services/application.service";
 import { inviteGuardian } from "@/services/guardian.service";
+import { isDurableCdnUrl } from "@/lib/file-access";
 import { uploadApplicationFile } from "@/services/storage.service";
 import { AgreementViewer } from "@/components/application/AgreementViewer";
 import { useImageCropper } from "@/components/ui/ImageCropper";
@@ -412,11 +413,13 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
     autoRef.current=setTimeout(()=>{ void flushSave().catch(()=>{}); },2000);
   }
 
-  function updateField(fieldId,value,fileName,fileType){
+  function updateField(fieldId,value,fileName,fileType,cdnUrl){
     setData(prev=>{
       const next={...prev,[fieldId]:value};
       if(fileName) next[fieldId+"_name"]=fileName;
       if(fileType) next[fieldId+"_type"]=fileType;
+      if(isDurableCdnUrl(cdnUrl)) next[fieldId+"_cdn"]=cdnUrl;
+      else if(cdnUrl!==undefined) delete next[fieldId+"_cdn"];
       dataRef.current=next;
       const updated={...appRef.current,data:next,last_saved:new Date().toISOString(),completed_sections:Array.from(completedSections)};
       queueSave(updated);
@@ -758,9 +761,9 @@ function ApplicationForm({ applications, app, onSave, onExit }) {
                             toUpload=cropped;
                             console.debug("[FileUpload] Cropped",{fieldId:field.id,croppedSize:toUpload.size,croppedType:toUpload.type});
                           }
-                          const {url}=await uploadApplicationFile(app.id,field.id,toUpload);
-                          console.debug("[FileUpload] Upload complete",{fieldId:field.id,url:url?.slice(0,60)});
-                          updateField(field.id,url,toUpload.name,toUpload.type);
+                          const uploaded=await uploadApplicationFile(app.id,field.id,toUpload);
+                          console.debug("[FileUpload] Upload complete",{fieldId:field.id,url:uploaded.url?.slice(0,60),hasCdn:Boolean(uploaded.cdnUrl)});
+                          updateField(field.id,uploaded.url,toUpload.name,toUpload.type,uploaded.cdnUrl);
                         }catch(err){
                           const msg=err?.message||"Upload failed";
                           console.error("[FileUpload] Upload error",{fieldId:field.id,appId:app.id,error:msg,stack:err?.stack,name:err?.name});

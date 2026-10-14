@@ -7,43 +7,22 @@ import {
   isFieldVisible,
   validateSection,
 } from '@/constants/app-sections'
+import { applicationUploadFieldIds, fileFromApplication } from '@/lib/file-access'
 import { T } from '@/lib/tokens'
-import { parseS3Key, toS3Ref } from '@/lib/application-files'
-import { resolveS3Url, thumbnailUrl } from '@/lib/s3-storage'
 import type { AppField, Application, ApplicationData } from '@/types/application'
 import type { UploadedDoc } from '@/types/talent'
 
 function storedUploadIds(data: ApplicationData): string[] {
-  return Object.keys(data).filter(
-    (key) => key.startsWith('doc_') && !key.endsWith('_name') && !key.endsWith('_type') && data[key],
-  )
+  return applicationUploadFieldIds(data)
 }
+
+export { fileFromApplication }
 
 function asText(data: ApplicationData, id: string): string {
   const value = data[id]
   if (value === true) return 'Yes'
   if (value === false) return 'No'
   return String(value ?? '').trim()
-}
-
-export function fileFromApplication(data: ApplicationData, fieldId: string, fallbackName: string): UploadedDoc | null {
-  const raw = data[fieldId]
-  if (!raw || typeof raw === 'boolean') return null
-  const value = String(raw)
-  if (!value) return null
-  const key = parseS3Key(value)
-  return {
-    name: String(data[`${fieldId}_name`] || fallbackName),
-    data: value,
-    type: String(data[`${fieldId}_type`] || 'application/octet-stream'),
-    storagePath: key || undefined,
-    cdnUrl: key ? resolveS3Url(toS3Ref(key)) : undefined,
-    thumbnailUrl: key ? thumbnailUrl(toS3Ref(key)) : undefined,
-    doc_type: fieldId.replace(/^doc_/, ''),
-    uploaded_at: new Date().toISOString(),
-    uploaded_by: 'applicant',
-    status: 'received',
-  }
 }
 
 function FieldAnswer({

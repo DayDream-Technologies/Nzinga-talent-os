@@ -1,29 +1,13 @@
-import { parseS3Key, sanitizeStorageFileName, toS3Ref } from '@/lib/application-files'
-import { resolveS3Url, thumbnailUrl } from '@/lib/s3-storage'
+import { sanitizeStorageFileName } from '@/lib/application-files'
+import { fileFromApplication } from '@/lib/file-access'
 import { uploadOwnedFile } from '@/services/storage.service'
 import type { Application } from '@/types/application'
 import type { AgencyProspect, AgencyTalent } from '@/types/agency'
 import type { Talent, UploadedDoc } from '@/types/talent'
 
 function photoFromApplication(app: Application | null | undefined): UploadedDoc | null {
-  const data = app?.data
-  const raw = data?.doc_profile_photo
-  if (!raw || typeof raw === 'boolean') return null
-  const value = String(raw)
-  if (!value) return null
-  const key = parseS3Key(value)
-  return {
-    name: String(data.doc_profile_photo_name || 'Profile Photo'),
-    data: value,
-    type: String(data.doc_profile_photo_type || 'image/jpeg'),
-    storagePath: key || undefined,
-    cdnUrl: key ? resolveS3Url(toS3Ref(key)) : undefined,
-    thumbnailUrl: key ? thumbnailUrl(toS3Ref(key)) : undefined,
-    doc_type: 'profile_photo',
-    uploaded_at: new Date().toISOString(),
-    uploaded_by: 'applicant',
-    status: 'received',
-  }
+  if (!app?.data) return null
+  return fileFromApplication(app.data, 'doc_profile_photo', 'Profile Photo')
 }
 
 export function initialsAvatarDataUrl(initials: string, bg = '#7c3aed'): string {

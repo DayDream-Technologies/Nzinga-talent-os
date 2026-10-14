@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApplicationAnswersTab, fileFromApplication } from '@/components/agency/ApplicationAnswersTab'
+import { hasPermission } from '@/constants'
 import { PersonApplicationPanel } from '@/components/agency/PersonApplicationPanel'
 import { UdfPanel } from '@/components/agency/UdfPanel'
 import { ExpenseFormModal, InvoiceFormModal, RetainerFormModal } from '@/components/agency/FinanceFormModals'
@@ -966,6 +967,30 @@ export function AccountProfileTemplate({
     {reviewingApp && (
       <ApplicationReview
         app={reviewingApp}
+        talent={
+          (pipelineTalent &&
+          (pipelineTalent.id === reviewingApp.talent_id || pipelineTalent.application_id === reviewingApp.id)
+            ? pipelineTalent
+            : null) ||
+          talents.find((t) => t.id === reviewingApp.talent_id || t.application_id === reviewingApp.id) ||
+          null
+        }
+        canScore={Boolean(
+          user &&
+            (hasPermission(user.role, 'submit_client_packet') ||
+              hasPermission(user.role, 'admin_access') ||
+              user.role === 'success_manager'),
+        )}
+        onScore={(patch: Pick<Talent, 'pillar_scores' | 'pillar_rationales' | 'jordan_score'>) => {
+          const base =
+            (pipelineTalent &&
+            (pipelineTalent.id === reviewingApp.talent_id || pipelineTalent.application_id === reviewingApp.id)
+              ? pipelineTalent
+              : null) ||
+            talents.find((t) => t.id === reviewingApp.talent_id || t.application_id === reviewingApp.id)
+          if (!base) return
+          return updatePipelineTalent({ ...base, ...patch })
+        }}
         onClose={() => setReviewingApp(null)}
         onImportToPipeline={async () => {
           const imported = await importAppToPipeline(reviewingApp)

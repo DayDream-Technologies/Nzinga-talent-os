@@ -1,14 +1,31 @@
 import { invokeEdgeFunction } from '@/lib/edge-functions'
 import {
-  isEmbeddedDataUrl,
   isS3Ref,
   parseS3Key,
   sanitizeStorageFileName,
   toS3Ref,
 } from '@/lib/application-files'
-import { resolveS3Url, thumbnailUrl, uploadFile as putS3File, type S3FileRef } from '@/lib/s3-storage'
+import { immediateFileUrl, isDurableCdnUrl, isViewableHttpUrl, storedObjectKey } from '@/lib/file-access'
+import { thumbnailUrl, uploadFile as putS3File, type S3FileRef } from '@/lib/s3-storage'
 import { supabaseConfigured } from '@/lib/supabase'
 import type { UploadedDoc } from '@/types'
+
+const downloadCache = new Map<string, { url: string; exp: number }>()
+
+export async function requestDownloadUrl(key: string): Promise<string> {
+  const hit = downloadCache.get(key)
+  if (hit && hit.exp > Date.now()) return hit.url
+  const result = await invokeEdgeFunction<{ downloadUrl?: string }>('s3-upload-url', {
+    action: 'download',
+    key,
+  })
+  const url = result.ok ? result.data?.downloadUrl : ''
+  if (!result.ok || !isViewableHttpUrl(url)) {
+    throw new Error(result.ok ? 'Could not open this file' : result.error)
+  }
+  downloadCache.set(key, { url, exp: Date.now() + 90_000 })
+  return url
+}
 
 function readAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -29,8 +46,8 @@ function docFromS3(
     data: toS3Ref(ref.key),
     type: file.type,
     storagePath: ref.key,
-    cdnUrl: ref.cdnUrl,
-    thumbnailUrl: ref.thumbUrl,
+    cdnUrl: isDurableCdnUrl(ref.cdnUrl) ? ref.cdnUrl : undefined,
+    thumbnailUrl: isDurableCdnUrl(ref.thumbUrl) ? ref.thumbUrl : undefined,
     uploaded_at: new Date().toISOString(),
     status: 'received',
     ...extra,
@@ -120,23 +137,24 @@ export async function uploadApplicationFile(
 }
 
 export async function resolveApplicationFileUrl(value: string): Promise<string> {
-  if (!value || isEmbeddedDataUrl(value)) return value
-  if (value.startsWith('http://') || value.startsWith('https://')) return value
-  const key = parseS3Key(value)
-  if (key) return resolveS3Url(toS3Ref(key))
-  return value
+  return resolveUploadedDocUrl({ name: 'file', data: value, type: 'application/octet-stream' })
 }
 
 export async function resolveUploadedDocUrl(doc: UploadedDoc): Promise<string> {
-  if (doc.cdnUrl) return doc.cdnUrl
-  if (doc.data?.startsWith('data:')) return doc.data
-  if (doc.data?.startsWith('http://') || doc.data?.startsWith('https://')) return doc.data
-  if (isS3Ref(doc.data) || parseS3Key(doc.data)) return resolveS3Url(doc.data)
-  if (doc.storagePath) {
-    const key = parseS3Key(doc.storagePath) || parseS3Key(toS3Ref(doc.storagePath))
-    if (key) return resolveS3Url(toS3Ref(key))
+  const immediate = immediateFileUrl(doc)
+  if (immediate) return immediate
+  const key = storedObjectKey(doc)
+  if (key && supabaseConfigured) {
+    try {
+      return await requestDownloadUrl(key)
+    } catch (err) {
+      console.error('[AppUpload] Could not open stored file', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return ''
+    }
   }
-  return doc.data
+  return ''
 }
 
 export async function uploadDocument(
@@ -156,7 +174,10 @@ export async function getDocumentUrl(doc: UploadedDoc): Promise<string> {
 }
 
 export function displayThumbUrl(doc: UploadedDoc): string | null {
-  if (doc.thumbnailUrl) return doc.thumbnailUrl
-  if (doc.data && (isS3Ref(doc.data) || parseS3Key(doc.data))) return thumbnailUrl(doc.data)
+  if (isDurableCdnUrl(doc.thumbnailUrl)) return doc.thumbnailUrl
+  if (doc.data && (isS3Ref(doc.data) || parseS3Key(doc.data))) {
+    const thumb = thumbnailUrl(doc.data)
+    return isDurableCdnUrl(thumb) ? thumb : null
+  }
   return null
 }

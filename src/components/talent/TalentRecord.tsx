@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState } from "react";
 import {
-  ROLE_LABELS, ROLE_STAGE_ACCESS, STAGES, STAGE_LABELS, PILLAR_NAMES, REQUIRED_DOCS,
+  ROLE_LABELS, ROLE_STAGE_ACCESS, STAGES, STAGE_LABELS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS,
   validateSection, getVisibleSections,
   APPLICANT_STAGE_STATUSES, ROSTER_DIVISIONS, isScoutReadOnlyView, hasPermission, SOP_STATUS,
 } from "@/constants";
@@ -24,6 +24,7 @@ import { CONTRACT_PUBLISHED_EMAIL, markContractPendingSignature } from "@/lib/so
 import { useAgencyData } from "@/context/AgencyDataContext";
 import { sendGeneralEmail } from "@/lib/email";
 import { uploadProfilePhoto } from "@/lib/profile-photo";
+import { applicationUploadFieldIds, fileFromApplication } from "@/lib/file-access";
 import { uploadDocument, uploadOwnedFile } from "@/services/storage.service";
 import { fileToBase64, sendDocHubContract } from "@/lib/dochub";
 import { isDocHubConnected } from "@/lib/integrations";
@@ -772,14 +773,13 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
             <div style={{ display: "grid", gridTemplateColumns: stack, gap: 10 }}>
               {REQUIRED_DOCS.map((doc) => {
                 const staffDoc = (local.uploaded_docs || {})[doc.id];
-                const appDocData = linkedApp?.data?.["doc_" + doc.id];
-                const appDoc = appDocData ? { data: appDocData, name: linkedApp.data["doc_" + doc.id + "_name"] || doc.label, type: linkedApp.data["doc_" + doc.id + "_type"] || "image/jpeg" } : null;
+                const appDoc = linkedApp?.data ? fileFromApplication(linkedApp.data, "doc_" + doc.id, doc.label) : null;
                 const docData = staffDoc || appDoc;
                 return (
                   <div key={doc.id} style={{ border: `1px solid ${docData ? "#86efac" : "#fca5a5"}`, borderRadius: 8, padding: 12, background: docData ? "#f0fdf4" : "#fff5f5" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{doc.label}</div>
                     {docData ? (
-                      <button onClick={() => setViewingDoc({ name: docData.name || doc.label, data: docData.data, type: docData.type || "image/jpeg" })} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 5, padding: "5px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%", marginBottom: canUploadDocs ? 6 : 0 }}>View</button>
+                      <button onClick={() => setViewingDoc({ ...docData, name: docData.name || doc.label, data: docData.data, type: docData.type || "image/jpeg" })} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 5, padding: "5px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%", marginBottom: canUploadDocs ? 6 : 0 }}>View</button>
                     ) : (
                       <div style={{ fontSize: 11, color: T.red, marginBottom: 6 }}>Not uploaded</div>
                     )}
@@ -807,6 +807,27 @@ function TalentRecord({ talent, currentUser, allHistory, setHistory, allTasks, s
                 );
               })}
             </div>
+            {linkedApp?.data && applicationUploadFieldIds(linkedApp.data).filter((id) => !REQUIRED_DOCS.some((doc) => "doc_" + doc.id === id)).length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: T.t2 }}>Application uploads</div>
+                <div style={{ display: "grid", gridTemplateColumns: stack, gap: 10 }}>
+                  {applicationUploadFieldIds(linkedApp.data)
+                    .filter((id) => !REQUIRED_DOCS.some((doc) => "doc_" + doc.id === id))
+                    .map((id) => {
+                      const label = APP_SECTIONS.flatMap((s) => s.fields).find((f) => f.id === id)?.label || id;
+                      const doc = fileFromApplication(linkedApp.data, id, label);
+                      if (!doc) return null;
+                      return (
+                        <div key={id} style={{ border: "1px solid #86efac", borderRadius: 8, padding: 12, background: "#f0fdf4" }}>
+                          <div style={{ fontSize: 11, color: T.t3 }}>{label}</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{doc.name}</div>
+                          <button onClick={() => setViewingDoc(doc)} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 5, padding: "5px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>View</button>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </Section>
 
           {/* Role actions — inline, no tabs */}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AccountProfileTemplate } from '@/components/agency/AccountProfileTemplate'
@@ -6,11 +6,12 @@ import { emptyUdf } from '@/lib/talent-udf'
 import { seedProfilePhoto } from '@/lib/profile-photo'
 import type { Application } from '@/types/application'
 
-const { updateProspect, updatePipelineTalent, updateRosterTalent, authState } = vi.hoisted(() => ({
+const { updateProspect, updatePipelineTalent, updateRosterTalent, authState, reviewState } = vi.hoisted(() => ({
   updateProspect: vi.fn(),
   updatePipelineTalent: vi.fn(),
   updateRosterTalent: vi.fn(),
   authState: { role: 'scout' as string },
+  reviewState: { app: null as Application | null },
 }))
 
 const sampleApp: Application = {
@@ -44,8 +45,12 @@ vi.mock('@/context/AppDataContext', () => ({
     handleSendApp: vi.fn(),
     updateTalent: updatePipelineTalent,
     talents: [],
-    reviewingApp: null,
-    setReviewingApp: vi.fn(),
+    get reviewingApp() {
+      return reviewState.app
+    },
+    setReviewingApp: (app: Application | null) => {
+      reviewState.app = app
+    },
   }),
 }))
 
@@ -74,6 +79,7 @@ vi.mock('@/hooks/useAuth', () => ({
 describe('AccountProfileTemplate', () => {
   beforeEach(() => {
     authState.role = 'scout'
+    reviewState.app = null
     updateProspect.mockReset()
     updatePipelineTalent.mockReset()
     updateRosterTalent.mockReset()
@@ -304,5 +310,44 @@ describe('AccountProfileTemplate', () => {
 
     expect(screen.getByRole('button', { name: 'Change photo' })).toBeInTheDocument()
     expect(document.querySelector('input[type="file"][accept="image/*"]')).toBeTruthy()
+  })
+
+  it('shows application files and Jordan Score in review', async () => {
+    reviewState.app = sampleApp
+    render(
+      <MemoryRouter>
+        <AccountProfileTemplate
+          kind="applicant"
+          displayName="Kai Johnson"
+          statusLabel="Complete"
+          statusColor="#16a34a"
+          application={sampleApp}
+          pipelineTalent={{
+            id: 't4',
+            application_id: 'app_kai',
+            name: 'Kai Johnson',
+            pillar_scores: [0, 0, 0, 0, 0],
+            pillar_rationales: ['', '', '', '', ''],
+            jordan_score: 0,
+          } as never}
+          backTo={{ label: 'Back to Applications', to: '/applications' }}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Jordan Score')).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: '5' })[0])
+    expect(updatePipelineTalent).toHaveBeenCalled()
+    expect(updatePipelineTalent.mock.calls[0][0].pillar_scores[0]).toBe(5)
+    expect(updatePipelineTalent.mock.calls[0][0].jordan_score).toBe(1)
+
+    fireEvent.click(screen.getByText('Documents'))
+    expect(screen.getAllByText('kai-headshot.jpg').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getAllByRole('button', { name: 'View' })[0])
+    const dialog = await screen.findByRole('dialog', { name: 'kai-headshot.jpg' })
+    expect(dialog.className).toContain('z-[10050]')
+    await waitFor(() => {
+      expect(dialog).toBeInTheDocument()
+    })
   })
 })

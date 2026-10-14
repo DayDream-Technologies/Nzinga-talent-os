@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { S3Client, PutObjectCommand } from 'npm:@aws-sdk/client-s3@3.709.0'
+import { S3Client, GetObjectCommand, PutObjectCommand } from 'npm:@aws-sdk/client-s3@3.709.0'
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.709.0'
 import { authenticateRequest, corsHeaders, errorResponse, jsonResponse } from '../shared/auth.ts'
 
@@ -80,11 +80,34 @@ serve(async (req) => {
       return errorResponse('S3 is not configured — contact your administrator', 500, origin)
     }
 
-    let body: { path?: string; contentType?: string; fileSize?: number }
+    let body: { action?: string; path?: string; key?: string; contentType?: string; fileSize?: number }
     try {
       body = await req.json()
     } catch {
       return errorResponse('Invalid JSON body', 400, origin)
+    }
+
+    const s3 = new S3Client({
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+    })
+
+    if (String(body.action || '') === 'download') {
+      const key = normalizePath(String(body.key || ''))
+      if (!key) return errorResponse('key is required', 400, origin)
+      if (!matchRule(key)) {
+        console.error('[s3-upload-url] Download key rejected')
+        return errorResponse('Invalid file key', 400, origin)
+      }
+      try {
+        const downloadUrl = await getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), {
+          expiresIn: 120,
+        })
+        return jsonResponse({ downloadUrl, expiresIn: 120 }, 200, origin)
+      } catch (s3Err) {
+        console.error('[s3-upload-url] Download presign failed:', s3Err)
+        return errorResponse('Could not open this file', 500, origin)
+      }
     }
 
     const contentType = String(body.contentType || '').toLowerCase()
@@ -115,11 +138,6 @@ serve(async (req) => {
     const fileName = sanitizeFileName(slash >= 0 ? requested.slice(slash + 1) : requested)
     const key = `${dir}/${Date.now()}_${fileName}`
 
-    const s3 = new S3Client({
-      region,
-      credentials: { accessKeyId, secretAccessKey },
-    })
-
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -135,14 +153,15 @@ serve(async (req) => {
       return errorResponse('Could not generate upload URL — check S3 credentials', 500, origin)
     }
 
-    const cdnBase = cdn || `https://${bucket}.s3.${region}.amazonaws.com`
-    const thumbnailUrl = `${cdnBase}/thumbnails/${stemKey(key)}.webp`
+    // Only a configured CDN is returned. The raw bucket URL is not sent to the browser.
+    const cdnBase = cdn
+    const thumbnailUrl = cdnBase ? `${cdnBase}/thumbnails/${stemKey(key)}.webp` : ''
 
     return jsonResponse(
       {
         uploadUrl,
         key,
-        cdnUrl: `${cdnBase}/${key}`,
+        cdnUrl: cdnBase ? `${cdnBase}/${key}` : '',
         thumbnailUrl,
       },
       200,

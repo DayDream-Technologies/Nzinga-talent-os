@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE, STAGES, STAGE_LABELS, STAGE_COLORS, PILLAR_NAMES, REQUIRED_DOCS, APP_SECTIONS, validateSection, isAppComplete, talentFromApp, getVisibleSections, ageFromDob, isMinor, TASKS_SEED, HISTORY_SEED, TALENTS_SEED, APPLICATIONS_SEED } from "@/constants";
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { completedSectionsFromData, prefillApplicationData } from "@/lib/application-prefill";
+import { applicationUploadFieldIds, fileFromApplication, immediateFileUrl } from "@/lib/file-access";
+import { JordanScorePanel } from "@/components/application/JordanScorePanel";
 
 /**
  * @param {{ talent: any, prospect?: any, onSend: Function, onClose: Function, companyCode?: string }} props
@@ -78,7 +80,7 @@ function SendApplicationModal({ talent, prospect, onSend, onClose, companyCode =
 }
 
 // ─── APPLICATION REVIEW (staff side) ─────────────────────────────────────────
-function ApplicationReview({ app, onClose, onImportToPipeline }) {
+function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore, onScore }) {
   const [tab,setTab]=useState("overview");
   const [viewingDoc,setViewingDoc]=useState(null);
   const [importing,setImporting]=useState(false);
@@ -93,7 +95,14 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
   const totalMissing=Object.values(missingMap).reduce((sum,arr)=>sum+arr.length,0);
   const age=ageFromDob(d.dob);
   const interests=String(d.representation_interests||"").split(",").filter(Boolean);
-  const docFields=Object.keys(d).filter(k=>k.startsWith("doc_")&&!k.endsWith("_name")&&!k.endsWith("_type")&&d[k]);
+  function uploadLabel(fieldId){
+    for(const sec of APP_SECTIONS){
+      const field=sec.fields.find(f=>f.id===fieldId);
+      if(field) return field.label;
+    }
+    return fieldId;
+  }
+  const uploads=applicationUploadFieldIds(d).map(id=>fileFromApplication(d,id,uploadLabel(id))).filter(Boolean);
   const tabIds=["overview",...visible.map(s=>s.id),"documents","incomplete"];
 
   function tabLabel(t){
@@ -197,7 +206,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
                     {tabLabel(t)}
                   </span>
                   {t==="incomplete"&&totalMissing>0&&<span style={{ marginLeft:"auto",background:T.redL,color:T.red,borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{totalMissing}</span>}
-                  {t==="documents"&&<span style={{ marginLeft:"auto",background:T.blueL,color:T.blue,borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{docFields.length}</span>}
+                  {t==="documents"&&<span style={{ marginLeft:"auto",background:T.blueL,color:T.blue,borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{uploads.length}</span>}
                 </div>;
               })}
             </div>
@@ -252,6 +261,9 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
                   Scout boundary (SOP): Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
                 </div>
               </Section>
+              <Section title="Jordan Score" accent={T.purple}>
+                <JordanScorePanel talent={talent} canEdit={!!canScore} onScore={onScore} />
+              </Section>
               <Section title="Section Completion" accent={T.purple}>
                 {visible.map(s=>{
                   const done=(app.completed_sections||[]).includes(s.id);
@@ -277,13 +289,15 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
             </div>}
 
             {tab==="documents"&&<div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12 }}>
-              {docFields.length===0&&<div style={{ gridColumn:"1/-1",fontSize:13,color:T.t3 }}>No documents uploaded yet.</div>}
-              {docFields.map(fieldKey=>{
-                const name=d[fieldKey+"_name"]||fieldKey;
-                const type=d[fieldKey+"_type"]||"application/octet-stream";
-                return <div key={fieldKey} style={{ border:`1px solid ${T.green}44`,borderRadius:8,padding:14,background:T.greenL }}>
-                  <div style={{ fontSize:12,fontWeight:700,marginBottom:8,color:T.t1 }}>{String(name)}</div>
-                  <button onClick={()=>setViewingDoc({name:String(name),data:d[fieldKey],type:String(type),storagePath:typeof d[fieldKey]==="string"?(String(d[fieldKey]).startsWith("s3:")?String(d[fieldKey]).slice(3):String(d[fieldKey]).startsWith("storage:")?String(d[fieldKey]).replace(/^storage:application-docs\//,""):undefined):undefined,doc_type:fieldKey.replace(/^doc_/,""),uploaded_by:"applicant",status:"received"})} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>View</button>
+              {uploads.length===0&&<div style={{ gridColumn:"1/-1",fontSize:13,color:T.t3 }}>No documents uploaded yet.</div>}
+              {uploads.map(doc=>{
+                const preview=immediateFileUrl(doc);
+                const showImage=Boolean(preview)&&String(doc.type||"").startsWith("image/");
+                return <div key={doc.doc_type||doc.name} style={{ border:`1px solid ${T.green}44`,borderRadius:8,padding:14,background:T.greenL }}>
+                  <div style={{ fontSize:11,color:T.t3,marginBottom:2 }}>{uploadLabel("doc_"+(doc.doc_type||""))}</div>
+                  <div style={{ fontSize:12,fontWeight:700,marginBottom:8,color:T.t1 }}>{doc.name}</div>
+                  {showImage&&<img src={preview} alt="" style={{ width:"100%",maxHeight:160,objectFit:"cover",borderRadius:6,marginBottom:8 }}/>}
+                  <button onClick={()=>setViewingDoc(doc)} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%" }}>View</button>
                 </div>;
               })}
             </div>}
@@ -303,7 +317,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline }) {
                     return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"?"1/-1":"auto" }}>
                       <Lbl>{field.label}</Lbl>
                       <div style={{ padding:"8px 12px",background:T.mutedBg,border:`1px solid ${T.cardBorder}`,borderRadius:6,fontSize:13,color:hasVal?T.t1:T.t4,minHeight:32,lineHeight:1.5 }}>
-                        {field.type==="checkbox"?(val?"Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):field.type==="file_upload"?(val?String(d[field.id+"_name"]||"Uploaded"):"—"):val||"—"}
+                        {field.type==="checkbox"?(val?"Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):field.type==="file_upload"?(val?(()=>{const doc=fileFromApplication(d,field.id,field.label);return <span style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8 }}><span>{String(d[field.id+"_name"]||doc?.name||"Uploaded")}</span>{doc&&<button type="button" onClick={()=>setViewingDoc(doc)} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"4px 10px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>View</button>}</span>;})():"—"):val||"—"}
                       </div>
                     </div>;
                   })}
