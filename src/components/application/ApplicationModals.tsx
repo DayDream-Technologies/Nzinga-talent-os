@@ -5,6 +5,7 @@ import { COMPANY_CODES, USERS, ROLE_LABELS, ROLE_STAGE_ACCESS, ROLE_ACTION_STAGE
 import { T, Av, StageBadge, NichePill, ScoreBar, Toggle, Btn, Lbl, FInput, FTextarea, FSelect, TH, TD, Section, PriBadge, HIcon, FileUpload, DocViewer, IncompleteSectionAlert } from "@/components/ui-compat";
 import { completedSectionsFromData, prefillApplicationData } from "@/lib/application-prefill";
 import { applicationUploadFieldIds, fileFromApplication, immediateFileUrl } from "@/lib/file-access";
+import { jordanScoreFromPillars, jordanScoreMeetsThreshold } from "@/lib/jordan-score";
 import { JordanScorePanel } from "@/components/application/JordanScorePanel";
 
 /**
@@ -103,10 +104,21 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
     return fieldId;
   }
   const uploads=applicationUploadFieldIds(d).map(id=>fileFromApplication(d,id,uploadLabel(id))).filter(Boolean);
-  const tabIds=["overview",...visible.map(s=>s.id),"documents","incomplete"];
+  const scoreTalent=talent||{
+    id:"t_app_"+app.id,
+    pillar_scores:[0,0,0,0,0],
+    pillar_rationales:["","","","",""],
+    jordan_score:0,
+  };
+  const jordanAverage=jordanScoreFromPillars(scoreTalent.pillar_scores);
+  const jordanMeets=jordanScoreMeetsThreshold(scoreTalent.pillar_scores);
+  const jordanColor=jordanMeets?T.green:jordanAverage>0?T.red:T.purple;
+  const jordanTint=jordanMeets?T.greenL:jordanAverage>0?T.redL:T.purpleL;
+  const tabIds=["overview","jordan",...visible.map(s=>s.id),"documents","incomplete"];
 
   function tabLabel(t){
     if(t==="overview") return "Overview";
+    if(t==="jordan") return "Jordan Score";
     if(t==="documents") return "Documents";
     if(t==="incomplete") return "Incomplete";
     const sec=visible.find(s=>s.id===t);
@@ -114,19 +126,20 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
   }
   function tabIcon(t){
     if(t==="overview") return "📋";
+    if(t==="jordan") return "★";
     if(t==="documents") return "📁";
     if(t==="incomplete") return "⚠️";
     const sec=visible.find(s=>s.id===t);
     return sec?.icon||"";
   }
   function tabDone(t){
-    if(t==="overview"||t==="documents"||t==="incomplete") return false;
+    if(t==="overview"||t==="jordan"||t==="documents"||t==="incomplete") return false;
     const sec=visible.find(s=>s.id===t);
     if(!sec) return false;
     return (app.completed_sections||[]).includes(sec.id)&&(missingMap[sec.id]||[]).length===0;
   }
   function tabHasMissing(t){
-    if(t==="overview"||t==="documents"||t==="incomplete") return false;
+    if(t==="overview"||t==="jordan"||t==="documents"||t==="incomplete") return false;
     return (missingMap[t]||[]).length>0;
   }
   function tabIndex(t){
@@ -134,16 +147,20 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
     return secIdx>=0?secIdx+1:0;
   }
 
+  const stepIdx=tabIds.indexOf(tab);
+  const prevTab=stepIdx>0?tabIds[stepIdx-1]:null;
+  const nextTab=stepIdx>=0&&stepIdx<tabIds.length-1?tabIds[stepIdx+1]:null;
+
   return createPortal(
-    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"16px 0",overflowY:"auto" }}>
+    <div style={{ position:"fixed",inset:0,background:"rgba(15,23,42,0.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:16 }}>
       {viewingDoc&&<DocViewer doc={viewingDoc} onClose={()=>setViewingDoc(null)}/>}
-      <div style={{ width:"min(960px, 94vw)",background:T.cardBg,borderRadius:12,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 12px 48px rgba(0,0,0,0.18)" }}>
+      <div style={{ width:"min(1040px, 96vw)",background:T.cardBg,borderRadius:14,overflow:"hidden",height:"min(860px, 92vh)",display:"flex",flexDirection:"column",boxShadow:"0 16px 56px rgba(0,0,0,0.22)" }}>
         {/* ── Header ── */}
         <div style={{ padding:"14px 20px",borderBottom:`2px solid ${T.blue}`,background:T.mutedBg,flexShrink:0 }}>
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}>
-            <div>
+            <div style={{ minWidth:0 }}>
               <div style={{ fontSize:16,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>Application Review — {app.talent_name}</div>
-              <div style={{ display:"flex",gap:8,marginTop:4,alignItems:"center",flexWrap:"wrap" }}>
+              <div style={{ display:"flex",gap:8,marginTop:6,alignItems:"center",flexWrap:"wrap" }}>
                 <span style={{ background:isPendingGuardian?T.amberL:isSubmitted?T.greenL:T.amberL,color:isPendingGuardian?T.amber:isSubmitted?T.green:T.amber,borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700 }}>{isPendingGuardian?"PENDING PARENT APPROVAL":isSubmitted?"SUBMITTED":"IN PROGRESS"}</span>
                 {isMinor(d.dob)&&<span style={{ background:T.purpleL,color:T.purple,borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700 }}>MINOR</span>}
                 {d.currently_represented==="Yes"&&<span style={{ background:T.redL,color:T.red,borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:700 }}>EXISTING REP</span>}
@@ -152,8 +169,12 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
               </div>
             </div>
             <div style={{ display:"flex",gap:8,alignItems:"center" }}>
+              <button type="button" onClick={()=>setTab("jordan")} style={{ background:jordanTint,border:`1px solid ${jordanColor}55`,borderRadius:8,padding:"6px 10px",cursor:"pointer",fontFamily:"inherit",textAlign:"center",minWidth:72 }}>
+                <div style={{ fontSize:18,fontWeight:800,color:jordanColor,fontFamily:"'Syne',sans-serif",lineHeight:1 }}>{jordanAverage.toFixed(2)}</div>
+                <div style={{ fontSize:9,color:jordanColor,fontWeight:700,letterSpacing:"0.06em",marginTop:2 }}>JORDAN</div>
+              </button>
               {isComplete&&isSubmitted&&!isPendingGuardian&&<Btn variant="success" loading={importing} disabled={importing} onClick={async ()=>{ if(importing) return; setImporting(true); try { await onImportToPipeline?.(); } finally { setImporting(false); } }}>{importing?"Importing…":"Import to Pipeline"}</Btn>}
-              <button onClick={onClose} style={{ background:"transparent",border:`1px solid ${T.cardBorder}`,borderRadius:6,color:T.t3,cursor:"pointer",padding:"4px 10px",fontSize:12,fontFamily:"inherit" }}>✕</button>
+              <button type="button" aria-label="Close review" onClick={onClose} style={{ background:T.cardBg,border:`1px solid ${T.cardBorder}`,borderRadius:8,color:T.t2,cursor:"pointer",padding:"8px 12px",fontSize:13,fontFamily:"inherit" }}>Close</button>
             </div>
           </div>
         </div>
@@ -161,7 +182,7 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
         {/* ── Body: sidebar + content ── */}
         <div style={{ display:"flex",flex:1,overflow:"hidden",minHeight:0 }}>
           {/* ── Sidebar ── */}
-          <div style={{ width:210,flexShrink:0,background:T.mutedBg,borderRight:`1px solid ${T.cardBorder}`,display:"flex",flexDirection:"column",overflowY:"auto" }}>
+          <div style={{ width:228,flexShrink:0,background:T.mutedBg,borderRight:`1px solid ${T.cardBorder}`,display:"flex",flexDirection:"column",overflowY:"auto" }}>
             {/* Progress */}
             <div style={{ padding:"14px 14px 10px" }}>
               <div style={{ fontSize:11,color:T.t3,marginBottom:5,display:"flex",justifyContent:"space-between" }}>
@@ -181,17 +202,22 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
                 const done=tabDone(t);
                 const hasMissing=tabHasMissing(t);
                 const idx=tabIndex(t);
-                const isSpecial=t==="overview"||t==="documents"||t==="incomplete";
-                const borderColor=active?T.blue:done?T.green:hasMissing?T.red:"transparent";
-                const circleBg=done?T.green:hasMissing?T.red:active?T.blue:T.cardBorder;
+                const isSpecial=t==="overview"||t==="jordan"||t==="documents"||t==="incomplete";
+                const borderColor=active?T.blue:t==="jordan"&&jordanAverage>0?jordanColor:done?T.green:hasMissing?T.red:"transparent";
+                const circleBg=done?T.green:hasMissing?T.red:t==="jordan"?jordanColor:active?T.blue:T.cardBorder;
                 const circleContent=done?"✓":isSpecial?tabIcon(t):String(idx);
-                return <div key={t} onClick={()=>setTab(t)} style={{
-                  padding:"9px 14px",
+                return <button type="button" key={t} aria-label={tabLabel(t)} onClick={()=>setTab(t)} style={{
+                  width:"100%",
+                  textAlign:"left",
+                  padding:"9px 12px",
                   cursor:"pointer",
                   background:active?T.blueL:"transparent",
+                  border:"none",
                   borderLeft:`3px solid ${borderColor}`,
+                  borderRadius:0,
                   display:"flex",alignItems:"center",gap:8,
                   marginBottom:1,
+                  fontFamily:"inherit",
                   transition:"background 0.15s",
                 }}>
                   <div style={{
@@ -199,15 +225,16 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
                     background:circleBg,
                     display:"flex",alignItems:"center",justifyContent:"center",
                     fontSize:isSpecial&&!done?12:10,fontWeight:700,
-                    color:done||active||hasMissing?"#fff":T.t3,
+                    color:done||active||hasMissing||t==="jordan"?"#fff":T.t3,
                     flexShrink:0,lineHeight:1,
                   }}>{circleContent}</div>
-                  <span style={{ fontSize:12,fontWeight:active?700:400,color:active?T.t1:T.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+                  <span style={{ fontSize:12,fontWeight:active||t==="jordan"?700:400,color:active?T.t1:t==="jordan"?jordanColor:T.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
                     {tabLabel(t)}
                   </span>
+                  {t==="jordan"&&<span style={{ marginLeft:"auto",background:jordanTint,color:jordanColor,borderRadius:10,padding:"1px 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{jordanAverage.toFixed(1)}</span>}
                   {t==="incomplete"&&totalMissing>0&&<span style={{ marginLeft:"auto",background:T.redL,color:T.red,borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{totalMissing}</span>}
                   {t==="documents"&&<span style={{ marginLeft:"auto",background:T.blueL,color:T.blue,borderRadius:10,padding:"0 6px",fontSize:10,fontWeight:700,flexShrink:0 }}>{uploads.length}</span>}
-                </div>;
+                </button>;
               })}
             </div>
 
@@ -220,20 +247,30 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
           </div>
 
           {/* ── Content ── */}
-          <div style={{ flex:1,minWidth:0,overflowY:"auto",overflowX:"hidden",padding:20 }}>
+          <div style={{ flex:1,minWidth:0,minHeight:0,display:"flex",flexDirection:"column" }}>
+          <div style={{ flex:1,minWidth:0,overflowY:"auto",overflowX:"hidden",padding:"20px 22px 12px" }}>
             {/* Section heading */}
             <div style={{ marginBottom:16 }}>
               <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:2 }}>
                 <span style={{ fontSize:20 }}>{tabIcon(tab)}</span>
                 <div style={{ fontSize:18,fontWeight:700,color:T.t1,fontFamily:"'Syne',sans-serif" }}>{tabLabel(tab)}</div>
               </div>
-              {tab!=="overview"&&tab!=="documents"&&tab!=="incomplete"&&(()=>{
+              {tab==="jordan"&&<div style={{ fontSize:12,color:T.t3 }}>Scout scoring · saved on the talent record</div>}
+              {visible.some(s=>s.id===tab)&&(()=>{
                 const secIdx=visible.findIndex(s=>s.id===tab);
                 return <div style={{ fontSize:12,color:T.t3 }}>Section {secIdx+1} of {visible.length}{age!==null?` · Age ${age}`:""}</div>;
               })()}
             </div>
 
             {tab==="overview"&&<div style={{ display:"flex",flexDirection:"column",gap:14,minWidth:0 }}>
+              <button type="button" onClick={()=>setTab("jordan")} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,width:"100%",textAlign:"left",cursor:"pointer",fontFamily:"inherit",padding:"14px 16px",borderRadius:10,background:jordanTint,border:`1px solid ${jordanColor}55` }}>
+                <div>
+                  <div style={{ fontSize:12,fontWeight:800,letterSpacing:"0.08em",color:jordanColor }}>JORDAN SCORE</div>
+                  <div style={{ fontSize:13,color:T.t1,marginTop:4,fontWeight:600 }}>{jordanMeets?"Meets the 3.5 threshold":jordanAverage>0?"Below the 3.5 threshold":"Not scored yet"}</div>
+                  <div style={{ fontSize:12,color:T.t3,marginTop:2 }}>Open to score the five pillars</div>
+                </div>
+                <div style={{ fontSize:32,fontWeight:800,color:jordanColor,fontFamily:"'Syne',sans-serif",lineHeight:1 }}>{jordanAverage.toFixed(2)}</div>
+              </button>
               <Section title="Quick Profile" accent={T.blue}>
                 {[
                   ["Name",[d.legal_first,d.legal_last].filter(Boolean).join(" ")||app.talent_name],
@@ -261,9 +298,6 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
                   Scout boundary (SOP): Do not promise representation, guarantee bookings, offer contracts, or negotiate terms.
                 </div>
               </Section>
-              <Section title="Jordan Score" accent={T.purple}>
-                <JordanScorePanel talent={talent} canEdit={!!canScore} onScore={onScore} />
-              </Section>
               <Section title="Section Completion" accent={T.purple}>
                 {visible.map(s=>{
                   const done=(app.completed_sections||[]).includes(s.id);
@@ -275,6 +309,8 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
                 })}
               </Section>
             </div>}
+
+            {tab==="jordan"&&<JordanScorePanel talent={scoreTalent} canEdit={!!canScore} onScore={onScore} />}
 
             {tab==="incomplete"&&<div>
               {totalMissing===0&&<div style={{ fontSize:13,color:T.green,fontWeight:600,padding:16,textAlign:"center" }}>All sections complete — no missing fields.</div>}
@@ -314,9 +350,10 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
                     const val=d[field.id];
                     const hasVal=val&&val.toString().trim();
                     if(field.type==="note")return <div key={field.id} style={{ gridColumn:"1/-1",padding:"10px 12px",borderRadius:8,background:T.blueL,border:`1px solid ${T.blue}33`,fontSize:13,color:T.t1,lineHeight:1.5 }}>{field.label}</div>;
+                    const isMissing=missing.includes(field.id);
                     return <div key={field.id} style={{ gridColumn:field.type==="textarea"||field.type==="multicheck"||field.type==="checkbox"||field.type==="file_upload"?"1/-1":"auto" }}>
                       <Lbl>{field.label}</Lbl>
-                      <div style={{ padding:"8px 12px",background:T.mutedBg,border:`1px solid ${T.cardBorder}`,borderRadius:6,fontSize:13,color:hasVal?T.t1:T.t4,minHeight:32,lineHeight:1.5 }}>
+                      <div style={{ padding:"8px 12px",background:isMissing?T.redL:T.mutedBg,border:`1px solid ${isMissing?T.red+"66":T.cardBorder}`,borderRadius:6,fontSize:13,color:hasVal?T.t1:T.t4,minHeight:32,lineHeight:1.5 }}>
                         {field.type==="checkbox"?(val?"Agreed":"—"):field.type==="multicheck"?(val||"").split(",").filter(Boolean).map(n=><NichePill key={n} n={n}/>):field.type==="file_upload"?(val?(()=>{const doc=fileFromApplication(d,field.id,field.label);return <span style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:8 }}><span>{String(d[field.id+"_name"]||doc?.name||"Uploaded")}</span>{doc&&<button type="button" onClick={()=>setViewingDoc(doc)} style={{ background:T.green,color:"#fff",border:"none",borderRadius:5,padding:"4px 10px",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>View</button>}</span>;})():"—"):val||"—"}
                       </div>
                     </div>;
@@ -325,16 +362,12 @@ function ApplicationReview({ app, onClose, onImportToPipeline, talent, canScore,
               </>;
             })()}
 
-            {/* Section navigation */}
-            {tab!=="overview"&&tab!=="documents"&&tab!=="incomplete"&&(()=>{
-              const secIdx=tabIds.indexOf(tab);
-              const prevTab=secIdx>0?tabIds[secIdx-1]:null;
-              const nextTab=secIdx<tabIds.length-1?tabIds[secIdx+1]:null;
-              return <div style={{ display:"flex",justifyContent:"space-between",marginTop:24,paddingTop:16,borderTop:`1px solid ${T.cardBorder}`,gap:10 }}>
-                <div>{prevTab&&<button onClick={()=>setTab(prevTab)} style={{ background:T.mutedBg,border:`1px solid ${T.cardBorder}`,color:T.t2,borderRadius:6,padding:"8px 14px",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>← {tabLabel(prevTab)}</button>}</div>
-                <div>{nextTab&&<button onClick={()=>setTab(nextTab)} style={{ background:T.blue,border:"none",color:"#fff",borderRadius:6,padding:"8px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>{tabLabel(nextTab)} →</button>}</div>
-              </div>;
-            })()}
+          </div>
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,padding:"12px 22px",borderTop:`1px solid ${T.cardBorder}`,background:T.cardBg,flexShrink:0 }}>
+            <div>{prevTab&&<button type="button" onClick={()=>setTab(prevTab)} style={{ background:T.mutedBg,border:`1px solid ${T.cardBorder}`,color:T.t2,borderRadius:8,padding:"8px 14px",fontSize:12,cursor:"pointer",fontFamily:"inherit" }}>← {tabLabel(prevTab)}</button>}</div>
+            <div style={{ fontSize:11,color:T.t4 }}>{stepIdx+1} of {tabIds.length}</div>
+            <div>{nextTab&&<button type="button" onClick={()=>setTab(nextTab)} style={{ background:T.blue,border:"none",color:"#fff",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit" }}>{tabLabel(nextTab)} →</button>}</div>
+          </div>
           </div>
         </div>
       </div>

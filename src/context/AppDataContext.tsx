@@ -96,6 +96,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const persistTalents = useCallback(
     async (next: Talent[]) => {
       await updateTalents(next)
+      talentsRef.current = next
       queryClient.setQueryData(['talents'], next)
     },
     [queryClient],
@@ -103,7 +104,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const updateTalent = useCallback(
     async (t: Talent) => {
-      const next = talentsRef.current.map((x) => (x.id === t.id ? t : x))
+      const exists = talentsRef.current.some((x) => x.id === t.id)
+      const next = exists
+        ? talentsRef.current.map((x) => (x.id === t.id ? t : x))
+        : [...talentsRef.current, t]
       try {
         await persistTalents(next)
         if (selectedTalent?.id === t.id) setSelectedTalent(t)

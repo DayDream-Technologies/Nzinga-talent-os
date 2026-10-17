@@ -32,11 +32,11 @@ import { downloadReport } from '@/lib/report-export'
 import { RenewalOfferModal } from '@/components/agency/RenewalOffersHub'
 import { createHistoryEntry } from '@/lib/history-ledger'
 import { staffTicketAgents, useStaffDirectory } from '@/hooks/useStaffDirectory'
-import { isApplicationReadyToImport } from '@/lib/application-prefill'
+import { findLinkedTalent, isApplicationReadyToImport } from '@/lib/application-prefill'
 import { splitPersonName } from '@/lib/guardian-email'
 import { inviteGuardian } from '@/services/guardian.service'
 import { STAGE_LABELS } from '@/constants/stages'
-import { isMinor } from '@/constants/app-sections'
+import { isMinor, talentFromApp } from '@/constants/app-sections'
 import { useAgencyData } from '@/context/AgencyDataContext'
 import { useAppData } from '@/context/AppDataContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -202,6 +202,7 @@ export function AccountProfileTemplate({
   const chargesRef = useRef<HTMLDivElement>(null)
   const notesRef = useRef<HTMLDivElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const scoredTalentRef = useRef<Talent | null>(null)
 
   useEffect(() => {
     setUdf(resolvedUdf(prospect?.udf || rosterTalent?.udf, application, prospect))
@@ -260,6 +261,20 @@ export function AccountProfileTemplate({
   const canEditPhoto = user?.role === 'director'
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || null
   const canImport = Boolean(application && isApplicationReadyToImport(application))
+
+  function linkedReviewTalent(app: Application): Talent | null {
+    if (
+      pipelineTalent &&
+      (pipelineTalent.id === app.talent_id || pipelineTalent.application_id === app.id)
+    ) {
+      return pipelineTalent
+    }
+    const found = findLinkedTalent(talents, app)
+    if (found) return found
+    const pending = scoredTalentRef.current
+    if (pending && (pending.application_id === app.id || pending.id === app.talent_id)) return pending
+    return null
+  }
   const tabs: { id: ProfileTab; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'udf', label: 'UDF' },
@@ -967,14 +982,7 @@ export function AccountProfileTemplate({
     {reviewingApp && (
       <ApplicationReview
         app={reviewingApp}
-        talent={
-          (pipelineTalent &&
-          (pipelineTalent.id === reviewingApp.talent_id || pipelineTalent.application_id === reviewingApp.id)
-            ? pipelineTalent
-            : null) ||
-          talents.find((t) => t.id === reviewingApp.talent_id || t.application_id === reviewingApp.id) ||
-          null
-        }
+        talent={linkedReviewTalent(reviewingApp)}
         canScore={Boolean(
           user &&
             (hasPermission(user.role, 'submit_client_packet') ||
@@ -983,13 +991,19 @@ export function AccountProfileTemplate({
         )}
         onScore={(patch: Pick<Talent, 'pillar_scores' | 'pillar_rationales' | 'jordan_score'>) => {
           const base =
-            (pipelineTalent &&
-            (pipelineTalent.id === reviewingApp.talent_id || pipelineTalent.application_id === reviewingApp.id)
-              ? pipelineTalent
-              : null) ||
-            talents.find((t) => t.id === reviewingApp.talent_id || t.application_id === reviewingApp.id)
-          if (!base) return
-          return updatePipelineTalent({ ...base, ...patch })
+            linkedReviewTalent(reviewingApp) ||
+            {
+              ...talentFromApp(reviewingApp, accountId || ''),
+              application_id: reviewingApp.id,
+              scout_id: user?.id ?? null,
+            }
+          const next = {
+            ...base,
+            ...patch,
+            application_id: base.application_id || reviewingApp.id,
+          }
+          scoredTalentRef.current = next
+          return updatePipelineTalent(next)
         }}
         onClose={() => setReviewingApp(null)}
         onImportToPipeline={async () => {

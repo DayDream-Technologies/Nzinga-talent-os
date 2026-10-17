@@ -335,7 +335,9 @@ describe('AccountProfileTemplate', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Jordan Score')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Jordan Score' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Jordan Score' }))
+    expect(screen.getByText(/Score each pillar from 1 to 5/i)).toBeInTheDocument()
     fireEvent.click(screen.getAllByRole('button', { name: '5' })[0])
     expect(updatePipelineTalent).toHaveBeenCalled()
     expect(updatePipelineTalent.mock.calls[0][0].pillar_scores[0]).toBe(5)
@@ -349,5 +351,29 @@ describe('AccountProfileTemplate', () => {
     await waitFor(() => {
       expect(dialog).toBeInTheDocument()
     })
+  })
+
+  it('shows Jordan Score to a scout when the application is not linked to a talent yet', async () => {
+    reviewState.app = sampleApp
+    render(
+      <MemoryRouter>
+        <AccountProfileTemplate
+          kind="applicant"
+          displayName="Kai Johnson"
+          statusLabel="Complete"
+          statusColor="#16a34a"
+          application={sampleApp}
+          backTo={{ label: 'Back to Applications', to: '/applications' }}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Jordan Score' }))
+    fireEvent.click(screen.getAllByRole('button', { name: '5' })[0])
+    expect(updatePipelineTalent).toHaveBeenCalled()
+    expect(updatePipelineTalent.mock.calls[0][0].application_id).toBe('app_kai')
+    expect(updatePipelineTalent.mock.calls[0][0].pillar_scores[0]).toBe(5)
+    expect(updatePipelineTalent.mock.calls[0][0].jordan_score).toBe(1)
+    expect(await screen.findByText('Saved on the talent record')).toBeInTheDocument()
   })
 })

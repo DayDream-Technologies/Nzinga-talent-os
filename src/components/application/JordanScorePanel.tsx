@@ -83,12 +83,15 @@ export function JordanScorePanel({
 
   return (
     <div>
+      <div style={{ fontSize: 13, color: T.t2, lineHeight: 1.5, marginBottom: 12 }}>
+        Score each pillar from 1 to 5 and write a short rationale. Every pillar must be at least 3, and the average must be at least 3.5.
+      </div>
       {PILLAR_NAMES.map((name, i) => (
-        <div key={name} style={{ marginBottom: 10, padding: 10, background: T.mutedBg, borderRadius: 8, border: `1px solid ${T.cardBorder}` }}>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+        <div key={name} style={{ marginBottom: 10, padding: 12, background: T.mutedBg, borderRadius: 8, border: `1px solid ${T.cardBorder}` }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: T.t1 }}>
             Pillar {i + 1}: {name}
           </div>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
@@ -96,11 +99,11 @@ export function JordanScorePanel({
                 disabled={!canEdit}
                 onClick={() => setScore(i, n)}
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 5,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 6,
                   cursor: canEdit ? 'pointer' : 'default',
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 700,
                   fontFamily: 'inherit',
                   background: scores[i] >= n ? (n >= 3 ? T.greenL : T.redL) : T.cardBg,
@@ -132,12 +135,23 @@ export function JordanScorePanel({
           />
         </div>
       ))}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          marginTop: 4,
+          padding: '12px 14px',
+          borderRadius: 8,
+          background: meets ? T.greenL : average > 0 ? T.redL : T.mutedBg,
+          border: `1px solid ${meets ? T.green : average > 0 ? T.red : T.cardBorder}55`,
+        }}
+      >
         <div style={{ fontSize: 32, fontWeight: 800, color: meets ? T.green : average > 0 ? T.red : T.t4, fontFamily: "'Syne', sans-serif" }}>
           {average.toFixed(2)}
         </div>
-        <div style={{ fontSize: 12, color: meets ? T.green : T.red, fontWeight: 600 }}>
-          {meets ? 'Meets 3.5 threshold' : average > 0 ? 'Below 3.5, or a pillar is under 3' : 'Enter pillar scores'}
+        <div style={{ fontSize: 13, color: meets ? T.green : average > 0 ? T.red : T.t3, fontWeight: 600, lineHeight: 1.4 }}>
+          {meets ? 'Meets the 3.5 threshold' : average > 0 ? 'Below 3.5, or a pillar is under 3' : 'Enter all five pillar scores'}
         </div>
       </div>
       {status && <div style={{ fontSize: 11, color: T.t3, marginTop: 6 }}>{status}</div>}
